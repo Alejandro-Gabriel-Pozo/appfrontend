@@ -16,30 +16,47 @@ export function Layout() {
   if (!user) return <Navigate to="/login" replace />;
 
   return (
-    <div className={`app-shell${menuOpen ? ' menu-open' : ''}`}>
-      <nav className={`sidebar${menuOpen ? ' open' : ''}`}>
+    <div className="app-shell">
+      <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          Panel de Reservas
-          <small>reservations-panel</small>
+          Bitácora
+          <small>Panel operativo</small>
         </div>
-        <div className="sidebar-nav">
-          <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/">Panorama</NavLink>
-          <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/resources">Recursos</NavLink>
-          <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/reservations">Reservas</NavLink>
-          <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/occupancy">Ocupación</NavLink>
-        </div>
+        <nav className="sidebar-nav" onClick={() => setMenuOpen(false)}>
+          <NavLink to="/" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            Panorama
+          </NavLink>
+          <NavLink to="/recursos" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            Recursos
+          </NavLink>
+          <NavLink to="/reservas" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            Reservas
+          </NavLink>
+          {user.role !== 'WAITER' && (
+            <NavLink to="/ocupacion" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              Ocupación
+            </NavLink>
+          )}
+        </nav>
         <div className="sidebar-footer">
           <strong>{user.email}</strong>
           {ROLE_LABELS[user.role] ?? user.role}
         </div>
-      </nav>
+      </aside>
+
       <div className="main">
-        <header className="topbar">
-          <button className="icon-btn" onClick={() => setMenuOpen((v) => !v)} aria-label="Abrir menú">☰</button>
-          <button className="btn btn-ghost btn-sm" onClick={logout}>Cerrar sesión</button>
-        </header>
+        <div className="topbar">
+          <button className="icon-btn" onClick={() => setMenuOpen((v) => !v)} aria-label="Abrir menú">
+            ☰
+          </button>
+          <span />
+          <button className="btn btn-ghost btn-sm" onClick={logout}>
+            Cerrar sesión
+          </button>
+        </div>
         <Outlet />
       </div>
     </div>
   );
 }
+
