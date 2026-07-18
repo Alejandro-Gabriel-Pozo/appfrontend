@@ -3,19 +3,99 @@
 @tailwind utilities;
 
 :root {
-  --font-body: 'Inter', sans-serif;
+  --sidebar-width: 256px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: var(--font-body);
-  background: #0f1117;
-  color: #e2e8f0;
-  min-height: 100vh;
+@layer base {
+  * { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+  body { @apply bg-[#0f1117] text-slate-100 font-sans; }
 }
 
-pre {
-  white-space: pre-wrap;
-  word-break: break-all;
+@layer components {
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+           text-slate-400 hover:text-white hover:bg-white/5
+           transition-all duration-150 cursor-pointer select-none;
+  }
+  .sidebar-link.active {
+    @apply text-white bg-indigo-600/20 border border-indigo-500/30;
+  }
+  .sidebar-link .icon {
+    @apply w-4 h-4 shrink-0;
+  }
+
+  .card {
+    @apply bg-[#161b27] border border-white/[0.07] rounded-xl;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold
+           bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg
+           transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium
+           bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 rounded-lg
+           transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold
+           bg-red-600/80 hover:bg-red-600 text-white rounded-lg
+           transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-success {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold
+           bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-lg
+           transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .input {
+    @apply w-full px-3 py-2 bg-[#0f1117] border border-white/10 rounded-lg text-sm
+           text-slate-100 placeholder-slate-500
+           focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50
+           transition-all duration-150;
+  }
+  .label {
+    @apply block text-xs font-medium text-slate-400 mb-1.5;
+  }
+
+  .badge-get  { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20; }
+  .badge-post { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-500/15 text-blue-400 border border-blue-500/20; }
+  .badge-del  { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-500/15 text-red-400 border border-red-500/20; }
+
+  .response-block {
+    @apply mt-3 p-4 rounded-lg text-xs font-mono leading-relaxed overflow-auto max-h-72
+           bg-[#0a0d14] border border-white/[0.06] text-slate-300;
+  }
+  .response-block.error {
+    @apply border-red-500/30 bg-red-950/20 text-red-300;
+  }
+
+  .section-title {
+    @apply text-xs font-semibold uppercase tracking-widest text-slate-500 px-3 mb-2 mt-6;
+  }
+
+  .page-header {
+    @apply flex items-center justify-between mb-8;
+  }
+  .page-title {
+    @apply text-xl font-semibold text-white;
+  }
+  .page-subtitle {
+    @apply text-sm text-slate-500 mt-0.5;
+  }
+
+  .spinner {
+    @apply animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full;
+  }
+
+  .toast {
+    @apply fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3
+           rounded-xl shadow-2xl text-sm font-medium border
+           animate-in fade-in slide-in-from-bottom-2 duration-200;
+  }
+  .toast.success { @apply bg-emerald-900/90 border-emerald-500/40 text-emerald-200; }
+  .toast.error   { @apply bg-red-900/90 border-red-500/40 text-red-200; }
+  .toast.info    { @apply bg-indigo-900/90 border-indigo-500/40 text-indigo-200; }
 }

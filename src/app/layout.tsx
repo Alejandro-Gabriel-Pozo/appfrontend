@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Admin Panel — API Manager',
-  description: 'Panel de administración para la API REST',
+  title: 'ReservaHub Admin',
+  description: 'Panel de administración — ReservaHub',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
