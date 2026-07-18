@@ -29,7 +29,7 @@ export function Layout() {
           <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/occupancy">Ocupación</NavLink>
         </div>
         <div className="sidebar-footer">
-          <strong>{user.name}</strong>
+          <strong>{user.email}</strong>
           {ROLE_LABELS[user.role] ?? user.role}
         </div>
       </nav>
