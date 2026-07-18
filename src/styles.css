@@ -84,7 +84,6 @@ button {
   font-size: 18px;
   padding: 0 8px;
 }
-
 .sidebar-brand small { display: block; font-family: var(--font-mono); font-size: 10px; opacity: 0.6; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
@@ -101,7 +100,6 @@ button {
   font-weight: 500;
   transition: background 0.12s ease, color 0.12s ease;
 }
-
 .sidebar-link:hover { background: rgba(255,255,255,0.06); color: #fff; }
 .sidebar-link.active { background: var(--ochre); color: #201603; }
 
@@ -113,7 +111,6 @@ button {
   border-top: 1px solid rgba(255,255,255,0.1);
   padding-top: 14px;
 }
-
 .sidebar-footer strong { display: block; color: rgba(238,241,238,0.9); font-weight: 600; }
 
 .main {
@@ -146,7 +143,6 @@ button {
   gap: 12px;
   flex-wrap: wrap;
 }
-
 .page-header h1 { font-size: 22px; }
 .page-header p { margin: 4px 0 0; color: var(--ink-soft); font-size: 13px; }
 
@@ -174,7 +170,6 @@ button {
   border-radius: var(--radius);
   padding: 16px;
 }
-
 .kpi-card .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); font-weight: 600; }
 .kpi-card .kpi-value { font-family: var(--font-display); font-size: 30px; margin-top: 6px; }
 
@@ -189,7 +184,6 @@ thead th {
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
 }
-
 tbody td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
 .mono { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-soft); }
@@ -203,7 +197,6 @@ tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
   font-weight: 600;
   letter-spacing: 0.02em;
 }
-
 .badge-pending { background: var(--ochre-soft); color: #7a5417; }
 .badge-confirmed { background: var(--blue-soft); color: var(--blue); }
 .badge-completed { background: #dfeee1; color: var(--pine-dark); }
@@ -221,7 +214,6 @@ tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
   background: var(--pine);
   color: #fff;
 }
-
 .btn:hover { background: var(--pine-dark); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
@@ -241,7 +233,6 @@ tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
   background: var(--surface);
   color: var(--ink);
 }
-
 .field textarea { font-family: var(--font-mono); font-size: 12.5px; min-height: 80px; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
@@ -251,7 +242,6 @@ tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
   font-size: 13px;
   margin-bottom: 14px;
 }
-
 .alert-error { background: var(--red-soft); color: var(--red); border: 1px solid rgba(161,62,62,0.25); }
 .alert-info { background: var(--blue-soft); color: var(--blue); border: 1px solid rgba(58,90,120,0.2); }
 
@@ -269,7 +259,6 @@ tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
   padding: 20px;
   z-index: 50;
 }
-
 .modal {
   background: var(--surface);
   border-radius: 4px;
@@ -280,7 +269,6 @@ tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
   max-height: 90vh;
   overflow-y: auto;
 }
-
 .modal h2 { font-size: 18px; margin-bottom: 4px; }
 .modal-sub { color: var(--ink-soft); font-size: 12.5px; margin-bottom: 16px; }
 
@@ -292,7 +280,6 @@ tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
   background: var(--pine-dark);
   padding: 20px;
 }
-
 .login-card {
   background: var(--paper);
   border-radius: 4px;
@@ -301,7 +288,6 @@ tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
   max-width: 380px;
   box-shadow: var(--shadow);
 }
-
 .login-card h1 { font-size: 24px; margin-bottom: 4px; }
 .login-card p.sub { color: var(--ink-soft); font-size: 13px; margin: 0 0 24px; }
 
@@ -312,7 +298,6 @@ tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
   overflow: hidden;
   width: 100%;
 }
-
 .occupancy-bar-fill { height: 100%; background: var(--pine); }
 
 .toolbar {
@@ -331,7 +316,6 @@ tbody tr:hover { background: rgba(47, 82, 51, 0.04); }
   border-radius: var(--radius);
   display: none;
 }
-
 @media (max-width: 760px) {
   .icon-btn { display: inline-flex; }
 }
