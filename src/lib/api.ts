@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL ?? 'https://app-chny.onrender.com/';
 
 export class ApiError extends Error {
   constructor(
@@ -62,6 +62,7 @@ async function request<T>(
   if (!res.ok) {
     if (res.status === 401) {
       clearSession();
+      window.dispatchEvent(new Event('auth:unauthorized'));
     }
     const b = (body ?? {}) as { code?: string; message?: string };
     throw new ApiError(
@@ -84,7 +85,8 @@ export const api = {
 };
 
 // ---------------------------------------------------------------------------
-// Tipos compartidos con el backend
+// Tipos compartidos con el backend (ver src/api/mappers/reservation.mapper.ts
+// y src/security/auth.service.ts del repo de la API)
 // ---------------------------------------------------------------------------
 
 export type UserRole = 'ADMIN' | 'RECEPTIONIST' | 'WAITER' | 'CUSTOMER';
@@ -94,7 +96,6 @@ export interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
-  name: string;
 }
 
 export interface LoginResponse {
