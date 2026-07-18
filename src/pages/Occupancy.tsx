@@ -44,18 +44,20 @@ export function Occupancy() {
         </div>
       </div>
 
-      <form className="toolbar" onSubmit={runReport}>
-        <div className="field" style={{ margin: 0 }}>
-          <label>Desde</label>
-          <input type="date" value={range.start} onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))} required />
+      <form className="card" style={{ marginBottom: 18 }} onSubmit={runReport}>
+        <div className="toolbar" style={{ marginBottom: 0 }}>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Desde</label>
+            <input type="date" value={range.start} onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))} required />
+          </div>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Hasta</label>
+            <input type="date" value={range.end} onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))} required />
+          </div>
+          <button className="btn" type="submit" disabled={loading}>
+            {loading ? 'Generando…' : 'Generar reporte'}
+          </button>
         </div>
-        <div className="field" style={{ margin: 0 }}>
-          <label>Hasta</label>
-          <input type="date" value={range.end} onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))} required />
-        </div>
-        <button className="btn" disabled={loading}>
-          {loading ? 'Generando…' : 'Generar reporte'}
-        </button>
       </form>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -75,15 +77,15 @@ export function Occupancy() {
               </thead>
               <tbody>
                 {rows.map((row, i) => (
-                  <tr key={i}>
+                  <tr key={`${row.resourceId}-${row.date}-${i}`}>
                     <td className="mono">{row.date}</td>
                     <td>{row.resourceName}</td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div className="occupancy-bar" style={{ width: 80 }}>
-                          <div className="occupancy-bar-fill" style={{ width: `${row.occupancyRate}%` }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="occupancy-bar" style={{ maxWidth: 160 }}>
+                          <div className="occupancy-bar-fill" style={{ width: `${Math.min(row.occupancyRate, 100)}%` }} />
                         </div>
-                        <span>{row.occupancyRate.toFixed(0)}%</span>
+                        <span className="mono">{row.occupancyRate.toFixed(0)}%</span>
                       </div>
                     </td>
                   </tr>
