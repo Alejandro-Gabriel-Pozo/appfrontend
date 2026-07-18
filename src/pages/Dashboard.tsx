@@ -85,21 +85,21 @@ export function Dashboard() {
 
       {summary && summary.topOccupied.length > 0 && (
         <div className="card" style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 15, marginBottom: 12 }}>Más ocupados (30 días)</h2>
+          <h3 style={{ marginBottom: 12, fontSize: 15 }}>Más ocupados (30 días)</h3>
           {summary.topOccupied.map((s) => (
-            <div key={s.resourceId} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <span style={{ flex: 1, fontSize: 13 }}>{s.resourceName}</span>
-              <div className="occupancy-bar" style={{ width: 120 }}>
-                <div className="occupancy-bar-fill" style={{ width: `${s.occupancyRate}%` }} />
+            <div key={s.resourceId} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+              <span style={{ width: 140, fontSize: 13 }}>{s.resourceName}</span>
+              <div className="occupancy-bar">
+                <div className="occupancy-bar-fill" style={{ width: `${Math.min(s.occupancyRate, 100)}%` }} />
               </div>
-              <span style={{ fontSize: 12, width: 36, textAlign: 'right' }}>{s.occupancyRate.toFixed(0)}%</span>
+              <span className="mono" style={{ width: 44, textAlign: 'right' }}>{s.occupancyRate.toFixed(0)}%</span>
             </div>
           ))}
         </div>
       )}
 
       <div className="card">
-        <h2 style={{ fontSize: 15, marginBottom: 12 }}>Reservas recientes</h2>
+        <h3 style={{ marginBottom: 12, fontSize: 15 }}>Reservas recientes</h3>
         {recent.length === 0 ? (
           <div className="empty-state">Todavía no hay reservas cargadas.</div>
         ) : (
