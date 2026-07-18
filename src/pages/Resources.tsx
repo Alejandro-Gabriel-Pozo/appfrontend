@@ -6,11 +6,6 @@ interface AvailabilityResult {
   available: boolean;
 }
 
-function toLocalInput(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 export function Resources() {
   const [resources, setResources] = useState<ResourceDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,38 +52,39 @@ export function Resources() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <div className="toolbar">
-        <div className="field" style={{ margin: 0 }}>
-          <label>Verificar disponibilidad desde</label>
-          <input
-            type="datetime-local"
-            value={range.start}
-            onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
-          />
-        </div>
-        <div className="field" style={{ margin: 0 }}>
-          <label>Hasta</label>
-          <input
-            type="datetime-local"
-            value={range.end}
-            onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
-          />
+      <div className="card" style={{ marginBottom: 18 }}>
+        <div className="field-row">
+          <div className="field">
+            <label>Verificar disponibilidad desde</label>
+            <input
+              type="datetime-local"
+              value={range.start}
+              onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
+            />
+          </div>
+          <div className="field">
+            <label>Hasta</label>
+            <input
+              type="datetime-local"
+              value={range.end}
+              onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
+            />
+          </div>
         </div>
       </div>
 
-      {resources === null ? (
-        <div className="empty-state">Cargando…</div>
-      ) : resources.length === 0 ? (
-        <div className="empty-state">No hay recursos cargados todavía.</div>
-      ) : (
-        <div className="card">
+      <div className="card">
+        {resources === null ? (
+          <div className="empty-state">Cargando…</div>
+        ) : resources.length === 0 ? (
+          <div className="empty-state">No hay recursos cargados todavía.</div>
+        ) : (
           <table>
             <thead>
               <tr>
                 <th>Nombre</th>
                 <th>Categoría</th>
                 <th>Precio base</th>
-                <th></th>
                 <th></th>
               </tr>
             </thead>
@@ -106,10 +102,11 @@ export function Resources() {
                     >
                       {checking === r.id ? 'Verificando…' : 'Ver disponibilidad'}
                     </button>
-                  </td>
-                  <td>
                     {result?.resourceId === r.id && (
-                      <span className={`badge ${result.available ? 'badge-confirmed' : 'badge-cancelled'}`}>
+                      <span
+                        className={`badge ${result.available ? 'badge-completed' : 'badge-cancelled'}`}
+                        style={{ marginLeft: 8 }}
+                      >
                         {result.available ? 'Disponible' : 'Ocupado'}
                       </span>
                     )}
@@ -118,8 +115,13 @@ export function Resources() {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
+}
+
+function toLocalInput(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
