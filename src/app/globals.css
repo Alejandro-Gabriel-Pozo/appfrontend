@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-body: 'Inter', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: #0f1117;
+  color: #e2e8f0;
+  min-height: 100vh;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
