@@ -33,34 +33,38 @@ export function Login() {
 
   return (
     <div className="login-shell">
-      <div className="login-card">
+      <form className="login-card" onSubmit={handleSubmit}>
         <h1>Bitácora</h1>
         <p className="sub">Panel operativo de reservas</p>
+
         {error && <div className="alert alert-error">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field">
-            <label>Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button className="btn" style={{ width: '100%' }} disabled={loading}>
-            {loading ? 'Ingresando…' : 'Ingresar'}
-          </button>
-        </form>
-      </div>
+
+        <div className="field">
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="password">Contraseña</label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        <button className="btn" type="submit" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
+          {loading ? 'Ingresando…' : 'Ingresar'}
+        </button>
+      </form>
     </div>
   );
 }
