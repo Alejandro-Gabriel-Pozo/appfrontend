@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { api, setSession, clearSession, getStoredUser, type AuthUser, type LoginResponse } from './api';
 
 interface AuthContextValue {
@@ -21,6 +21,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     clearSession();
     setUser(null);
+  }, []);
+
+  useEffect(() => {
+    // Si cualquier request recibe 401 (token vencido, revocado, etc.), api.ts
+    // limpia localStorage y dispara este evento — acá sincronizamos el estado
+    // de React para que <Layout> redirija a /login en el acto, en vez de dejar
+    // la pantalla actual haciendo requests sin Authorization.
+    function handleUnauthorized() {
+      setUser(null);
+    }
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, []);
 
   return (
