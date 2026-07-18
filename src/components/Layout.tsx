@@ -26,18 +26,19 @@ export function Layout() {
           <NavLink to="/" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
             Panorama
           </NavLink>
-          <NavLink to="/recursos" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+        <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/recursos">Recursos</NavLink>
             Recursos
           </NavLink>
-          <NavLink to="/reservas" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+          <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/reservas">Reservas</NavLink>
             Reservas
           </NavLink>
           {user.role !== 'WAITER' && (
-            <NavLink to="/ocupacion" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+<NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/ocupacion">Ocupación</NavLink>
               Ocupación
             </NavLink>
           )}
         </nav>
+
         <div className="sidebar-footer">
           <strong>{user.email}</strong>
           {ROLE_LABELS[user.role] ?? user.role}
