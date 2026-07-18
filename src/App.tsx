@@ -15,9 +15,9 @@ export function App() {
           <Route path="/login" element={<Login />} />
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/resources" element={<Resources />} />
-            <Route path="/reservations" element={<Reservations />} />
-            <Route path="/occupancy" element={<Occupancy />} />
+            <Route path="/recursos" element={<Resources />} />
+            <Route path="/reservas" element={<Reservations />} />
+            <Route path="/ocupacion" element={<Occupancy />} />
           </Route>
         </Routes>
       </AuthProvider>
