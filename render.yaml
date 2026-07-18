@@ -1,13 +1,11 @@
 services:
   - type: web
-    name: reservations-panel
-    env: static
+    name: admin-panel
+    env: node
     buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    startCommand: npm run start
     envVars:
-      - key: VITE_API_URL
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
         value: https://app-chny.onrender.com
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
