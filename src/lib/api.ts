@@ -66,7 +66,7 @@ export function extractFieldErrors(err: unknown): Record<string, string> {
 }
 
 // ─── Resources ───────────────────────────────────────────────────────────────
-import type { Resource, Category, Reservation, Customer } from './types'
+import type { Resource, Category, Reservation, Customer, Product, ProductVariant, CreateProductInput, UpdateProductInput, CreateVariantInput, UpdateVariantInput } from './types'
 
 export const resourcesApi = {
   list: () => request<Resource[]>('/api/resources'),
@@ -104,4 +104,43 @@ export const customersApi = {
   findByEmail: (email: string) => request<Customer | null>(`/api/customers?email=${encodeURIComponent(email)}`),
   create: (body: { fullName: string; email: string }) =>
     request<Customer>('/api/customers', { method: 'POST', body: JSON.stringify(body) }),
+}
+
+// ─── Products ─────────────────────────────────────────────────────────────────
+// Endpoints:
+//   GET    /api/products              → listar todos los productos del tenant
+//   POST   /api/products              → crear producto
+//   GET    /api/products/:id          → obtener producto por ID
+//   PUT    /api/products/:id          → actualizar producto
+//   DELETE /api/products/:id          → soft-delete (active = false)
+
+export const productsApi = {
+  list: () =>
+    request<Product[]>('/api/products'),
+  get: (id: string) =>
+    request<Product>(`/api/products/${id}`),
+  create: (body: CreateProductInput) =>
+    request<Product>('/api/products', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: UpdateProductInput) =>
+    request<Product>(`/api/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (id: string) =>
+    request<void>(`/api/products/${id}`, { method: 'DELETE' }),
+}
+
+// ─── Product Variants ─────────────────────────────────────────────────────────
+// Endpoints:
+//   GET    /api/products/:id/variants                            → listar variantes
+//   POST   /api/products/:id/variants                            → crear variante
+//   PUT    /api/products/:id/variants/:variantId                 → actualizar variante
+//   DELETE /api/products/:id/variants/:variantId                 → soft-delete variante
+
+export const variantsApi = {
+  list: (productId: string) =>
+    request<ProductVariant[]>(`/api/products/${productId}/variants`),
+  create: (productId: string, body: CreateVariantInput) =>
+    request<ProductVariant>(`/api/products/${productId}/variants`, { method: 'POST', body: JSON.stringify(body) }),
+  update: (productId: string, variantId: string, body: UpdateVariantInput) =>
+    request<ProductVariant>(`/api/products/${productId}/variants/${variantId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (productId: string, variantId: string) =>
+    request<void>(`/api/products/${productId}/variants/${variantId}`, { method: 'DELETE' }),
 }

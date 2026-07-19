@@ -16,46 +16,86 @@ export interface CategoryField {
   options?: string[]
 }
 
-export interface Resource {
+// ─── Products ────────────────────────────────────────────────────────────────
+
+export interface Product {
   id: string
+  businessId: string
+  categoryId: string | null
   name: string
-  categoryId: string
+  description: string | null
   basePrice: number
-  visualData?: VisualData | null
+  sku: string | null
+  /**
+   * true  → stock y precio se gestionan por variante.
+   * false → stock y precio directamente en el producto.
+   */
+  hasVariants: boolean
+  /** Solo relevante cuando hasVariants === false */
+  stockQuantity: number
+  stockMinAlert: number
+  active: boolean
+  createdAt: string
+  updatedAt: string
 }
 
-export interface VisualData {
-  shape: string
-  width: number
-  height: number
-  positionX: number
-  positionY: number
-  rotationDegrees: number
-}
-
-export interface Customer {
+export interface ProductVariant {
   id: string
-  fullName: string
-  email: string
+  productId: string
+  name: string
+  /** Atributos libres: { talle: 'M', color: 'rojo' } */
+  attributes: Record<string, string>
+  sku: string | null
+  /**
+   * NULL → hereda basePrice del producto padre.
+   * Resuelto siempre en el dominio por ProductService.
+   */
+  priceOverride: number | null
+  stockQuantity: number
+  stockMinAlert: number
+  active: boolean
+  createdAt: string
+  updatedAt: string
 }
 
-export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
-
-export interface Reservation {
-  id: string
-  resourceId: string
-  customer: Customer
-  startTime: string
-  endTime: string
-  status: ReservationStatus
-  details: Record<string, unknown>
+export interface CreateProductInput {
+  categoryId?: string | null
+  name: string
+  description?: string | null
+  basePrice: number
+  sku?: string | null
+  hasVariants?: boolean
+  stockQuantity?: number
+  stockMinAlert?: number
 }
 
-export interface ApiError {
-  code: string
-  message: string
-  errors?: {
-    formErrors?: string[]
-    fieldErrors?: Record<string, string[]>
-  }
+export interface UpdateProductInput {
+  categoryId?: string | null
+  name?: string
+  description?: string | null
+  basePrice?: number
+  sku?: string | null
+  hasVariants?: boolean
+  stockQuantity?: number
+  stockMinAlert?: number
+  active?: boolean
+}
+
+export interface CreateVariantInput {
+  name: string
+  attributes?: Record<string, string>
+  sku?: string | null
+  priceOverride?: number | null
+  stockQuantity?: number
+  stockMinAlert?: number
+}
+
+export interface UpdateVariantInput {
+  name?: string
+  attributes?: Record<string, string>
+  sku?: string | null
+  priceOverride?: number | null
+  stockQuantity?: number
+  stockMinAlert?: number
+  active?: boolean
 }
