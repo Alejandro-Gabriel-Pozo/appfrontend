@@ -16,6 +16,38 @@ export interface CategoryField {
   options?: string[]
 }
 
+// ─── Customer ─────────────────────────────────────────────────────────────────
+
+export interface Customer {
+  id: string
+  businessId: string
+  fullName: string
+  email: string
+  createdAt: string
+  updatedAt: string
+}
+
+// ─── Resource / Reservation ───────────────────────────────────────────────────
+
+export interface Resource {
+  id: string
+  name: string
+  description?: string | null
+  active: boolean
+}
+
+export interface Reservation {
+  id: string
+  resourceId: string
+  customer: { id: string; fullName?: string; email?: string }
+  startTime: string
+  endTime: string
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+  details?: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+}
+
 // ─── Products ────────────────────────────────────────────────────────────────
 
 export interface Product {
