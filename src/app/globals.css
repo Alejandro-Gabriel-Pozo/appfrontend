@@ -9,7 +9,7 @@
   Texto: slate cálido en tres niveles.
 */
 :root {
-  --sidebar-width: 256px;
+  --sidebar-width: 220px;
 
   /* Superficie — escala de 5 niveles */
   --bg:          #0a0c10;
@@ -80,6 +80,10 @@
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
 }
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
@@ -209,6 +213,35 @@
     box-shadow: var(--shadow-md);
     transform: translateY(-1px);
   }
+  /* KPI variantes semánticas — tiñen el borde sutilmente */
+  .kpi-card-success {
+    border-color: var(--success-border);
+  }
+  .kpi-card-success:hover {
+    border-color: var(--success);
+    box-shadow: var(--shadow-md), 0 0 0 1px var(--success-border);
+  }
+  .kpi-card-warning {
+    border-color: var(--warning-border);
+  }
+  .kpi-card-warning:hover {
+    border-color: var(--warning);
+    box-shadow: var(--shadow-md), 0 0 0 1px var(--warning-border);
+  }
+  .kpi-card-danger {
+    border-color: var(--danger-border);
+  }
+  .kpi-card-danger:hover {
+    border-color: var(--danger);
+    box-shadow: var(--shadow-md), 0 0 0 1px var(--danger-border);
+  }
+  .kpi-card-info {
+    border-color: var(--info-border);
+  }
+  .kpi-card-info:hover {
+    border-color: var(--info);
+    box-shadow: var(--shadow-md), 0 0 0 1px var(--info-border);
+  }
   .kpi-label {
     font-size: 11px;
     font-weight: 600;
@@ -235,6 +268,56 @@
   }
   .kpi-trend.up   { color: var(--success); }
   .kpi-trend.down { color: var(--danger); }
+
+  /* ── Quick Link ── */
+  .quick-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-radius: var(--r-xl);
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+    transition: border-color var(--t), background-color var(--t), box-shadow var(--t);
+    text-decoration: none;
+  }
+  .quick-link:hover {
+    border-color: var(--border-md);
+    background-color: var(--surface-3);
+    box-shadow: var(--shadow-sm);
+  }
+  .quick-link-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--r-md);
+    background-color: var(--accent-dim);
+    color: var(--accent);
+  }
+  .quick-link-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .quick-link-desc {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+  }
+
+  /* ── Page layout ── */
+  .page-content {
+    padding: 1.5rem;
+    max-width: 80rem;
+    margin-inline: auto;
+  }
+  .page-content-tight {
+    padding: 1rem 1.5rem;
+    max-width: 80rem;
+    margin-inline: auto;
+  }
 
   /* ── Botones ── */
   .btn-primary {
@@ -474,8 +557,9 @@
   .alert-success { background: var(--success-dim); border-color: var(--success-border); color: var(--success); }
 
   /* ── Animaciones de utilidad ── */
-  .animate-fade-in  { animation: fadeIn  0.20s ease-out both; }
-  .animate-slide-up { animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .animate-fade-in    { animation: fadeIn     0.20s ease-out both; }
+  .animate-slide-up   { animation: slideUp    0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .animate-slide-left { animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
   /* ── Dot de estado (live / online) ── */
   .dot-live {

@@ -61,20 +61,19 @@ function NavIcon({ d }: { d: string }) {
   )
 }
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const router       = useRouter()
-  const pathname     = usePathname()
-  const [user, setUser]             = useState<string | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+function Sidebar({ onClose }: { onClose?: () => void }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const [user, setUser] = useState<string | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (!token) { router.replace('/login'); return }
+    if (!token) return
     try {
       const payload = JSON.parse(atob(token.split('.')[1]))
       setUser(payload.email || payload.sub || 'Admin')
     } catch { setUser('Admin') }
-  }, [router])
+  }, [])
 
   function logout() {
     localStorage.removeItem('token')
@@ -83,13 +82,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const initials = user ? user[0].toUpperCase() : 'A'
 
-  const Sidebar = () => (
+  return (
     <aside
       className="flex flex-col h-full"
       style={{
         backgroundColor: 'var(--surface-1)',
         borderRight: '1px solid var(--border)',
-        width: '220px',
+        width: 'var(--sidebar-width)',
       }}
     >
       {/* Logo */}
@@ -136,7 +135,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setSidebarOpen(false)}
+                  onClick={onClose}
                   className={`sidebar-link${isActive ? ' active' : ''}`}
                 >
                   <NavIcon d={item.icon} />
@@ -193,12 +192,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
     </aside>
   )
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const router           = useRouter()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) router.replace('/login')
+  }, [router])
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
 
       {/* Desktop sidebar */}
-      <div className="hidden md:flex md:flex-col shrink-0" style={{ width: '220px' }}>
+      <div
+        className="hidden md:flex md:flex-col shrink-0"
+        style={{ width: 'var(--sidebar-width)' }}
+      >
         <Sidebar />
       </div>
 
@@ -208,16 +220,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           className="fixed inset-0 z-50 md:hidden"
           onClick={() => setSidebarOpen(false)}
         >
+          {/* Backdrop */}
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 animate-fade-in"
             style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
           />
+          {/* Panel — desliza desde la izquierda */}
           <div
-            className="absolute left-0 top-0 h-full animate-slide-up"
-            style={{ width: '220px' }}
+            className="absolute left-0 top-0 h-full animate-slide-left"
+            style={{ width: 'var(--sidebar-width)' }}
             onClick={e => e.stopPropagation()}
           >
-            <Sidebar />
+            <Sidebar onClose={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}
@@ -233,7 +247,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             borderBottom: '1px solid var(--border)',
           }}
         >
-          <button onClick={() => setSidebarOpen(true)} className="btn-ghost p-1.5">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="btn-ghost p-1.5"
+            aria-label="Abrir menú"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <line x1="3" y1="6"  x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
@@ -253,7 +271,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           className="flex-1 overflow-y-auto"
           style={{ backgroundColor: 'var(--surface-0)' }}
         >
-          <div className="p-6 max-w-screen-xl mx-auto">
+          <div className="page-content">
             {children}
           </div>
         </main>

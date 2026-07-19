@@ -4,22 +4,22 @@ import Link from 'next/link'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'https://app-chny.onrender.com'
 
-type Reservation = { status?: string; created_at?: string }
-type Resource     = { active?: boolean }
+type Reservation = { id?: string | number; status?: string; created_at?: string; resource_id?: string | number }
+type Resource     = { id?: string | number; name?: string; active?: boolean }
 
 function KpiCard({
   label,
   value,
   sub,
   icon,
-  accent,
+  variant,
   loading,
 }: {
   label: string
   value: string | number
   sub: string
   icon: React.ReactNode
-  accent: string
+  variant?: 'success' | 'warning' | 'danger' | 'info'
   loading: boolean
 }) {
   if (loading) {
@@ -31,13 +31,30 @@ function KpiCard({
       </div>
     )
   }
+
+  const accentColor: Record<string, string> = {
+    success: 'var(--success)',
+    warning: 'var(--warning)',
+    danger:  'var(--danger)',
+    info:    'var(--info)',
+  }
+  const accentDim: Record<string, string> = {
+    success: 'var(--success-dim)',
+    warning: 'var(--warning-dim)',
+    danger:  'var(--danger-dim)',
+    info:    'var(--info-dim)',
+  }
+  const color = variant ? accentColor[variant] : 'var(--accent)'
+  const dim   = variant ? accentDim[variant]   : 'var(--accent-dim)'
+  const variantClass = variant ? ` kpi-card-${variant}` : ''
+
   return (
-    <div className="kpi-card">
+    <div className={`kpi-card${variantClass}`}>
       <div className="flex items-center justify-between mb-3">
         <span className="kpi-label">{label}</span>
         <div
           className="flex items-center justify-center w-8 h-8 rounded-lg"
-          style={{ backgroundColor: accent + '18', color: accent }}
+          style={{ backgroundColor: dim, color }}
         >
           {icon}
         </div>
@@ -60,35 +77,109 @@ function QuickLink({
   description: string
 }) {
   return (
-    <Link
-      href={href}
-      className="group flex flex-col gap-2 p-4 rounded-xl transition-all duration-150"
-      style={{
-        backgroundColor: 'var(--surface-2)',
-        border: '1px solid var(--border)',
-      }}
-      onMouseEnter={e => {
-        const el = e.currentTarget
-        el.style.borderColor = 'var(--border-md)'
-        el.style.backgroundColor = 'var(--surface-3)'
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget
-        el.style.borderColor = 'var(--border)'
-        el.style.backgroundColor = 'var(--surface-2)'
-      }}
-    >
-      <div
-        className="flex items-center justify-center w-8 h-8 rounded-lg"
-        style={{ backgroundColor: 'rgba(45,212,191,0.10)', color: 'var(--accent)' }}
-      >
-        {icon}
-      </div>
+    <Link href={href} className="quick-link">
+      <div className="quick-link-icon">{icon}</div>
       <div>
-        <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</p>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{description}</p>
+        <p className="quick-link-label">{label}</p>
+        <p className="quick-link-desc">{description}</p>
       </div>
     </Link>
+  )
+}
+
+function RecentReservations({ reservations, loading }: { reservations: Reservation[]; loading: boolean }) {
+  const recent = reservations.slice(0, 5)
+
+  const statusClass: Record<string, string> = {
+    CONFIRMED: 'badge-confirmed',
+    PENDING:   'badge-pending',
+    COMPLETED: 'badge-completed',
+    CANCELLED: 'badge-cancelled',
+  }
+
+  const statusLabel: Record<string, string> = {
+    CONFIRMED: 'Confirmada',
+    PENDING:   'Pendiente',
+    COMPLETED: 'Completada',
+    CANCELLED: 'Cancelada',
+  }
+
+  return (
+    <div
+      className="card"
+      style={{ overflow: 'hidden' }}
+    >
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
+        <h2
+          className="text-xs font-semibold uppercase tracking-widest"
+          style={{ color: 'var(--text-tertiary)', letterSpacing: '0.09em' }}
+        >
+          Últimas reservas
+        </h2>
+        <Link
+          href="/dashboard/reservas"
+          className="text-xs font-medium"
+          style={{ color: 'var(--accent)' }}
+        >
+          Ver todas →
+        </Link>
+      </div>
+
+      {loading ? (
+        <div className="p-4 space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="skeleton h-4 w-8" />
+              <div className="skeleton h-4 flex-1" />
+              <div className="skeleton h-5 w-20 rounded-full" />
+            </div>
+          ))}
+        </div>
+      ) : recent.length === 0 ? (
+        <div className="empty-state py-10">
+          <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <h3>Sin reservas</h3>
+          <p>Las reservas aparecerán aquí</p>
+        </div>
+      ) : (
+        <div className="table-wrapper">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Recurso</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recent.map((r, i) => (
+                <tr key={r.id ?? i}>
+                  <td className="table-cell-mono">#{String(r.id ?? i + 1).slice(-4)}</td>
+                  <td className="table-cell-primary">{r.resource_id ? `Recurso ${r.resource_id}` : '—'}</td>
+                  <td style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>
+                    {r.created_at
+                      ? new Date(r.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
+                      : '—'}
+                  </td>
+                  <td>
+                    <span className={statusClass[r.status ?? ''] ?? 'badge-pending'}>
+                      {statusLabel[r.status ?? ''] ?? r.status ?? '—'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -109,9 +200,9 @@ export default function DashboardHome() {
     }).finally(() => setLoading(false))
   }, [])
 
-  const confirmed  = reservations.filter(r => r.status === 'CONFIRMED').length
-  const pending    = reservations.filter(r => r.status === 'PENDING').length
-  const activeRes  = resources.filter(r => r.active !== false).length
+  const confirmed = reservations.filter(r => r.status === 'CONFIRMED').length
+  const pending   = reservations.filter(r => r.status === 'PENDING').length
+  const activeRes = resources.filter(r => r.active !== false).length
 
   const today = new Date().toLocaleDateString('es-AR', {
     weekday: 'long',
@@ -147,7 +238,7 @@ export default function DashboardHome() {
           label="Total Reservas"
           value={reservations.length}
           sub="Todas las reservas"
-          accent="#60a5fa"
+          variant="info"
           icon={
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round"
@@ -160,7 +251,7 @@ export default function DashboardHome() {
           label="Confirmadas"
           value={confirmed}
           sub="Estado CONFIRMED"
-          accent="#34d399"
+          variant="success"
           icon={
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -172,7 +263,7 @@ export default function DashboardHome() {
           label="Pendientes"
           value={pending}
           sub="Esperando confirmación"
-          accent="#fbbf24"
+          variant="warning"
           icon={
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -184,7 +275,7 @@ export default function DashboardHome() {
           label="Recursos activos"
           value={activeRes}
           sub={`De ${resources.length} registrados`}
-          accent="#2dd4bf"
+          variant="success"
           icon={
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round"
@@ -194,8 +285,13 @@ export default function DashboardHome() {
         />
       </div>
 
-      {/* Quick links */}
+      {/* Últimas reservas */}
       <div className="mt-8">
+        <RecentReservations reservations={reservations} loading={loading} />
+      </div>
+
+      {/* Quick links */}
+      <div className="mt-6">
         <h2
           className="text-xs font-semibold uppercase tracking-widest mb-3"
           style={{ color: 'var(--text-tertiary)', letterSpacing: '0.09em' }}
