@@ -53,13 +53,15 @@ export interface UpdateResourceInput {
   active?: boolean
 }
 
+export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
+
 export interface Reservation {
   id: string
   resourceId: string
   customer: { id: string; fullName?: string; email?: string }
   startTime: string
   endTime: string
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+  status: ReservationStatus
   details?: Record<string, unknown>
   createdAt: string
   updatedAt: string

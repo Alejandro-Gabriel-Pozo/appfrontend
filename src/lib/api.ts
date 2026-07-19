@@ -66,13 +66,19 @@ export function extractFieldErrors(err: unknown): Record<string, string> {
 }
 
 // ─── Resources ───────────────────────────────────────────────────────────────
-import type { Resource, Category, Reservation, Customer, Product, ProductVariant, CreateProductInput, UpdateProductInput, CreateVariantInput, UpdateVariantInput } from './types'
+import type {
+  Resource, CreateResourceInput, UpdateResourceInput,
+  Category,
+  Reservation,
+  Customer,
+  Product, ProductVariant, CreateProductInput, UpdateProductInput, CreateVariantInput, UpdateVariantInput,
+} from './types'
 
 export const resourcesApi = {
   list: () => request<Resource[]>('/api/resources'),
-  create: (body: Omit<Resource, 'id'> & { id?: string }) =>
+  create: (body: CreateResourceInput) =>
     request<Resource>('/api/resources', { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: string, body: Omit<Resource, 'id'> & { id?: string }) =>
+  update: (id: string, body: UpdateResourceInput) =>
     request<Resource>(`/api/resources/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   remove: (id: string) =>
     request<void>(`/api/resources/${id}`, { method: 'DELETE' }),
@@ -107,13 +113,6 @@ export const customersApi = {
 }
 
 // ─── Products ─────────────────────────────────────────────────────────────────
-// Endpoints:
-//   GET    /api/products              → listar todos los productos del tenant
-//   POST   /api/products              → crear producto
-//   GET    /api/products/:id          → obtener producto por ID
-//   PUT    /api/products/:id          → actualizar producto
-//   DELETE /api/products/:id          → soft-delete (active = false)
-
 export const productsApi = {
   list: () =>
     request<Product[]>('/api/products'),
@@ -128,12 +127,6 @@ export const productsApi = {
 }
 
 // ─── Product Variants ─────────────────────────────────────────────────────────
-// Endpoints:
-//   GET    /api/products/:id/variants                            → listar variantes
-//   POST   /api/products/:id/variants                            → crear variante
-//   PUT    /api/products/:id/variants/:variantId                 → actualizar variante
-//   DELETE /api/products/:id/variants/:variantId                 → soft-delete variante
-
 export const variantsApi = {
   list: (productId: string) =>
     request<ProductVariant[]>(`/api/products/${productId}/variants`),
