@@ -35,7 +35,7 @@ function ProductModal({
   onClose: () => void
   onSaved: (p: Product) => void
 }) {
-  const { showToast } = useToast()
+  const { toast } = useToast()
   const isEdit = mode.kind === 'edit'
 
   const [form, setForm] = useState<CreateProductInput>(
@@ -80,10 +80,10 @@ function ProductModal({
         saved = await productsApi.create(form)
       }
       onSaved(saved)
-      showToast(isEdit ? 'Producto actualizado' : 'Producto creado', 'success')
+      toast(isEdit ? 'Producto actualizado' : 'Producto creado', 'success')
       onClose()
     } catch (err) {
-      showToast(extractErrorMessage(err), 'error')
+      toast(extractErrorMessage(err), 'error')
     } finally {
       setLoading(false)
     }
@@ -194,7 +194,7 @@ function ProductModal({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProductosPage() {
-  const { showToast } = useToast()
+  const { toast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<ModalMode | null>(null)
@@ -206,11 +206,11 @@ export default function ProductosPage() {
       const data = await productsApi.list()
       setProducts(data)
     } catch (err) {
-      showToast(extractErrorMessage(err), 'error')
+      toast(extractErrorMessage(err), 'error')
     } finally {
       setLoading(false)
     }
-  }, [showToast])
+  }, [toast])
 
   useEffect(() => { load() }, [load])
 
@@ -218,10 +218,10 @@ export default function ProductosPage() {
     if (!confirm(`¿Eliminar "${p.name}"?`)) return
     try {
       await productsApi.remove(p.id)
-      showToast('Producto eliminado', 'success')
+      toast('Producto eliminado', 'success')
       setProducts(prev => prev.filter(x => x.id !== p.id))
     } catch (err) {
-      showToast(extractErrorMessage(err), 'error')
+      toast(extractErrorMessage(err), 'error')
     }
   }
 

@@ -39,7 +39,7 @@ function VariantModal({
   onClose: () => void
   onSaved: (v: ProductVariant) => void
 }) {
-  const { showToast } = useToast()
+  const { toast } = useToast()
   const isEdit = mode.kind === 'edit'
 
   const [form, setForm] = useState<CreateVariantInput>(
@@ -70,7 +70,7 @@ function VariantModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     let parsedAttrs: Record<string, string> = {}
-    try { parsedAttrs = JSON.parse(attrRaw) } catch { showToast('JSON de atributos inválido', 'error'); return }
+    try { parsedAttrs = JSON.parse(attrRaw) } catch { toast('JSON de atributos inválido', 'error'); return }
     setLoading(true)
     try {
       const payload = { ...form, attributes: parsedAttrs }
@@ -82,10 +82,10 @@ function VariantModal({
         saved = await variantsApi.create(productId, payload as CreateVariantInput)
       }
       onSaved(saved)
-      showToast(isEdit ? 'Variante actualizada' : 'Variante creada', 'success')
+      toast(isEdit ? 'Variante actualizada' : 'Variante creada', 'success')
       onClose()
     } catch (err) {
-      showToast(extractErrorMessage(err), 'error')
+      toast(extractErrorMessage(err), 'error')
     } finally {
       setLoading(false)
     }
@@ -194,7 +194,7 @@ function VariantModal({
 export default function VariantesPage() {
   const params = useParams()
   const productId = params?.id as string
-  const { showToast } = useToast()
+  const { toast } = useToast()
 
   const [product, setProduct] = useState<Product | null>(null)
   const [variants, setVariants] = useState<ProductVariant[]>([])
@@ -212,11 +212,11 @@ export default function VariantesPage() {
       setProduct(prod)
       setVariants(vars)
     } catch (err) {
-      showToast(extractErrorMessage(err), 'error')
+      toast(extractErrorMessage(err), 'error')
     } finally {
       setLoading(false)
     }
-  }, [productId, showToast])
+  }, [productId, toast])
 
   useEffect(() => { load() }, [load])
 
@@ -224,10 +224,10 @@ export default function VariantesPage() {
     if (!confirm(`¿Eliminar variante "${v.name}"?`)) return
     try {
       await variantsApi.remove(productId, v.id)
-      showToast('Variante eliminada', 'success')
+      toast('Variante eliminada', 'success')
       setVariants(prev => prev.filter(x => x.id !== v.id))
     } catch (err) {
-      showToast(extractErrorMessage(err), 'error')
+      toast(extractErrorMessage(err), 'error')
     }
   }
 
