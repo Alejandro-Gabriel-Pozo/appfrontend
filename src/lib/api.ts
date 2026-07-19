@@ -1,6 +1,10 @@
 'use client'
 
-const BASE = 'https://app-chny.onrender.com'
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
+
+if (!BASE && typeof window !== 'undefined') {
+  console.error('[api] NEXT_PUBLIC_API_URL no está definida. Configurá la variable de entorno en Vercel.')
+}
 
 function getToken(): string {
   if (typeof window === 'undefined') return ''
@@ -25,7 +29,6 @@ async function request<T>(
   const data = await res.json()
 
   if (!res.ok) {
-    // Lanza el objeto de error tal como viene de la API
     throw data
   }
 

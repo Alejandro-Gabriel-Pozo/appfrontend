@@ -1,8 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-
-const BASE = process.env.NEXT_PUBLIC_API_URL || 'https://app-chny.onrender.com'
+import { resourcesApi, reservationsApi } from '@/lib/api'
 
 type Reservation = { id?: string | number; status?: string; created_at?: string; resource_id?: string | number }
 type Resource     = { id?: string | number; name?: string; active?: boolean }
@@ -189,14 +188,12 @@ export default function DashboardHome() {
   const [loading, setLoading]           = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('token') || ''
-    const h = { Authorization: `Bearer ${token}` }
     Promise.all([
-      fetch(`${BASE}/api/reservations`, { headers: h }).then(r => r.json()).catch(() => []),
-      fetch(`${BASE}/api/resources`,    { headers: h }).then(r => r.json()).catch(() => []),
+      reservationsApi.list().catch(() => []),
+      resourcesApi.list().catch(() => []),
     ]).then(([res, rec]) => {
-      setReservations(Array.isArray(res) ? res : (res.data ?? []))
-      setResources(Array.isArray(rec)    ? rec : (rec.data ?? []))
+      setReservations(Array.isArray(res) ? res : [])
+      setResources(Array.isArray(rec) ? rec : [])
     }).finally(() => setLoading(false))
   }, [])
 
