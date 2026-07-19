@@ -1,281 +1,129 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { ToastProvider } from '@/context/ToastContext'
 
 const NAV = [
-  {
-    section: 'Principal',
-    items: [
-      {
-        href: '/dashboard',
-        label: 'Resumen',
-        icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
-      },
-    ],
-  },
-  {
-    section: 'Recursos',
-    items: [
-      {
-        href: '/dashboard/recursos',
-        label: 'Recursos',
-        icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
-      },
-    ],
-  },
-  {
-    section: 'Operaciones',
-    items: [
-      {
-        href: '/dashboard/reservas',
-        label: 'Reservas',
-        icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-      },
-      {
-        href: '/dashboard/reportes',
-        label: 'Reportes',
-        icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-      },
-    ],
-  },
-  {
-    section: 'Sistema',
-    items: [
-      {
-        href: '/dashboard/admin',
-        label: 'Admin',
-        icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
-      },
-    ],
-  },
+  { href: '/dashboard', label: 'Inicio', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { href: '/dashboard/recursos', label: 'Recursos', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
+  { href: '/dashboard/categorias', label: 'Categorías', icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z' },
+  { href: '/dashboard/reservas', label: 'Reservas', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+  { href: '/dashboard/clientes', label: 'Clientes', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
+  { href: '/dashboard/reportes', label: 'Reportes', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+  { href: '/dashboard/admin', label: 'Admin', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
 
-function NavIcon({ d }: { d: string }) {
-  return (
-    <svg className="icon" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24">
-      {d.split(' M').map((seg, i) => (
-        <path key={i} strokeLinecap="round" strokeLinejoin="round" d={i === 0 ? seg : 'M' + seg} />
-      ))}
-    </svg>
-  )
-}
-
-function Sidebar({ onClose }: { onClose?: () => void }) {
-  const pathname = usePathname()
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const [user, setUser] = useState<string | null>(null)
+  const pathname = usePathname()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (!token) return
+    if (!token) { router.push('/login'); return }
     try {
       const payload = JSON.parse(atob(token.split('.')[1]))
-      setUser(payload.email || payload.sub || 'Admin')
-    } catch { setUser('Admin') }
+      setUser({ name: payload.email ?? payload.sub ?? 'Usuario', role: payload.role ?? '' })
+    } catch {}
   }, [])
 
   function logout() {
     localStorage.removeItem('token')
-    router.replace('/login')
+    router.push('/login')
   }
 
-  const initials = user ? user[0].toUpperCase() : 'A'
-
   return (
-    <aside
-      className="flex flex-col h-full"
-      style={{
-        backgroundColor: 'var(--surface-1)',
-        borderRight: '1px solid var(--border)',
-        width: 'var(--sidebar-width)',
-      }}
-    >
-      {/* Logo */}
-      <div
-        className="flex items-center gap-2.5 px-4 py-[14px] shrink-0"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
-        <div
-          className="flex items-center justify-center w-7 h-7 rounded-lg shrink-0"
-          style={{
-            backgroundColor: 'var(--accent-dark)',
-            boxShadow: '0 0 0 1px var(--accent-border)',
-          }}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-            stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8"  y1="2" x2="8"  y2="6" />
-            <line x1="3"  y1="10" x2="21" y2="10" />
-          </svg>
-        </div>
-        <div>
-          <p
-            className="text-[13px] font-semibold leading-tight"
-            style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}
-          >
-            ReservaHub
-          </p>
-          <p className="text-[10px] leading-tight mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-            Panel de control
-          </p>
-        </div>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-2 py-1.5">
-        {NAV.map(group => (
-          <div key={group.section}>
-            <p className="section-title">{group.section}</p>
-            {group.items.map(item => {
-              const isActive = pathname === item.href
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onClose}
-                  className={`sidebar-link${isActive ? ' active' : ''}`}
-                >
-                  <NavIcon d={item.icon} />
-                  <span>{item.label}</span>
-                </Link>
-              )
-            })}
+    <ToastProvider>
+      <div className="flex h-screen bg-[#0f1117] text-slate-200 overflow-hidden">
+        {/* Sidebar */}
+        <aside className={`
+          fixed inset-y-0 left-0 z-40 w-64 bg-[#1a1d27] border-r border-white/[0.06]
+          flex flex-col transition-transform duration-200
+          lg:static lg:translate-x-0
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}>
+          {/* Logo */}
+          <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
+            <svg className="w-7 h-7 text-emerald-400 mr-2.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6.75v6.75" />
+            </svg>
+            <span className="font-semibold text-white tracking-tight">ReservaApp</span>
           </div>
-        ))}
-      </nav>
 
-      {/* User footer */}
-      <div
-        className="shrink-0 px-2 py-2"
-        style={{ borderTop: '1px solid var(--border)' }}
-      >
-        <div
-          className="flex items-center gap-2.5 px-2 py-2 rounded-lg"
-          style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}
-        >
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
-            style={{
-              backgroundColor: 'var(--accent-dim)',
-              border: '1px solid var(--accent-border)',
-              color: 'var(--accent)',
-            }}
-          >
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p
-              className="text-xs font-medium truncate leading-tight"
-              style={{ color: 'var(--text-primary)' }}
+          {/* Nav */}
+          <nav className="flex-1 overflow-y-auto py-4 px-3">
+            <ul className="space-y-0.5">
+              {NAV.map(item => {
+                const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        active
+                          ? 'bg-emerald-500/10 text-emerald-400 font-medium'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                      }`}
+                    >
+                      <svg className="w-4.5 h-4.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                      </svg>
+                      {item.label}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </nav>
+
+          {/* User */}
+          {user && (
+            <div className="p-4 border-t border-white/[0.06]">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs font-bold">
+                  {user.name[0]?.toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-white truncate">{user.name}</p>
+                  <p className="text-xs text-slate-500 capitalize">{user.role.toLowerCase()}</p>
+                </div>
+              </div>
+              <button onClick={logout} className="w-full text-left text-xs text-slate-500 hover:text-red-400 transition-colors">
+                Cerrar sesión
+              </button>
+            </div>
+          )}
+        </aside>
+
+        {/* Overlay mobile */}
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        )}
+
+        {/* Main */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Top bar */}
+          <header className="h-16 flex items-center px-4 lg:px-6 border-b border-white/[0.06] bg-[#0f1117] shrink-0">
+            <button
+              onClick={() => setSidebarOpen(o => !o)}
+              className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors mr-3"
+              aria-label="Menú"
             >
-              {user || 'Admin'}
-            </p>
-            <p className="text-[10px] leading-tight mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-              Administrador
-            </p>
-          </div>
-          <button
-            onClick={logout}
-            title="Cerrar sesión"
-            className="btn-ghost p-1"
-            style={{ borderRadius: '6px' }}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </aside>
-  )
-}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </header>
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const router           = useRouter()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) router.replace('/login')
-  }, [router])
-
-  return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
-
-      {/* Desktop sidebar */}
-      <div
-        className="hidden md:flex md:flex-col shrink-0"
-        style={{ width: 'var(--sidebar-width)' }}
-      >
-        <Sidebar />
-      </div>
-
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-50 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 animate-fade-in"
-            style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
-          />
-          {/* Panel — desliza desde la izquierda */}
-          <div
-            className="absolute left-0 top-0 h-full animate-slide-left"
-            style={{ width: 'var(--sidebar-width)' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <Sidebar onClose={() => setSidebarOpen(false)} />
-          </div>
-        </div>
-      )}
-
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-
-        {/* Mobile topbar */}
-        <header
-          className="md:hidden flex items-center gap-3 px-4 py-3 shrink-0"
-          style={{
-            backgroundColor: 'var(--surface-1)',
-            borderBottom: '1px solid var(--border)',
-          }}
-        >
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="btn-ghost p-1.5"
-            aria-label="Abrir menú"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <line x1="3" y1="6"  x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-          <span
-            className="text-sm font-semibold"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            ReservaHub
-          </span>
-        </header>
-
-        {/* Page content */}
-        <main
-          className="flex-1 overflow-y-auto"
-          style={{ backgroundColor: 'var(--surface-0)' }}
-        >
-          <div className="page-content">
+          {/* Content */}
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
             {children}
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   )
 }
