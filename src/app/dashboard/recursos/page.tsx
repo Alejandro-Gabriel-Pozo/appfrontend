@@ -4,7 +4,7 @@ import { resourcesApi, categoriesApi, extractErrorMessage, extractFieldErrors } 
 import { useToast } from '@/context/ToastContext'
 import type { Resource, Category } from '@/lib/types'
 
-const EMPTY: Omit<Resource, 'id'> = { name: '', categoryId: '', basePrice: 0 }
+const EMPTY: Omit<Resource, 'id'> = { name: '', categoryId: '', basePrice: 0, active: true }
 
 export default function RecursosPage() {
   const { toast } = useToast()
@@ -42,7 +42,7 @@ export default function RecursosPage() {
 
   function openEdit(r: Resource) {
     setEditing(r)
-    setForm({ name: r.name, categoryId: r.categoryId, basePrice: r.basePrice })
+    setForm({ name: r.name, categoryId: r.categoryId, basePrice: r.basePrice, active: r.active })
     setFieldErrors({})
     setModalOpen(true)
   }
