@@ -77,12 +77,7 @@ export interface Product {
   description: string | null
   basePrice: number
   sku: string | null
-  /**
-   * true  → stock y precio se gestionan por variante.
-   * false → stock y precio directamente en el producto.
-   */
   hasVariants: boolean
-  /** Solo relevante cuando hasVariants === false */
   stockQuantity: number
   stockMinAlert: number
   active: boolean
@@ -94,13 +89,8 @@ export interface ProductVariant {
   id: string
   productId: string
   name: string
-  /** Atributos libres: { talle: 'M', color: 'rojo' } */
   attributes: Record<string, string>
   sku: string | null
-  /**
-   * NULL → hereda basePrice del producto padre.
-   * Resuelto siempre en el dominio por ProductService.
-   */
   priceOverride: number | null
   stockQuantity: number
   stockMinAlert: number
@@ -149,4 +139,69 @@ export interface UpdateVariantInput {
   stockQuantity?: number
   stockMinAlert?: number
   active?: boolean
+}
+
+// ─── Orders ──────────────────────────────────────────────────────────────────
+// Sincronizado con domain/order.entities.ts del backend
+
+export type OrderStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
+
+export type OrderItemType = 'PRODUCT' | 'PRODUCT_VARIANT' | 'RESERVATION'
+
+export interface OrderItem {
+  id: string
+  orderId: string
+  itemType: OrderItemType
+  /** FK a products.id — presente para PRODUCT y PRODUCT_VARIANT */
+  productId: string | null
+  /** FK a product_variants.id — presente para PRODUCT_VARIANT */
+  productVariantId: string | null
+  /** FK a reservations.id — presente para RESERVATION */
+  reservationId: string | null
+  quantity: number
+  unitPrice: number
+  /** quantity * unitPrice (snapshot inmutable) */
+  subtotal: number
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Order {
+  id: string
+  businessId: string
+  customerId: string
+  status: OrderStatus
+  totalAmount: number
+  notes: string | null
+  items: OrderItem[]
+  confirmedAt: string | null
+  cancelledAt: string | null
+  completedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateOrderItemInput {
+  itemType: OrderItemType
+  productId?: string | null
+  productVariantId?: string | null
+  reservationId?: string | null
+  quantity: number
+  unitPrice: number
+}
+
+export interface CreateOrderInput {
+  customerId: string
+  notes?: string | null
+  items: CreateOrderItemInput[]
+}
+
+export interface ListOrdersFilters {
+  customerId?: string
+  status?: OrderStatus
+  from?: string
+  to?: string
+  limit?: number
+  offset?: number
 }
