@@ -1,8 +1,10 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { useState } from 'react'
 import { ToastProvider } from '@/context/ToastContext'
+import { useAuth } from '@/context/AuthContext'
 
 const NAV = [
   {
@@ -59,30 +61,26 @@ const PAGE_TITLES: Record<string, string> = {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const router   = useRouter()
+  const router      = useRouter()
   const rawPathname = usePathname()
-  const pathname = rawPathname ?? ''
+  const pathname    = rawPathname ?? ''
+  const { user, token, isLoading, clearToken } = useAuth()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null)
 
+  // Guard: redirige si no hay token (espera a que termine la hidratación)
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) { router.push('/login'); return }
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      setUser({ name: payload.email ?? payload.sub ?? 'Usuario', role: payload.role ?? '' })
-    } catch { router.push('/login') }
-  }, [])
+    if (isLoading) return
+    if (!token) router.push('/login')
+  }, [isLoading, token, router])
 
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
   function logout() {
-    localStorage.removeItem('token')
+    clearToken()
     router.push('/login')
   }
 
-  // Resuelve el título incluso para subrutas (ej: /dashboard/productos/abc/variantes)
   const currentTitle = (() => {
     if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname]
     const match = Object.keys(PAGE_TITLES)
@@ -90,6 +88,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .find(k => pathname.startsWith(k))
     return match ? PAGE_TITLES[match] : 'Dashboard'
   })()
+
+  // Pantalla de carga mientras hidratamos el token
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0c0e14' }}>
+        <span style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid #10b981', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
 
   return (
     <ToastProvider>
@@ -247,11 +255,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       flexShrink: 0,
                     }}
                   >
-                    {user.name[0]?.toUpperCase()}
+                    {user.email[0]?.toUpperCase()}
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontSize: 12, fontWeight: 500, color: '#e2e4ea', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {user.name}
+                      {user.email}
                     </p>
                     <p style={{ fontSize: 10, color: '#4b5563', textTransform: 'capitalize' }}>
                       {user.role.toLowerCase() || 'usuario'}
@@ -321,7 +329,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {/* Hamburger */}
               <button
                 onClick={() => setSidebarOpen(o => !o)}
                 className="sidebar-toggle"
@@ -341,7 +348,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </svg>
               </button>
 
-              {/* Breadcrumb */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 12, color: '#4b5563' }}>Dashboard</span>
                 {pathname !== '/dashboard' && (
@@ -355,7 +361,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             </div>
 
-            {/* Right side */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div
                 style={{
@@ -374,7 +379,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </header>
 
-          {/* Content */}
           <main
             style={{
               flex: 1,
@@ -386,7 +390,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </main>
         </div>
 
-        {/* Estilos globales para sidebar responsive */}
         <style>{`
           @media (max-width: 1023px) {
             .sidebar-desktop {

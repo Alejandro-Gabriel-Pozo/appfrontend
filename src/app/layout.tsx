@@ -1,18 +1,20 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
+import { AuthProvider } from '@/context/AuthContext'
 
 export const metadata: Metadata = {
-  title: 'ReservaHub Admin',
-  description: 'Panel de administración — ReservaHub',
+  title: 'ReservaApp',
+  description: 'Panel de gestión de reservas',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={inter.className}>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   )
 }

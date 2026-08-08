@@ -1,14 +1,10 @@
 'use client'
+import { getTokenImperative } from '@/context/AuthContext'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 if (!BASE && typeof window !== 'undefined') {
   console.error('[api] NEXT_PUBLIC_API_URL no está definida. Configurá la variable de entorno en Vercel.')
-}
-
-function getToken(): string {
-  if (typeof window === 'undefined') return ''
-  return localStorage.getItem('token') ?? ''
 }
 
 async function request<T>(
@@ -19,7 +15,7 @@ async function request<T>(
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${getToken()}`,
+      Authorization: `Bearer ${getTokenImperative()}`,
       ...options?.headers,
     },
   })
@@ -35,7 +31,7 @@ async function request<T>(
   return data as T
 }
 
-// Extrae el primer mensaje de error de campo o mensaje general
+// ─── Error helpers ───────────────────────────────────────────────────────────
 export function extractErrorMessage(err: unknown): string {
   if (typeof err !== 'object' || err === null) return 'Error inesperado'
   const e = err as Record<string, unknown>
@@ -53,7 +49,6 @@ export function extractErrorMessage(err: unknown): string {
   return 'Ocurrió un error'
 }
 
-// Extrae fieldErrors como mapa { campo: mensaje }
 export function extractFieldErrors(err: unknown): Record<string, string> {
   if (typeof err !== 'object' || err === null) return {}
   const e = err as Record<string, unknown>
@@ -65,7 +60,7 @@ export function extractFieldErrors(err: unknown): Record<string, string> {
   )
 }
 
-// ─── Resources ───────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 import type {
   Resource, CreateResourceInput, UpdateResourceInput,
   Category,
@@ -74,6 +69,30 @@ import type {
   Product, ProductVariant, CreateProductInput, UpdateProductInput, CreateVariantInput, UpdateVariantInput,
 } from './types'
 
+// Respuesta paginada genérica
+export interface PaginatedResponse<T> {
+  data: T[]
+  total: number
+  page: number
+  totalPages: number
+}
+
+export interface ReservationFilters {
+  page?: number
+  limit?: number
+  status?: string
+  from?: string   // ISO date
+  to?: string     // ISO date
+}
+
+export interface CustomerListFilters {
+  page?: number
+  limit?: number
+  email?: string
+  search?: string
+}
+
+// ─── Resources ───────────────────────────────────────────────────────────────
 export const resourcesApi = {
   list: () => request<Resource[]>('/api/resources'),
   create: (body: CreateResourceInput) =>
@@ -97,9 +116,26 @@ export const categoriesApi = {
 
 // ─── Reservations ────────────────────────────────────────────────────────────
 export const reservationsApi = {
-  list: () => request<Reservation[]>('/api/reservations'),
+  /**
+   * Lista reservas con paginación y filtros opcionales.
+   * El backend responde { data, total, page, totalPages } cuando recibe ?page=.
+   * Si no se pasa ningún filtro, devuelve array plano (compatibilidad).
+   */
+  list: (filters: ReservationFilters = {}) => {
+    const params = new URLSearchParams()
+    if (filters.page)   params.set('page',   String(filters.page))
+    if (filters.limit)  params.set('limit',  String(filters.limit))
+    if (filters.status) params.set('status', filters.status)
+    if (filters.from)   params.set('from',   filters.from)
+    if (filters.to)     params.set('to',     filters.to)
+    const qs = params.toString()
+    return request<PaginatedResponse<Reservation> | Reservation[]>(`/api/reservations${qs ? `?${qs}` : ''}`)
+  },
+  get: (id: string) => request<Reservation>(`/api/reservations/${id}`),
   create: (body: { resourceId: string; customer: { id: string }; startTime: string; endTime: string; details?: Record<string, unknown> }) =>
     request<Reservation>('/api/reservations', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: { startTime?: string; endTime?: string; details?: Record<string, unknown> }) =>
+    request<Reservation>(`/api/reservations/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   confirm: (id: string) => request<Reservation>(`/api/reservations/${id}/confirm`, { method: 'POST' }),
   cancel: (id: string) => request<Reservation>(`/api/reservations/${id}/cancel`, { method: 'POST' }),
   complete: (id: string) => request<Reservation>(`/api/reservations/${id}/complete`, { method: 'POST' }),
@@ -107,7 +143,17 @@ export const reservationsApi = {
 
 // ─── Customers ───────────────────────────────────────────────────────────────
 export const customersApi = {
-  findByEmail: (email: string) => request<Customer | null>(`/api/customers?email=${encodeURIComponent(email)}`),
+  list: (filters: CustomerListFilters = {}) => {
+    const params = new URLSearchParams()
+    if (filters.page)   params.set('page',   String(filters.page))
+    if (filters.limit)  params.set('limit',  String(filters.limit))
+    if (filters.email)  params.set('email',  filters.email)
+    if (filters.search) params.set('search', filters.search)
+    const qs = params.toString()
+    return request<PaginatedResponse<Customer> | Customer[]>(`/api/customers${qs ? `?${qs}` : ''}`)
+  },
+  findByEmail: (email: string) =>
+    request<Customer | null>(`/api/customers?email=${encodeURIComponent(email)}`),
   create: (body: { fullName: string; email: string }) =>
     request<Customer>('/api/customers', { method: 'POST', body: JSON.stringify(body) }),
 }

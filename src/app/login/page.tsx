@@ -1,11 +1,14 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'https://app-chny.onrender.com'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { setToken } = useAuth()
+
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
@@ -25,7 +28,8 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.message || data.error || 'Credenciales inválidas')
       const token = data.token || data.access_token || data.accessToken
       if (!token) throw new Error('No se recibió token en la respuesta')
-      localStorage.setItem('token', token)
+      // Guardar via AuthContext (memoria + sessionStorage)
+      setToken(token)
       router.replace('/dashboard')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
