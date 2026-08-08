@@ -67,6 +67,7 @@ import type {
   Reservation,
   Customer,
   Product, ProductVariant, CreateProductInput, UpdateProductInput, CreateVariantInput, UpdateVariantInput,
+  Order, OrderItem, CreateOrderInput, ListOrdersFilters,
 } from './types'
 
 // Respuesta paginada genérica
@@ -81,8 +82,8 @@ export interface ReservationFilters {
   page?: number
   limit?: number
   status?: string
-  from?: string   // ISO date
-  to?: string     // ISO date
+  from?: string
+  to?: string
 }
 
 export interface CustomerListFilters {
@@ -116,11 +117,6 @@ export const categoriesApi = {
 
 // ─── Reservations ────────────────────────────────────────────────────────────
 export const reservationsApi = {
-  /**
-   * Lista reservas con paginación y filtros opcionales.
-   * El backend responde { data, total, page, totalPages } cuando recibe ?page=.
-   * Si no se pasa ningún filtro, devuelve array plano (compatibilidad).
-   */
   list: (filters: ReservationFilters = {}) => {
     const params = new URLSearchParams()
     if (filters.page)   params.set('page',   String(filters.page))
@@ -137,8 +133,8 @@ export const reservationsApi = {
   update: (id: string, body: { startTime?: string; endTime?: string; details?: Record<string, unknown> }) =>
     request<Reservation>(`/api/reservations/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   confirm: (id: string) => request<Reservation>(`/api/reservations/${id}/confirm`, { method: 'POST' }),
-  cancel: (id: string) => request<Reservation>(`/api/reservations/${id}/cancel`, { method: 'POST' }),
-  complete: (id: string) => request<Reservation>(`/api/reservations/${id}/complete`, { method: 'POST' }),
+  cancel:  (id: string) => request<Reservation>(`/api/reservations/${id}/cancel`,  { method: 'POST' }),
+  complete:(id: string) => request<Reservation>(`/api/reservations/${id}/complete`,{ method: 'POST' }),
 }
 
 // ─── Customers ───────────────────────────────────────────────────────────────
@@ -182,4 +178,56 @@ export const variantsApi = {
     request<ProductVariant>(`/api/products/${productId}/variants/${variantId}`, { method: 'PUT', body: JSON.stringify(body) }),
   remove: (productId: string, variantId: string) =>
     request<void>(`/api/products/${productId}/variants/${variantId}`, { method: 'DELETE' }),
+}
+
+// ─── Orders ──────────────────────────────────────────────────────────────────
+// Sincronizado con orders.routes.ts del backend
+export const ordersApi = {
+  /**
+   * GET /api/orders
+   * Acepta customerId, status, from, to, limit, offset como query params.
+   * El backend devuelve array plano (sin envoltorio paginado).
+   */
+  list: (filters: ListOrdersFilters = {}) => {
+    const params = new URLSearchParams()
+    if (filters.customerId) params.set('customerId', filters.customerId)
+    if (filters.status)     params.set('status',     filters.status)
+    if (filters.from)       params.set('from',       filters.from)
+    if (filters.to)         params.set('to',         filters.to)
+    if (filters.limit  != null) params.set('limit',  String(filters.limit))
+    if (filters.offset != null) params.set('offset', String(filters.offset))
+    const qs = params.toString()
+    return request<Order[]>(`/api/orders${qs ? `?${qs}` : ''}`)
+  },
+
+  /** GET /api/orders/:id */
+  get: (id: string) => request<Order>(`/api/orders/${id}`),
+
+  /** POST /api/orders — crea orden en estado DRAFT */
+  create: (body: CreateOrderInput) =>
+    request<Order>('/api/orders', { method: 'POST', body: JSON.stringify(body) }),
+
+  /** POST /api/orders/:id/confirm — DRAFT → CONFIRMED */
+  confirm: (id: string) =>
+    request<Order>(`/api/orders/${id}/confirm`, { method: 'POST' }),
+
+  /** POST /api/orders/:id/complete — CONFIRMED → COMPLETED */
+  complete: (id: string) =>
+    request<Order>(`/api/orders/${id}/complete`, { method: 'POST' }),
+
+  /** POST /api/orders/:id/cancel */
+  cancel: (id: string) =>
+    request<Order>(`/api/orders/${id}/cancel`, { method: 'POST' }),
+
+  /** PATCH /api/orders/:id/notes — actualiza notas (solo DRAFT) */
+  updateNotes: (id: string, notes: string | null) =>
+    request<Order>(`/api/orders/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes }) }),
+
+  /** POST /api/orders/:id/items — agrega ítem (solo DRAFT) */
+  addItem: (id: string, body: { itemType: string; productId?: string | null; productVariantId?: string | null; reservationId?: string | null; quantity: number; unitPrice: number }) =>
+    request<OrderItem>(`/api/orders/${id}/items`, { method: 'POST', body: JSON.stringify(body) }),
+
+  /** DELETE /api/orders/:id/items/:itemId — elimina ítem (solo DRAFT) */
+  removeItem: (id: string, itemId: string) =>
+    request<void>(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' }),
 }
