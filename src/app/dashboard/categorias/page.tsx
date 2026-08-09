@@ -1,18 +1,22 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { categoriesApi, extractErrorMessage } from '@/lib/api'
+import { isPlanLimitError, isPlatformUnavailable, getErrorMessage } from '@/lib/apiErrors'
 import { useToast } from '@/context/ToastContext'
+import UpgradePrompt, { type PlanLimitPayload } from '@/components/UpgradePrompt'
 import type { Category } from '@/lib/types'
 
 export default function CategoriasPage() {
   const { toast } = useToast()
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing] = useState<Category | null>(null)
-  const [form, setForm] = useState({ name: '', description: '' })
-  const [submitting, setSubmitting] = useState(false)
+  const [categories, setCategories]   = useState<Category[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [modalOpen, setModalOpen]     = useState(false)
+  const [editing, setEditing]         = useState<Category | null>(null)
+  const [form, setForm]               = useState({ name: '', description: '' })
+  const [submitting, setSubmitting]   = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
+  // Banner 402 — los datos vienen del backend, nunca hardcodeados
+  const [limitErr, setLimitErr]       = useState<PlanLimitPayload | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -44,16 +48,32 @@ export default function CategoriasPage() {
     setSubmitting(true)
     try {
       if (editing) {
+        // UPDATE: no aplica límite de plan
         await categoriesApi.update(editing.id, form)
         toast('Categoría actualizada', 'success')
+        setModalOpen(false)
+        load()
       } else {
+        // CREATE: puede fallar con 402, 503 o error genérico
         await categoriesApi.create({ ...form, fields: [] })
         toast('Categoría creada', 'success')
+        setModalOpen(false)
+        load()
       }
-      setModalOpen(false)
-      load()
     } catch (err) {
-      toast(extractErrorMessage(err), 'error')
+      if (!editing) {
+        // Manejo por code — datos del error vienen del backend
+        if (isPlanLimitError(err)) {
+          setLimitErr({ plan: err.plan, limit: err.limit, resource: 'categorías' })
+          setModalOpen(false) // cierra el modal, el banner queda visible
+        } else if (isPlatformUnavailable(err)) {
+          toast(getErrorMessage(err), 'warning')
+        } else {
+          toast(getErrorMessage(err), 'error')
+        }
+      } else {
+        toast(extractErrorMessage(err), 'error')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -85,6 +105,18 @@ export default function CategoriasPage() {
           Nueva categoría
         </button>
       </div>
+
+      {/* Banner 402 — plan y limit vienen del backend */}
+      {limitErr && (
+        <div className="mb-6">
+          <UpgradePrompt
+            plan={limitErr.plan}
+            limit={limitErr.limit}
+            resource={limitErr.resource}
+            onDismiss={() => setLimitErr(null)}
+          />
+        </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -123,7 +155,7 @@ export default function CategoriasPage() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal crear/editar */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#1a1d27] rounded-xl border border-white/[0.08] w-full max-w-md shadow-2xl">
