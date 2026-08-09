@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { reservationsApi, resourcesApi, customersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import type { PaginatedResponse } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import type { Reservation, Resource, ReservationStatus } from '@/lib/types'
@@ -25,6 +26,11 @@ const ALL_STATUSES: ReservationStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+/** Normaliza la respuesta del API que puede venir paginada o como array plano */
+function toArray<T>(res: PaginatedResponse<T> | T[]): T[] {
+  return Array.isArray(res) ? res : res.data
 }
 
 export default function ReservasPage() {
@@ -52,7 +58,7 @@ export default function ReservasPage() {
         reservationsApi.list(),
         resourcesApi.list(),
       ])
-      setReservations(res)
+      setReservations(toArray(res))
       setResources(recs)
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
