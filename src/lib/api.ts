@@ -4,10 +4,35 @@ import { getTokenImperative } from '@/context/AuthContext'
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 if (!BASE && typeof window !== 'undefined') {
-  console.error('[api] NEXT_PUBLIC_API_URL no está definida. Configurá la variable de entorno en Vercel.')
+  console.error(
+    '[api] NEXT_PUBLIC_API_URL no está definida. Configurá la variable de entorno.',
+  )
 }
 
-async function request<T>(
+// ─── Tipos de error públicos ──────────────────────────────────────────────────
+// Cada code corresponde exactamente al contrato del backend.
+// NO mapear status HTTP aquí — usar e.code en los componentes.
+export type ApiError =
+  | { code: 'PLAN_LIMIT_REACHED'; message: string; plan: string; limit: number }
+  | { code: 'VALIDATION_ERROR';   message: string; errors: ZodFlatErrors }
+  | { code: 'PLATFORM_UNAVAILABLE'; message: string }
+  | { code: 'UNAUTHORIZED' | 'TOKEN_EXPIRED'; message: string }
+  | { code: 'FORBIDDEN'; message: string }
+  | { code: 'NOT_FOUND'; message: string }
+  | { code: 'INTERNAL_ERROR'; message: string }
+  | { code: string; message: string } // fallback para codes futuros
+
+export type ApiErrorWithStatus = ApiError & { httpStatus: number }
+
+export interface ZodFlatErrors {
+  fieldErrors: Record<string, string[]>
+  formErrors:  string[]
+}
+
+// ─── Función central de llamadas ─────────────────────────────────────────────
+// Un solo lugar para fetch, auth header, y manejo de errores.
+// Los componentes hacen switch(e.code) — nunca if(e.httpStatus === 403).
+export async function apiFetch<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
@@ -20,30 +45,52 @@ async function request<T>(
     },
   })
 
+  // 204 No Content — éxito sin cuerpo
   if (res.status === 204) return undefined as T
 
-  const data = await res.json()
+  const body = await res.json().catch(() => ({}))
 
   if (!res.ok) {
-    throw data
+    const err: ApiErrorWithStatus = {
+      code:       body?.code    ?? 'INTERNAL_ERROR',
+      message:    body?.message ?? 'Error inesperado',
+      httpStatus: res.status,
+      ...body,
+    }
+
+    // ── Interceptor global: token expirado o sin autenticación ──
+    // Redirige a /login una sola vez. Los componentes no necesitan
+    // manejar estos codes individualmente salvo que quieran
+    // mostrar un mensaje custom antes del redirect.
+    if (
+      (err.code === 'TOKEN_EXPIRED' || err.code === 'UNAUTHORIZED') &&
+      typeof window !== 'undefined'
+    ) {
+      window.location.href = `/login?reason=${err.code.toLowerCase()}`
+      // Lanzamos igual para que el catch del componente pueda
+      // hacer cleanup (ej: limpiar estado local) antes del redirect.
+    }
+
+    throw err
   }
 
-  return data as T
+  return body as T
 }
 
-// ─── Error helpers ───────────────────────────────────────────────────────────
+// ─── Error helpers ────────────────────────────────────────────────────────────
+// Compatibilidad con componentes que aún usen extractErrorMessage.
 export function extractErrorMessage(err: unknown): string {
   if (typeof err !== 'object' || err === null) return 'Error inesperado'
   const e = err as Record<string, unknown>
   if (e['errors']) {
-    const errors = e['errors'] as Record<string, unknown>
+    const errors     = e['errors'] as Record<string, unknown>
     const fieldErrors = errors['fieldErrors'] as Record<string, string[]> | undefined
     if (fieldErrors) {
       const first = Object.values(fieldErrors).flat()[0]
       if (first) return first
     }
     const formErrors = errors['formErrors'] as string[] | undefined
-    if (formErrors && formErrors.length > 0) return formErrors[0]
+    if (formErrors?.length) return formErrors[0]
   }
   if (typeof e['message'] === 'string') return e['message']
   return 'Ocurrió un error'
@@ -51,26 +98,26 @@ export function extractErrorMessage(err: unknown): string {
 
 export function extractFieldErrors(err: unknown): Record<string, string> {
   if (typeof err !== 'object' || err === null) return {}
-  const e = err as Record<string, unknown>
-  const errors = e['errors'] as Record<string, unknown> | undefined
+  const e          = err as Record<string, unknown>
+  const errors     = e['errors'] as Record<string, unknown> | undefined
   const fieldErrors = errors?.['fieldErrors'] as Record<string, string[]> | undefined
   if (!fieldErrors) return {}
   return Object.fromEntries(
-    Object.entries(fieldErrors).map(([k, v]) => [k, v[0] ?? ''])
+    Object.entries(fieldErrors).map(([k, v]) => [k, v[0] ?? '']),
   )
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 import type {
   Resource, CreateResourceInput, UpdateResourceInput,
   Category,
   Reservation,
   Customer,
-  Product, ProductVariant, CreateProductInput, UpdateProductInput, CreateVariantInput, UpdateVariantInput,
+  Product, ProductVariant, CreateProductInput, UpdateProductInput,
+  CreateVariantInput, UpdateVariantInput,
   Order, OrderItem, CreateOrderInput, ListOrdersFilters,
 } from './types'
 
-// Respuesta paginada genérica
 export interface PaginatedResponse<T> {
   data: T[]
   total: number
@@ -79,43 +126,41 @@ export interface PaginatedResponse<T> {
 }
 
 export interface ReservationFilters {
-  page?: number
-  limit?: number
+  page?:   number
+  limit?:  number
   status?: string
-  from?: string
-  to?: string
+  from?:   string
+  to?:     string
 }
 
 export interface CustomerListFilters {
-  page?: number
-  limit?: number
-  email?: string
+  page?:   number
+  limit?:  number
+  email?:  string
   search?: string
 }
 
-// ─── Resources ───────────────────────────────────────────────────────────────
+// ─── Resources ────────────────────────────────────────────────────────────────
 export const resourcesApi = {
-  list: () => request<Resource[]>('/api/resources'),
-  create: (body: CreateResourceInput) =>
-    request<Resource>('/api/resources', { method: 'POST', body: JSON.stringify(body) }),
+  list:   ()                              => apiFetch<Resource[]>('/api/resources'),
+  create: (body: CreateResourceInput)     => apiFetch<Resource>('/api/resources', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: UpdateResourceInput) =>
-    request<Resource>(`/api/resources/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  remove: (id: string) =>
-    request<void>(`/api/resources/${id}`, { method: 'DELETE' }),
+    apiFetch<Resource>(`/api/resources/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (id: string)                   => apiFetch<void>(`/api/resources/${id}`, { method: 'DELETE' }),
 }
 
-// ─── Categories ──────────────────────────────────────────────────────────────
+// ─── Categories ───────────────────────────────────────────────────────────────
 export const categoriesApi = {
-  list: () => request<Category[]>('/api/categories'),
+  list: () => apiFetch<Category[]>('/api/categories'),
   create: (body: { name: string; description?: string; fields: Category['fields'] }) =>
-    request<Category>('/api/categories', { method: 'POST', body: JSON.stringify(body) }),
+    apiFetch<Category>('/api/categories', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: Partial<{ name: string; description: string; fields: Category['fields']; active: boolean }>) =>
-    request<Category>(`/api/categories/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    apiFetch<Category>(`/api/categories/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   remove: (id: string) =>
-    request<void>(`/api/categories/${id}`, { method: 'DELETE' }),
+    apiFetch<void>(`/api/categories/${id}`, { method: 'DELETE' }),
 }
 
-// ─── Reservations ────────────────────────────────────────────────────────────
+// ─── Reservations ─────────────────────────────────────────────────────────────
 export const reservationsApi = {
   list: (filters: ReservationFilters = {}) => {
     const params = new URLSearchParams()
@@ -125,19 +170,21 @@ export const reservationsApi = {
     if (filters.from)   params.set('from',   filters.from)
     if (filters.to)     params.set('to',     filters.to)
     const qs = params.toString()
-    return request<PaginatedResponse<Reservation> | Reservation[]>(`/api/reservations${qs ? `?${qs}` : ''}`)
+    return apiFetch<PaginatedResponse<Reservation> | Reservation[]>(
+      `/api/reservations${qs ? `?${qs}` : ''}`,
+    )
   },
-  get: (id: string) => request<Reservation>(`/api/reservations/${id}`),
+  get:      (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}`),
   create: (body: { resourceId: string; customer: { id: string }; startTime: string; endTime: string; details?: Record<string, unknown> }) =>
-    request<Reservation>('/api/reservations', { method: 'POST', body: JSON.stringify(body) }),
+    apiFetch<Reservation>('/api/reservations', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: { startTime?: string; endTime?: string; details?: Record<string, unknown> }) =>
-    request<Reservation>(`/api/reservations/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  confirm: (id: string) => request<Reservation>(`/api/reservations/${id}/confirm`, { method: 'POST' }),
-  cancel:  (id: string) => request<Reservation>(`/api/reservations/${id}/cancel`,  { method: 'POST' }),
-  complete:(id: string) => request<Reservation>(`/api/reservations/${id}/complete`,{ method: 'POST' }),
+    apiFetch<Reservation>(`/api/reservations/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  confirm:  (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/confirm`,  { method: 'POST' }),
+  cancel:   (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/cancel`,   { method: 'POST' }),
+  complete: (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/complete`, { method: 'POST' }),
 }
 
-// ─── Customers ───────────────────────────────────────────────────────────────
+// ─── Customers ────────────────────────────────────────────────────────────────
 export const customersApi = {
   list: (filters: CustomerListFilters = {}) => {
     const params = new URLSearchParams()
@@ -146,88 +193,60 @@ export const customersApi = {
     if (filters.email)  params.set('email',  filters.email)
     if (filters.search) params.set('search', filters.search)
     const qs = params.toString()
-    return request<PaginatedResponse<Customer> | Customer[]>(`/api/customers${qs ? `?${qs}` : ''}`)
+    return apiFetch<PaginatedResponse<Customer> | Customer[]>(
+      `/api/customers${qs ? `?${qs}` : ''}`,
+    )
   },
   findByEmail: (email: string) =>
-    request<Customer | null>(`/api/customers?email=${encodeURIComponent(email)}`),
+    apiFetch<Customer | null>(`/api/customers?email=${encodeURIComponent(email)}`),
   create: (body: { fullName: string; email: string }) =>
-    request<Customer>('/api/customers', { method: 'POST', body: JSON.stringify(body) }),
+    apiFetch<Customer>('/api/customers', { method: 'POST', body: JSON.stringify(body) }),
 }
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 export const productsApi = {
-  list: () =>
-    request<Product[]>('/api/products'),
-  get: (id: string) =>
-    request<Product>(`/api/products/${id}`),
-  create: (body: CreateProductInput) =>
-    request<Product>('/api/products', { method: 'POST', body: JSON.stringify(body) }),
+  list:   ()                          => apiFetch<Product[]>('/api/products'),
+  get:    (id: string)                => apiFetch<Product>(`/api/products/${id}`),
+  create: (body: CreateProductInput)  => apiFetch<Product>('/api/products', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: UpdateProductInput) =>
-    request<Product>(`/api/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  remove: (id: string) =>
-    request<void>(`/api/products/${id}`, { method: 'DELETE' }),
+    apiFetch<Product>(`/api/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (id: string)                => apiFetch<void>(`/api/products/${id}`, { method: 'DELETE' }),
 }
 
 // ─── Product Variants ─────────────────────────────────────────────────────────
 export const variantsApi = {
   list: (productId: string) =>
-    request<ProductVariant[]>(`/api/products/${productId}/variants`),
+    apiFetch<ProductVariant[]>(`/api/products/${productId}/variants`),
   create: (productId: string, body: CreateVariantInput) =>
-    request<ProductVariant>(`/api/products/${productId}/variants`, { method: 'POST', body: JSON.stringify(body) }),
+    apiFetch<ProductVariant>(`/api/products/${productId}/variants`, { method: 'POST', body: JSON.stringify(body) }),
   update: (productId: string, variantId: string, body: UpdateVariantInput) =>
-    request<ProductVariant>(`/api/products/${productId}/variants/${variantId}`, { method: 'PUT', body: JSON.stringify(body) }),
+    apiFetch<ProductVariant>(`/api/products/${productId}/variants/${variantId}`, { method: 'PUT', body: JSON.stringify(body) }),
   remove: (productId: string, variantId: string) =>
-    request<void>(`/api/products/${productId}/variants/${variantId}`, { method: 'DELETE' }),
+    apiFetch<void>(`/api/products/${productId}/variants/${variantId}`, { method: 'DELETE' }),
 }
 
-// ─── Orders ──────────────────────────────────────────────────────────────────
-// Sincronizado con orders.routes.ts del backend
+// ─── Orders ───────────────────────────────────────────────────────────────────
 export const ordersApi = {
-  /**
-   * GET /api/orders
-   * Acepta customerId, status, from, to, limit, offset como query params.
-   * El backend devuelve array plano (sin envoltorio paginado).
-   */
   list: (filters: ListOrdersFilters = {}) => {
     const params = new URLSearchParams()
-    if (filters.customerId) params.set('customerId', filters.customerId)
-    if (filters.status)     params.set('status',     filters.status)
-    if (filters.from)       params.set('from',       filters.from)
-    if (filters.to)         params.set('to',         filters.to)
-    if (filters.limit  != null) params.set('limit',  String(filters.limit))
-    if (filters.offset != null) params.set('offset', String(filters.offset))
+    if (filters.customerId)     params.set('customerId', filters.customerId)
+    if (filters.status)         params.set('status',     filters.status)
+    if (filters.from)           params.set('from',       filters.from)
+    if (filters.to)             params.set('to',         filters.to)
+    if (filters.limit  != null) params.set('limit',      String(filters.limit))
+    if (filters.offset != null) params.set('offset',     String(filters.offset))
     const qs = params.toString()
-    return request<Order[]>(`/api/orders${qs ? `?${qs}` : ''}`)
+    return apiFetch<Order[]>(`/api/orders${qs ? `?${qs}` : ''}`)
   },
-
-  /** GET /api/orders/:id */
-  get: (id: string) => request<Order>(`/api/orders/${id}`),
-
-  /** POST /api/orders — crea orden en estado DRAFT */
-  create: (body: CreateOrderInput) =>
-    request<Order>('/api/orders', { method: 'POST', body: JSON.stringify(body) }),
-
-  /** POST /api/orders/:id/confirm — DRAFT → CONFIRMED */
-  confirm: (id: string) =>
-    request<Order>(`/api/orders/${id}/confirm`, { method: 'POST' }),
-
-  /** POST /api/orders/:id/complete — CONFIRMED → COMPLETED */
-  complete: (id: string) =>
-    request<Order>(`/api/orders/${id}/complete`, { method: 'POST' }),
-
-  /** POST /api/orders/:id/cancel */
-  cancel: (id: string) =>
-    request<Order>(`/api/orders/${id}/cancel`, { method: 'POST' }),
-
-  /** PATCH /api/orders/:id/notes — actualiza notas (solo DRAFT) */
+  get:         (id: string)                    => apiFetch<Order>(`/api/orders/${id}`),
+  create:      (body: CreateOrderInput)        => apiFetch<Order>('/api/orders', { method: 'POST', body: JSON.stringify(body) }),
+  confirm:     (id: string)                    => apiFetch<Order>(`/api/orders/${id}/confirm`,  { method: 'POST' }),
+  complete:    (id: string)                    => apiFetch<Order>(`/api/orders/${id}/complete`, { method: 'POST' }),
+  cancel:      (id: string)                    => apiFetch<Order>(`/api/orders/${id}/cancel`,   { method: 'POST' }),
   updateNotes: (id: string, notes: string | null) =>
-    request<Order>(`/api/orders/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes }) }),
-
-  /** POST /api/orders/:id/items — agrega ítem (solo DRAFT) */
+    apiFetch<Order>(`/api/orders/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes }) }),
   addItem: (id: string, body: { itemType: string; productId?: string | null; productVariantId?: string | null; reservationId?: string | null; quantity: number; unitPrice: number }) =>
-    request<OrderItem>(`/api/orders/${id}/items`, { method: 'POST', body: JSON.stringify(body) }),
-
-  /** DELETE /api/orders/:id/items/:itemId — elimina ítem (solo DRAFT) */
+    apiFetch<OrderItem>(`/api/orders/${id}/items`, { method: 'POST', body: JSON.stringify(body) }),
   removeItem: (id: string, itemId: string) =>
-    request<void>(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' }),
+    apiFetch<void>(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' }),
 }
