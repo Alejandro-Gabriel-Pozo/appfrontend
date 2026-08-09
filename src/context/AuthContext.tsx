@@ -32,9 +32,9 @@ function parseJwt(token: string): AuthUser | null {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
     return {
-      email: payload.email ?? payload.sub ?? 'Usuario',
-      role: payload.role ?? '',
-      businessId: payload.businessId,
+      email:      payload.email ?? payload.sub ?? 'Usuario',
+      role:       payload.role ?? '',
+      businessId: payload.business_id,  // ✅ snake_case — así lo firma el backend
     }
   } catch {
     return null
