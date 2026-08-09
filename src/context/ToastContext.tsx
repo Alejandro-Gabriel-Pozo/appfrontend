@@ -1,7 +1,7 @@
 'use client'
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 
-type ToastType = 'success' | 'error' | 'info'
+export type ToastType = 'success' | 'error' | 'info' | 'warning'
 
 interface Toast {
   id: number
@@ -31,18 +31,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      {/* Renderer */}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none" aria-live="polite">
         {toasts.map(t => (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm font-medium max-w-xs animate-slide-in
-              ${
-                t.type === 'success' ? 'bg-emerald-600 text-white' :
-                t.type === 'error'   ? 'bg-red-600 text-white' :
-                                       'bg-slate-700 text-white'
-              }`
-            }
+            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm font-medium max-w-xs animate-slide-in ${
+              t.type === 'success' ? 'bg-emerald-600 text-white' :
+              t.type === 'error'   ? 'bg-red-600 text-white'     :
+              t.type === 'warning' ? 'bg-amber-600 text-white'   :
+                                     'bg-slate-700 text-white'
+            }`}
           >
             {t.type === 'success' && (
               <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -52,6 +50,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             {t.type === 'error' && (
               <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            {t.type === 'warning' && (
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
               </svg>
             )}
             {t.type === 'info' && (
