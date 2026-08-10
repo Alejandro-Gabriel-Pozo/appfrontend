@@ -250,3 +250,42 @@ export const ordersApi = {
   removeItem: (id: string, itemId: string) =>
     apiFetch<void>(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' }),
 }
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+export interface OccupancyReport {
+  resourceId:   string
+  resourceName: string
+  totalSlots:   number
+  bookedSlots:  number
+  occupancyPct: number
+}
+
+export interface OccupancySummary {
+  from:      string
+  to:        string
+  topResources: OccupancyReport[]
+}
+
+export interface UnderutilizedResource {
+  resourceId:   string
+  resourceName: string
+  occupancyPct: number
+}
+
+export const reportsApi = {
+  /** Reporte de ocupación por recurso en un rango de fechas */
+  occupancy: (from: string, to: string) => {
+    const params = new URLSearchParams({ from, to })
+    return apiFetch<OccupancyReport[]>(`/api/reports/occupancy?${params}`)
+  },
+  /** Resumen general de ocupación (top N recursos) */
+  summary: (from: string, to: string, limit = 5) => {
+    const params = new URLSearchParams({ from, to, limit: String(limit) })
+    return apiFetch<OccupancySummary>(`/api/reports/occupancy/summary?${params}`)
+  },
+  /** Recursos con ocupación por debajo del threshold (%) */
+  underutilized: (from: string, to: string, threshold = 30) => {
+    const params = new URLSearchParams({ from, to, threshold: String(threshold) })
+    return apiFetch<UnderutilizedResource[]>(`/api/reports/underutilized?${params}`)
+  },
+}
