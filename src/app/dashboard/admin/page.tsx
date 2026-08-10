@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
-
-const BASE = 'https://app-chny.onrender.com'
+import { apiFetch } from '@/lib/api'
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(false)
@@ -17,16 +16,19 @@ export default function AdminPage() {
     setLoading(true)
     setResult(null)
     try {
-      const res = await fetch(`${BASE}/api/admin/repair-tenant-db`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      })
-      const data = await res.json()
-      setResult({ status: res.status, data })
-      if (res.ok) showToast('Base de datos activada correctamente', 'success')
-      else showToast(`Error ${res.status}: ${(data as {message?:string}).message || 'Error desconocido'}`, 'error')
-    } catch (e) {
-      showToast('Error de conexión', 'error')
+      const data = await apiFetch<unknown>('/api/admin/repair-tenant-db', { method: 'POST' })
+      setResult({ status: 200, data })
+      showToast('Base de datos activada correctamente', 'success')
+    } catch (e: unknown) {
+      const err = e as { httpStatus?: number; message?: string }
+      const status = err.httpStatus ?? 500
+      setResult({ status, data: e })
+      showToast(
+        status >= 400
+          ? `Error ${status}: ${err.message ?? 'Error desconocido'}`
+          : 'Error de conexión',
+        'error',
+      )
     } finally {
       setLoading(false)
     }

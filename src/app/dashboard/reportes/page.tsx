@@ -1,8 +1,7 @@
 'use client'
 import { useState } from 'react'
 import ApiSection from '@/components/ApiSection'
-
-const BASE = 'https://app-chny.onrender.com'
+import { apiFetch } from '@/lib/api'
 
 export default function ReportesPage() {
   const [occStart, setOccStart] = useState('')
@@ -29,8 +28,8 @@ export default function ReportesPage() {
           endpoint="/api/reports/occupancy"
           onSubmit={async () => {
             const params = new URLSearchParams({ startDate: occStart, endDate: occEnd })
-            const res = await fetch(`${BASE}/api/reports/occupancy?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-            return { status: res.status, data: await res.json() }
+            const data = await apiFetch<unknown>(`/api/reports/occupancy?${params}`)
+            return { status: 200, data }
           }}
           formContent={
             <div className="grid grid-cols-2 gap-3">
@@ -42,11 +41,11 @@ export default function ReportesPage() {
 
         <ApiSection
           method="GET" title="Resumen general"
-          endpoint="/api/reports/summary"
+          endpoint="/api/reports/occupancy/summary"
           onSubmit={async () => {
             const params = new URLSearchParams({ startDate: sumStart, endDate: sumEnd, limit: sumLimit })
-            const res = await fetch(`${BASE}/api/reports/summary?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-            return { status: res.status, data: await res.json() }
+            const data = await apiFetch<unknown>(`/api/reports/occupancy/summary?${params}`)
+            return { status: 200, data }
           }}
           formContent={
             <div className="space-y-3">
@@ -64,8 +63,8 @@ export default function ReportesPage() {
           endpoint="/api/reports/underutilized"
           onSubmit={async () => {
             const params = new URLSearchParams({ startDate: underStart, endDate: underEnd, threshold })
-            const res = await fetch(`${BASE}/api/reports/underutilized?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-            return { status: res.status, data: await res.json() }
+            const data = await apiFetch<unknown>(`/api/reports/underutilized?${params}`)
+            return { status: 200, data }
           }}
           formContent={
             <div className="space-y-3">
