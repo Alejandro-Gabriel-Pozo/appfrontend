@@ -2,9 +2,17 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 
 // ─── Token store en memoria (no localStorage) ────────────────────────────────
-// Usamos una variable de módulo como singleton para que getTokenImperative()
-// funcione fuera del árbol de React (ej: api.ts)
-let _memoryToken = ''
+// Inicialización sincrónica al cargar el módulo: evita la ventana de tiempo
+// entre el primer render y el useEffect de hidratación donde _memoryToken
+// está vacío y los fetches del layout llegan sin token.
+let _memoryToken = (() => {
+  if (typeof window === 'undefined') return '' // SSR — no hay sessionStorage
+  try {
+    return sessionStorage.getItem('_rh_token') ?? ''
+  } catch {
+    return '' // iframe sandbox sin acceso a sessionStorage
+  }
+})()
 
 export function getTokenImperative(): string {
   return _memoryToken
@@ -43,17 +51,21 @@ function parseJwt(token: string): AuthUser | null {
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setTokenState] = useState('')
-  const [user, setUser] = useState<AuthUser | null>(null)
-  // isLoading evita el flash de redirect mientras hidratamos desde sessionStorage
-  const [isLoading, setIsLoading] = useState(true)
+  // El estado inicial toma el token ya hidratado sincrónicamente
+  const [token, setTokenState] = useState(_memoryToken)
+  const [user, setUser] = useState<AuthUser | null>(() =>
+    _memoryToken ? parseJwt(_memoryToken) : null,
+  )
+  // isLoading: false de entrada si ya teniamos token, true solo si no habia nada
+  // (para evitar flash de redirect en usuarios ya autenticados)
+  const [isLoading, setIsLoading] = useState(!_memoryToken)
 
-  // Hidratación inicial: sessionStorage es más seguro que localStorage
-  // (no persiste entre pestañas y tiene scope de sesión)
+  // Sincronización de seguridad: por si sessionStorage cambia en otra pestaña
+  // (storage event) o si el IIFE de arriba falló silenciosamente
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem('_rh_token') ?? ''
-      if (stored) {
+      if (stored && stored !== _memoryToken) {
         _memoryToken = stored
         setTokenState(stored)
         setUser(parseJwt(stored))
