@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
+import { apiFetch } from '@/lib/api'
 
 type InputDef = {
   key: string
@@ -33,7 +34,7 @@ const BTN_COLOR: Record<string, string> = {
 }
 
 export default function ApiBlock({
-  method, label, buildUrl, buildBody, inputs = [], noAuth = false, onToken,
+  method, label, buildUrl, buildBody, inputs = [], onToken,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -47,25 +48,20 @@ export default function ApiBlock({
     setLoading(true)
     setResponse(null)
     try {
-      const url = buildUrl(vals.current)
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (!noAuth) {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-        if (token) headers['Authorization'] = `Bearer ${token}`
-      }
-      const options: RequestInit = { method, headers }
-      if (buildBody && method !== 'GET') {
-        options.body = JSON.stringify(buildBody(vals.current))
-      }
-      const res = await fetch(url, options)
-      let body: unknown
-      try { body = await res.json() } catch { body = await res.text() }
+      const path = buildUrl(vals.current).replace(/^https?:\/\/[^/]+/, '')
+      const body = await apiFetch<unknown>(path, {
+        method,
+        ...(buildBody && method !== 'GET' && {
+          body: JSON.stringify(buildBody(vals.current)),
+        }),
+      })
       if (onToken && typeof body === 'object' && body !== null && 'token' in body) {
         onToken((body as Record<string, string>).token)
       }
-      setResponse({ status: res.status, body })
-    } catch (e) {
-      setResponse({ status: 0, body: { error: String(e) } })
+      setResponse({ status: 200, body })
+    } catch (e: unknown) {
+      const err = e as { httpStatus?: number; message?: string }
+      setResponse({ status: err.httpStatus ?? 0, body: e })
     } finally {
       setLoading(false)
     }
