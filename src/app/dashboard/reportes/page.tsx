@@ -6,9 +6,14 @@ import { apiFetch } from '@/lib/api'
 export default function ReportesPage() {
   const [occFrom, setOccFrom] = useState('')
   const [occTo, setOccTo] = useState('')
+
   const [sumFrom, setSumFrom] = useState('')
   const [sumTo, setSumTo] = useState('')
   const [sumLimit, setSumLimit] = useState('5')
+
+  const [catFrom, setCatFrom] = useState('')
+  const [catTo, setCatTo] = useState('')
+
   const [underFrom, setUnderFrom] = useState('')
   const [underTo, setUnderTo] = useState('')
   const [threshold, setThreshold] = useState('30')
@@ -18,7 +23,7 @@ export default function ReportesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Reportes</h1>
-          <p className="page-subtitle">Ocupación, resumen y recursos subutilizados</p>
+          <p className="page-subtitle">Ocupación, resumen, categorías y recursos subutilizados</p>
         </div>
       </div>
 
@@ -59,11 +64,27 @@ export default function ReportesPage() {
         />
 
         <ApiSection
+          method="GET" title="Ocupación por categoría"
+          endpoint="/api/reports/occupancy/by-category"
+          onSubmit={async () => {
+            const params = new URLSearchParams({ from: catFrom, to: catTo })
+            const data = await apiFetch<unknown>(`/api/reports/occupancy/by-category?${params}`)
+            return { status: 200, data }
+          }}
+          formContent={
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="label">Desde</label><input type="datetime-local" value={catFrom} onChange={e => setCatFrom(e.target.value)} className="input" /></div>
+              <div><label className="label">Hasta</label><input type="datetime-local" value={catTo} onChange={e => setCatTo(e.target.value)} className="input" /></div>
+            </div>
+          }
+        />
+
+        <ApiSection
           method="GET" title="Recursos subutilizados"
-          endpoint="/api/reports/underutilized"
+          endpoint="/api/reports/occupancy/underutilized"
           onSubmit={async () => {
             const params = new URLSearchParams({ from: underFrom, to: underTo, threshold })
-            const data = await apiFetch<unknown>(`/api/reports/underutilized?${params}`)
+            const data = await apiFetch<unknown>(`/api/reports/occupancy/underutilized?${params}`)
             return { status: 200, data }
           }}
           formContent={
