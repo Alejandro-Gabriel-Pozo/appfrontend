@@ -10,8 +10,6 @@ if (!BASE && typeof window !== 'undefined') {
 }
 
 // ─── Tipos de error públicos ──────────────────────────────────────────────────
-// Cada code corresponde exactamente al contrato del backend.
-// NO mapear status HTTP aquí — usar e.code en los componentes.
 export type ApiError =
   | { code: 'PLAN_LIMIT_REACHED'; message: string; plan: string; limit: number }
   | { code: 'VALIDATION_ERROR';   message: string; errors: ZodFlatErrors }
@@ -20,7 +18,7 @@ export type ApiError =
   | { code: 'FORBIDDEN'; message: string }
   | { code: 'NOT_FOUND'; message: string }
   | { code: 'INTERNAL_ERROR'; message: string }
-  | { code: string; message: string } // fallback para codes futuros
+  | { code: string; message: string }
 
 export type ApiErrorWithStatus = ApiError & { httpStatus: number }
 
@@ -29,56 +27,88 @@ export interface ZodFlatErrors {
   formErrors:  string[]
 }
 
+// ─── Retry con backoff exponencial para cold starts de Render (503) ───────────
+// Solo reintenta en 503 (Service Unavailable) y errores de red.
+// No reintenta en 4xx (errores del cliente) ni en mutaciones peligrosas.
+const RETRYABLE_METHODS = new Set(['GET', 'HEAD'])
+const MAX_RETRIES = 3
+const BASE_DELAY_MS = 1_500  // 1.5s → 3s → 6s
+
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 // ─── Función central de llamadas ─────────────────────────────────────────────
-// Un solo lugar para fetch, auth header, y manejo de errores.
-// Los componentes hacen switch(e.code) — nunca if(e.httpStatus === 403).
 export async function apiFetch<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${getTokenImperative()}`,
-      ...options?.headers,
-    },
-  })
+  const method = (options?.method ?? 'GET').toUpperCase()
+  const canRetry = RETRYABLE_METHODS.has(method)
 
-  // 204 No Content — éxito sin cuerpo
-  if (res.status === 204) return undefined as T
+  let attempt = 0
 
-  const body = await res.json().catch(() => ({}))
-
-  if (!res.ok) {
-    const err: ApiErrorWithStatus = {
-      code:       body?.code    ?? 'INTERNAL_ERROR',
-      message:    body?.message ?? 'Error inesperado',
-      httpStatus: res.status,
-      ...body,
+  while (true) {
+    let res: Response
+    try {
+      res = await fetch(`${BASE}${path}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getTokenImperative()}`,
+          ...options?.headers,
+        },
+      })
+    } catch (networkErr) {
+      // Error de red (offline, ECONNREFUSED, etc.)
+      if (canRetry && attempt < MAX_RETRIES) {
+        attempt++
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1)
+        console.warn(`[api] Error de red en ${path} — reintento ${attempt}/${MAX_RETRIES} en ${delay}ms`)
+        await sleep(delay)
+        continue
+      }
+      throw networkErr
     }
 
-    // ── Interceptor global: token expirado o sin autenticación ──
-    // Redirige a /login una sola vez. Los componentes no necesitan
-    // manejar estos codes individualmente salvo que quieran
-    // mostrar un mensaje custom antes del redirect.
-    if (
-      (err.code === 'TOKEN_EXPIRED' || err.code === 'UNAUTHORIZED') &&
-      typeof window !== 'undefined'
-    ) {
-      window.location.href = `/login?reason=${err.code.toLowerCase()}`
-      // Lanzamos igual para que el catch del componente pueda
-      // hacer cleanup (ej: limpiar estado local) antes del redirect.
+    // 503 Service Unavailable — Render cold start
+    if (res.status === 503 && canRetry && attempt < MAX_RETRIES) {
+      attempt++
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1)
+      console.warn(`[api] 503 en ${path} — reintento ${attempt}/${MAX_RETRIES} en ${delay}ms (cold start)`)
+      await sleep(delay)
+      continue
     }
 
-    throw err
+    // 204 No Content — éxito sin cuerpo
+    if (res.status === 204) return undefined as T
+
+    const body = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      const err: ApiErrorWithStatus = {
+        code:       body?.code    ?? 'INTERNAL_ERROR',
+        message:    body?.message ?? 'Error inesperado',
+        httpStatus: res.status,
+        ...body,
+      }
+
+      // Interceptor global: token expirado o sin autenticación
+      if (
+        (err.code === 'TOKEN_EXPIRED' || err.code === 'UNAUTHORIZED') &&
+        typeof window !== 'undefined'
+      ) {
+        window.location.href = `/login?reason=${err.code.toLowerCase()}`
+      }
+
+      throw err
+    }
+
+    return body as T
   }
-
-  return body as T
 }
 
 // ─── Error helpers ────────────────────────────────────────────────────────────
-// Compatibilidad con componentes que aún usen extractErrorMessage.
 export function extractErrorMessage(err: unknown): string {
   if (typeof err !== 'object' || err === null) return 'Error inesperado'
   const e = err as Record<string, unknown>
@@ -103,7 +133,7 @@ export function extractFieldErrors(err: unknown): Record<string, string> {
   const fieldErrors = errors?.['fieldErrors'] as Record<string, string[]> | undefined
   if (!fieldErrors) return {}
   return Object.fromEntries(
-    Object.entries(fieldErrors).map(([k, v]) => [k, v[0] ?? '']),
+    Object.entries(fieldErrors).map(([k, v]) => [k, v[0] ?? ''])
   )
 }
 
@@ -273,17 +303,14 @@ export interface UnderutilizedResource {
 }
 
 export const reportsApi = {
-  /** Reporte de ocupación por recurso en un rango de fechas */
   occupancy: (from: string, to: string) => {
     const params = new URLSearchParams({ from, to })
     return apiFetch<OccupancyReport[]>(`/api/reports/occupancy?${params}`)
   },
-  /** Resumen general de ocupación (top N recursos) */
   summary: (from: string, to: string, limit = 5) => {
     const params = new URLSearchParams({ from, to, limit: String(limit) })
     return apiFetch<OccupancySummary>(`/api/reports/occupancy/summary?${params}`)
   },
-  /** Recursos con ocupación por debajo del threshold (%) */
   underutilized: (from: string, to: string, threshold = 30) => {
     const params = new URLSearchParams({ from, to, threshold: String(threshold) })
     return apiFetch<UnderutilizedResource[]>(`/api/reports/underutilized?${params}`)
