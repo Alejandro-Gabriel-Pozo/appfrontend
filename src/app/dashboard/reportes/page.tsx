@@ -4,13 +4,13 @@ import ApiSection from '@/components/ApiSection'
 import { apiFetch } from '@/lib/api'
 
 export default function ReportesPage() {
-  const [occStart, setOccStart] = useState('')
-  const [occEnd, setOccEnd] = useState('')
-  const [sumStart, setSumStart] = useState('')
-  const [sumEnd, setSumEnd] = useState('')
+  const [occFrom, setOccFrom] = useState('')
+  const [occTo, setOccTo] = useState('')
+  const [sumFrom, setSumFrom] = useState('')
+  const [sumTo, setSumTo] = useState('')
   const [sumLimit, setSumLimit] = useState('5')
-  const [underStart, setUnderStart] = useState('')
-  const [underEnd, setUnderEnd] = useState('')
+  const [underFrom, setUnderFrom] = useState('')
+  const [underTo, setUnderTo] = useState('')
   const [threshold, setThreshold] = useState('30')
 
   return (
@@ -27,14 +27,14 @@ export default function ReportesPage() {
           method="GET" title="Reporte de ocupación"
           endpoint="/api/reports/occupancy"
           onSubmit={async () => {
-            const params = new URLSearchParams({ startDate: occStart, endDate: occEnd })
+            const params = new URLSearchParams({ from: occFrom, to: occTo })
             const data = await apiFetch<unknown>(`/api/reports/occupancy?${params}`)
             return { status: 200, data }
           }}
           formContent={
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="label">Desde</label><input type="datetime-local" value={occStart} onChange={e => setOccStart(e.target.value)} className="input" /></div>
-              <div><label className="label">Hasta</label><input type="datetime-local" value={occEnd} onChange={e => setOccEnd(e.target.value)} className="input" /></div>
+              <div><label className="label">Desde</label><input type="datetime-local" value={occFrom} onChange={e => setOccFrom(e.target.value)} className="input" /></div>
+              <div><label className="label">Hasta</label><input type="datetime-local" value={occTo} onChange={e => setOccTo(e.target.value)} className="input" /></div>
             </div>
           }
         />
@@ -43,15 +43,15 @@ export default function ReportesPage() {
           method="GET" title="Resumen general"
           endpoint="/api/reports/occupancy/summary"
           onSubmit={async () => {
-            const params = new URLSearchParams({ startDate: sumStart, endDate: sumEnd, limit: sumLimit })
+            const params = new URLSearchParams({ from: sumFrom, to: sumTo, limit: sumLimit })
             const data = await apiFetch<unknown>(`/api/reports/occupancy/summary?${params}`)
             return { status: 200, data }
           }}
           formContent={
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="label">Desde</label><input type="datetime-local" value={sumStart} onChange={e => setSumStart(e.target.value)} className="input" /></div>
-                <div><label className="label">Hasta</label><input type="datetime-local" value={sumEnd} onChange={e => setSumEnd(e.target.value)} className="input" /></div>
+                <div><label className="label">Desde</label><input type="datetime-local" value={sumFrom} onChange={e => setSumFrom(e.target.value)} className="input" /></div>
+                <div><label className="label">Hasta</label><input type="datetime-local" value={sumTo} onChange={e => setSumTo(e.target.value)} className="input" /></div>
               </div>
               <div><label className="label">Límite de resultados</label><input type="number" value={sumLimit} onChange={e => setSumLimit(e.target.value)} min={1} max={100} className="input" /></div>
             </div>
@@ -62,15 +62,15 @@ export default function ReportesPage() {
           method="GET" title="Recursos subutilizados"
           endpoint="/api/reports/underutilized"
           onSubmit={async () => {
-            const params = new URLSearchParams({ startDate: underStart, endDate: underEnd, threshold })
+            const params = new URLSearchParams({ from: underFrom, to: underTo, threshold })
             const data = await apiFetch<unknown>(`/api/reports/underutilized?${params}`)
             return { status: 200, data }
           }}
           formContent={
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="label">Desde</label><input type="datetime-local" value={underStart} onChange={e => setUnderStart(e.target.value)} className="input" /></div>
-                <div><label className="label">Hasta</label><input type="datetime-local" value={underEnd} onChange={e => setUnderEnd(e.target.value)} className="input" /></div>
+                <div><label className="label">Desde</label><input type="datetime-local" value={underFrom} onChange={e => setUnderFrom(e.target.value)} className="input" /></div>
+                <div><label className="label">Hasta</label><input type="datetime-local" value={underTo} onChange={e => setUnderTo(e.target.value)} className="input" /></div>
               </div>
               <div>
                 <label className="label">Threshold de subutilización (%): <span className="text-indigo-400">{threshold}%</span></label>
