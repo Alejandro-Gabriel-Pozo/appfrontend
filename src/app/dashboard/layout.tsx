@@ -390,7 +390,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               padding: '24px 24px',
             }}
           >
-            {children}
+            {token ? children : null}
           </main>
         </div>
 
