@@ -53,6 +53,52 @@ export interface UpdateResourceInput {
   active?: boolean
 }
 
+// ─── Bookable Services / Resource Locks ────────────────────────────────────────
+// "Servicio" (bookable_service) es la unidad reservable con duración fija.
+// resource_locks vincula un servicio con recursos físicos ADICIONALES que
+// bloquea mientras dura (ej. "Corte" bloquea la silla que elegís + la estilista).
+
+export type BookingMode = 'slot' | 'block' | 'event'
+
+export interface BookableService {
+  id: string
+  categoryId: string
+  name: string
+  description?: string
+  bookingMode: BookingMode
+  /** null = sin duración fija; el usuario/recepcionista elige start y end */
+  durationMinutes: number | null
+  price: number
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateBookableServiceInput {
+  categoryId: string
+  name: string
+  description?: string
+  bookingMode: BookingMode
+  durationMinutes?: number | null
+  price: number
+}
+
+export interface UpdateBookableServiceInput {
+  categoryId?: string
+  name?: string
+  description?: string
+  bookingMode?: BookingMode
+  durationMinutes?: number | null
+  price?: number
+  active?: boolean
+}
+
+export interface ResourceLock {
+  serviceId: string
+  resourceId: string
+  sortOrder: number
+}
+
 export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
 
 export interface Reservation {

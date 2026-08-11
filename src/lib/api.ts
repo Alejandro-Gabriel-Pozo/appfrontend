@@ -146,6 +146,7 @@ import type {
   Product, ProductVariant, CreateProductInput, UpdateProductInput,
   CreateVariantInput, UpdateVariantInput,
   Order, OrderItem, CreateOrderInput, ListOrdersFilters,
+  BookableService, CreateBookableServiceInput, UpdateBookableServiceInput, ResourceLock,
 } from './types'
 
 export interface PaginatedResponse<T> {
@@ -177,6 +178,22 @@ export const resourcesApi = {
   update: (id: string, body: UpdateResourceInput) =>
     apiFetch<Resource>(`/api/resources/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   remove: (id: string)                   => apiFetch<void>(`/api/resources/${id}`, { method: 'DELETE' }),
+}
+
+// ─── Bookable Services / Resource Locks ────────────────────────────────────────
+export const bookableServicesApi = {
+  list:   ()                                => apiFetch<BookableService[]>('/api/bookable-services'),
+  get:    (id: string)                      => apiFetch<BookableService>(`/api/bookable-services/${id}`),
+  create: (body: CreateBookableServiceInput) => apiFetch<BookableService>('/api/bookable-services', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: UpdateBookableServiceInput) =>
+    apiFetch<BookableService>(`/api/bookable-services/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (id: string)                      => apiFetch<void>(`/api/bookable-services/${id}`, { method: 'DELETE' }),
+}
+
+export const resourceLocksApi = {
+  list:    (serviceId: string)                        => apiFetch<ResourceLock[]>(`/api/bookable-services/${serviceId}/resource-locks`),
+  replace: (serviceId: string, resourceIds: string[]) =>
+    apiFetch<ResourceLock[]>(`/api/bookable-services/${serviceId}/resource-locks`, { method: 'PUT', body: JSON.stringify({ resourceIds }) }),
 }
 
 // ─── Categories ───────────────────────────────────────────────────────────────
