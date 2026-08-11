@@ -147,6 +147,9 @@ import type {
   CreateVariantInput, UpdateVariantInput,
   Order, OrderItem, CreateOrderInput, ListOrdersFilters,
   BookableService, CreateBookableServiceInput, UpdateBookableServiceInput, ResourceLock,
+  TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput,
+  HousekeepingTask, CreateHousekeepingTaskInput,
+  Stay, CheckInInput, CheckOutInput,
 } from './types'
 
 export interface PaginatedResponse<T> {
@@ -196,6 +199,42 @@ export const resourceLocksApi = {
     apiFetch<ResourceLock[]>(`/api/bookable-services/${serviceId}/resource-locks`, { method: 'PUT', body: JSON.stringify({ resourceIds }) }),
 }
 
+// ─── Team members (empleados) ───────────────────────────────────────────────────
+export const usersApi = {
+  list:   ()                            => apiFetch<TeamMember[]>('/api/users'),
+  get:    (id: string)                  => apiFetch<TeamMember>(`/api/users/${id}`),
+  create: (body: CreateTeamMemberInput) => apiFetch<TeamMember>('/api/users', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: UpdateTeamMemberInput) =>
+    apiFetch<TeamMember>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (id: string)                  => apiFetch<void>(`/api/users/${id}`, { method: 'DELETE' }),
+}
+
+// ─── Housekeeping ───────────────────────────────────────────────────────────────
+export const housekeepingApi = {
+  listByDate: (date?: string) =>
+    apiFetch<HousekeepingTask[]>(`/api/housekeeping${date ? `?date=${date}` : ''}`),
+  create: (body: CreateHousekeepingTaskInput) =>
+    apiFetch<HousekeepingTask>('/api/housekeeping', { method: 'POST', body: JSON.stringify(body) }),
+  assign: (id: string, userId: string) =>
+    apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/assign`, { method: 'POST', body: JSON.stringify({ userId }) }),
+  start: (id: string) => apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/start`, { method: 'POST' }),
+  complete: (id: string, notes?: string) =>
+    apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/complete`, { method: 'POST', body: JSON.stringify({ notes }) }),
+  inspect: (id: string) => apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/inspect`, { method: 'POST' }),
+  outOfService: (id: string, reason?: string) =>
+    apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/out-of-service`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  reset: (id: string) => apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/reset`, { method: 'POST' }),
+}
+
+// ─── Stays (check-in / check-out) ────────────────────────────────────────────────
+export const staysApi = {
+  listActive: () => apiFetch<Stay[]>('/api/stays'),
+  checkIn: (body: CheckInInput) => apiFetch<Stay>('/api/stays/check-in', { method: 'POST', body: JSON.stringify(body) }),
+  checkOut: (id: string, body: CheckOutInput = {}) =>
+    apiFetch<Stay>(`/api/stays/${id}/check-out`, { method: 'POST', body: JSON.stringify(body) }),
+  noShow: (id: string) => apiFetch<Stay>(`/api/stays/${id}/no-show`, { method: 'POST' }),
+}
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 export const categoriesApi = {
   list: () => apiFetch<Category[]>('/api/categories'),
@@ -224,8 +263,11 @@ export const reservationsApi = {
   get:      (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}`),
   create: (body: { resourceId: string; customer: { id: string }; startTime: string; endTime: string; details?: Record<string, unknown> }) =>
     apiFetch<Reservation>('/api/reservations', { method: 'POST', body: JSON.stringify(body) }),
+  // El backend registra PUT /api/reservations/:id (no PATCH) — antes esto
+  // mandaba PATCH y el backend nunca tuvo ese handler, así que editar una
+  // reserva desde el dashboard devolvía 404 en silencio.
   update: (id: string, body: { startTime?: string; endTime?: string; details?: Record<string, unknown> }) =>
-    apiFetch<Reservation>(`/api/reservations/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    apiFetch<Reservation>(`/api/reservations/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   confirm:  (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/confirm`,  { method: 'POST' }),
   cancel:   (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/cancel`,   { method: 'POST' }),
   complete: (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/complete`, { method: 'POST' }),

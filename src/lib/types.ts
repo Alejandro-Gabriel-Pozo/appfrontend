@@ -53,6 +53,37 @@ export interface UpdateResourceInput {
   active?: boolean
 }
 
+// ─── Team members (empleados) ───────────────────────────────────────────────────
+// `id` acá es el id de la MEMBERSHIP (persona + este negocio + rol), no de la
+// identity — una misma persona puede tener membership en más de un negocio,
+// cada una con su propio id. Ver backend: src/api/routes/users.routes.ts.
+
+export type EmployeeRole = 'OWNER' | 'ADMIN' | 'RECEPTIONIST' | 'WAITER'
+/** Roles asignables desde la API — OWNER se asigna solo al registrar el negocio. */
+export type AssignableEmployeeRole = Exclude<EmployeeRole, 'OWNER'>
+
+export interface TeamMember {
+  id: string
+  identityId: string
+  businessId: string
+  businessName: string
+  role: EmployeeRole
+  active: boolean
+  createdAt: string
+  email: string
+}
+
+export interface CreateTeamMemberInput {
+  email: string
+  password: string
+  role: AssignableEmployeeRole
+}
+
+export interface UpdateTeamMemberInput {
+  role?: AssignableEmployeeRole
+  password?: string
+}
+
 // ─── Bookable Services / Resource Locks ────────────────────────────────────────
 // "Servicio" (bookable_service) es la unidad reservable con duración fija.
 // resource_locks vincula un servicio con recursos físicos ADICIONALES que
@@ -109,8 +140,72 @@ export interface Reservation {
   endTime: string
   status: ReservationStatus
   details?: Record<string, unknown>
+  serviceId?: string | null
+  partySize?: number
+  notes?: string | null
+  // El backend no trackea estas fechas a nivel de dominio para reservas
+  // todavía (a diferencia de otras entidades) — quedan opcionales a
+  // propósito, no asumir que siempre vienen.
+  createdAt?: string
+  updatedAt?: string
+}
+
+// ─── Housekeeping ────────────────────────────────────────────────────────────
+export type HousekeepingStatus = 'PENDING' | 'ASSIGNED' | 'IN_PROGRESS' | 'DONE' | 'INSPECTED' | 'OUT_OF_SERVICE'
+export type Shift = 'MORNING' | 'AFTERNOON' | 'NIGHT'
+
+export interface HousekeepingTask {
+  id: string
+  businessId: string
+  resourceId: string
+  assignedTo: string | null
+  status: HousekeepingStatus
+  notes: string | null
+  shift: Shift
+  scheduledFor: string
+  startedAt: string | null
+  completedAt: string | null
+  inspectedAt: string | null
+  inspectedBy: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface CreateHousekeepingTaskInput {
+  resourceId: string
+  shift: Shift
+  scheduledFor: string
+  notes?: string
+}
+
+// ─── Stays (check-in / check-out) ──────────────────────────────────────────────
+export type StayStatus = 'CHECKED_IN' | 'CHECKED_OUT' | 'NO_SHOW'
+
+export interface Stay {
+  id: string
+  businessId: string
+  reservationId: string
+  resourceId: string
+  customerId: string
+  assignedBy: string
+  status: StayStatus
+  checkedInAt: string
+  checkedOutAt: string | null
+  noShowAt: string | null
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CheckInInput {
+  reservationId: string
+  resourceId: string
+  notes?: string
+}
+
+export interface CheckOutInput {
+  notes?: string
+  nextCleaningShift?: Shift
 }
 
 // ─── Products ────────────────────────────────────────────────────────────────

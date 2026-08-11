@@ -1,10 +1,10 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { reservationsApi, resourcesApi, customersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { reservationsApi, resourcesApi, customersApi, bookableServicesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import type { PaginatedResponse } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
-import type { Reservation, Resource, ReservationStatus } from '@/lib/types'
+import type { Reservation, Resource, ReservationStatus, BookableService } from '@/lib/types'
 
 const PAGE_SIZE = 20
 
@@ -37,6 +37,7 @@ export default function ReservasPage() {
   const { toast } = useToast()
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [resources, setResources] = useState<Resource[]>([])
+  const [services, setServices] = useState<BookableService[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
@@ -51,15 +52,24 @@ export default function ReservasPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
+  // Modal detalle / edición
+  const [detailTarget, setDetailTarget] = useState<Reservation | null>(null)
+  const [editingDetail, setEditingDetail] = useState(false)
+  const [detailForm, setDetailForm] = useState({ startTime: '', endTime: '' })
+  const [detailFieldErrors, setDetailFieldErrors] = useState<Record<string, string>>({})
+  const [detailSubmitting, setDetailSubmitting] = useState(false)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [res, recs] = await Promise.all([
+      const [res, recs, svcs] = await Promise.all([
         reservationsApi.list(),
         resourcesApi.list(),
+        bookableServicesApi.list(),
       ])
       setReservations(toArray(res))
       setResources(recs)
+      setServices(svcs)
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -141,6 +151,62 @@ export default function ReservasPage() {
   const getResourceName = (id: string) =>
     resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
 
+  const getServiceName = (id?: string | null) =>
+    id ? services.find(s => s.id === id)?.name ?? id.slice(0, 8) + '…' : null
+
+  /** input datetime-local necesita "YYYY-MM-DDTHH:mm", sin segundos ni Z */
+  function toLocalInput(iso: string) {
+    const d = new Date(iso)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  function openDetail(r: Reservation) {
+    setDetailTarget(r)
+    setEditingDetail(false)
+    setDetailForm({ startTime: toLocalInput(r.startTime), endTime: toLocalInput(r.endTime) })
+    setDetailFieldErrors({})
+  }
+
+  async function handleUpdateDetail(e: React.FormEvent) {
+    e.preventDefault()
+    if (!detailTarget) return
+    setDetailSubmitting(true)
+    setDetailFieldErrors({})
+    try {
+      const updated = await reservationsApi.update(detailTarget.id, {
+        startTime: new Date(detailForm.startTime).toISOString(),
+        endTime: new Date(detailForm.endTime).toISOString(),
+      })
+      toast('Reserva actualizada', 'success')
+      setDetailTarget(updated)
+      setEditingDetail(false)
+      load()
+    } catch (err) {
+      const fe = extractFieldErrors(err)
+      if (Object.keys(fe).length > 0) setDetailFieldErrors(fe)
+      else toast(extractErrorMessage(err), 'error')
+    } finally {
+      setDetailSubmitting(false)
+    }
+  }
+
+  async function doDetailAction(action: 'confirm' | 'cancel' | 'complete') {
+    if (!detailTarget) return
+    setActionLoading(`${detailTarget.id}-${action}`)
+    try {
+      const labels = { confirm: 'Reserva confirmada', cancel: 'Reserva cancelada', complete: 'Reserva completada' }
+      const updated = await reservationsApi[action](detailTarget.id)
+      toast(labels[action], 'success')
+      setDetailTarget(updated)
+      load()
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   return (
     <div>
       {/* Header */}
@@ -213,7 +279,11 @@ export default function ReservasPage() {
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
                 {paginated.map(r => (
-                  <tr key={r.id} className="hover:bg-white/[0.02] transition-colors">
+                  <tr
+                    key={r.id}
+                    onClick={() => openDetail(r)}
+                    className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                  >
                     <td className="px-4 py-3.5">
                       <p className="font-medium text-white">{r.customer.fullName}</p>
                       <p className="text-xs text-slate-500">{r.customer.email}</p>
@@ -226,7 +296,7 @@ export default function ReservasPage() {
                         {STATUS_LABEL[r.status]}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         {r.status === 'PENDING' && (
                           <button
@@ -361,6 +431,137 @@ export default function ReservasPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Modal detalle / edición */}
+      {detailTarget && (
+        <Modal
+          open={detailTarget !== null}
+          onClose={() => setDetailTarget(null)}
+          title={editingDetail ? 'Editar reserva' : 'Detalle de reserva'}
+        >
+          {editingDetail ? (
+            <form onSubmit={handleUpdateDetail} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Inicio</label>
+                  <input
+                    type="datetime-local"
+                    className={`input ${detailFieldErrors['startTime'] ? 'border-red-500/60' : ''}`}
+                    value={detailForm.startTime}
+                    onChange={e => setDetailForm(f => ({ ...f, startTime: e.target.value }))}
+                    required
+                  />
+                  {detailFieldErrors['startTime'] && <p className="mt-1 text-xs text-red-400">{detailFieldErrors['startTime']}</p>}
+                </div>
+                <div>
+                  <label className="label">Fin</label>
+                  <input
+                    type="datetime-local"
+                    className={`input ${detailFieldErrors['endTime'] ? 'border-red-500/60' : ''}`}
+                    value={detailForm.endTime}
+                    onChange={e => setDetailForm(f => ({ ...f, endTime: e.target.value }))}
+                    required
+                  />
+                  {detailFieldErrors['endTime'] && <p className="mt-1 text-xs text-red-400">{detailFieldErrors['endTime']}</p>}
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                Cliente, recurso y servicio no se pueden cambiar acá — cancelá esta reserva y creá una nueva si hace falta.
+              </p>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditingDetail(false)} className="btn-secondary flex-1">Cancelar</button>
+                <button type="submit" disabled={detailSubmitting} className="btn-primary flex-1">
+                  {detailSubmitting ? <span className="spinner" /> : null}
+                  Guardar cambios
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Cliente</p>
+                  <p className="text-sm text-white font-medium">{detailTarget.customer.fullName}</p>
+                  <p className="text-xs text-slate-500">{detailTarget.customer.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Estado</p>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_CLASS[detailTarget.status]}`}>
+                    {STATUS_LABEL[detailTarget.status]}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Recurso</p>
+                  <p className="text-sm text-slate-200">{getResourceName(detailTarget.resourceId)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Servicio</p>
+                  <p className="text-sm text-slate-200">{getServiceName(detailTarget.serviceId) ?? '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Inicio</p>
+                  <p className="text-sm text-slate-200 tabular-nums">{fmt(detailTarget.startTime)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Fin</p>
+                  <p className="text-sm text-slate-200 tabular-nums">{fmt(detailTarget.endTime)}</p>
+                </div>
+                {detailTarget.partySize != null && detailTarget.partySize > 1 && (
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Personas</p>
+                    <p className="text-sm text-slate-200">{detailTarget.partySize}</p>
+                  </div>
+                )}
+              </div>
+
+              {detailTarget.notes && (
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Notas</p>
+                  <p className="text-sm text-slate-300 whitespace-pre-wrap">{detailTarget.notes}</p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 pt-3 border-t border-white/[0.06]">
+                {detailTarget.status === 'PENDING' && (
+                  <button
+                    onClick={() => setEditingDetail(true)}
+                    className="text-xs px-3 py-1.5 rounded-md bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] transition-colors"
+                  >
+                    Editar horario
+                  </button>
+                )}
+                {detailTarget.status === 'PENDING' && (
+                  <button
+                    onClick={() => doDetailAction('confirm')}
+                    disabled={actionLoading !== null}
+                    className="text-xs px-3 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                  >
+                    Confirmar
+                  </button>
+                )}
+                {(detailTarget.status === 'PENDING' || detailTarget.status === 'CONFIRMED') && (
+                  <button
+                    onClick={() => doDetailAction('cancel')}
+                    disabled={actionLoading !== null}
+                    className="text-xs px-3 py-1.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                  >
+                    Cancelar reserva
+                  </button>
+                )}
+                {detailTarget.status === 'CONFIRMED' && (
+                  <button
+                    onClick={() => doDetailAction('complete')}
+                    disabled={actionLoading !== null}
+                    className="text-xs px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                  >
+                    Completar
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
     </div>
   )
 }
