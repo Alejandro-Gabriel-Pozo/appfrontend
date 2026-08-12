@@ -1,10 +1,12 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { resourcesApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { resourcesApi, categoriesApi, resourceHoursApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
-import type { Resource, Category } from '@/lib/types'
+import type { Resource, Category, OperatingWindow } from '@/lib/types'
 
 const EMPTY: Omit<Resource, 'id'> = { name: '', categoryId: '', basePrice: 0, active: true }
+
+const DAY_LABEL = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 export default function RecursosPage() {
   const { toast } = useToast()
@@ -17,6 +19,11 @@ export default function RecursosPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Resource | null>(null)
+
+  // Horario propio del recurso (override opcional del horario del negocio)
+  const [ownHours, setOwnHours] = useState<OperatingWindow[]>([])
+  const [hourForm, setHourForm] = useState({ dayOfWeek: 0, startTime: '09:00', endTime: '18:00' })
+  const [addingHour, setAddingHour] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -37,14 +44,43 @@ export default function RecursosPage() {
     setEditing(null)
     setForm(EMPTY)
     setFieldErrors({})
+    setOwnHours([])
     setModalOpen(true)
   }
 
-  function openEdit(r: Resource) {
+  async function openEdit(r: Resource) {
     setEditing(r)
     setForm({ name: r.name, categoryId: r.categoryId, basePrice: r.basePrice, active: r.active })
     setFieldErrors({})
     setModalOpen(true)
+    try {
+      setOwnHours(await resourceHoursApi.list(r.id))
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    }
+  }
+
+  async function handleAddHour() {
+    if (!editing) return
+    setAddingHour(true)
+    try {
+      const window = await resourceHoursApi.create(editing.id, hourForm)
+      setOwnHours(h => [...h, window])
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setAddingHour(false)
+    }
+  }
+
+  async function handleRemoveHour(hourId: string) {
+    if (!editing) return
+    try {
+      await resourceHoursApi.remove(editing.id, hourId)
+      setOwnHours(h => h.filter(w => w.id !== hourId))
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -212,6 +248,38 @@ export default function RecursosPage() {
                 />
                 {fieldErrors['basePrice'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['basePrice']}</p>}
               </div>
+
+              {editing && (
+                <div>
+                  <label className="label">Horario propio (opcional)</label>
+                  <p className="text-xs text-slate-500 mb-2">
+                    Si no cargás nada, este recurso usa el horario de "Mi Negocio". Útil para
+                    un empleado con horario distinto al del negocio (ej. un barbero part-time).
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {ownHours.length === 0 && (
+                      <p className="text-xs text-slate-600">Sin horario propio — hereda el del negocio.</p>
+                    )}
+                    {ownHours.map(w => (
+                      <span key={w.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400">
+                        {DAY_LABEL[w.dayOfWeek]} {w.startTime.slice(0, 5)}–{w.endTime.slice(0, 5)}
+                        <button type="button" onClick={() => handleRemoveHour(w.id)} className="hover:text-white" aria-label="Quitar franja">×</button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 items-end">
+                    <select className="input" value={hourForm.dayOfWeek} onChange={e => setHourForm(f => ({ ...f, dayOfWeek: Number(e.target.value) }))}>
+                      {DAY_LABEL.map((d, i) => <option key={i} value={i}>{d}</option>)}
+                    </select>
+                    <input type="time" className="input" value={hourForm.startTime} onChange={e => setHourForm(f => ({ ...f, startTime: e.target.value }))} />
+                    <input type="time" className="input" value={hourForm.endTime} onChange={e => setHourForm(f => ({ ...f, endTime: e.target.value }))} />
+                    <button type="button" onClick={handleAddHour} disabled={addingHour} className="btn-secondary shrink-0">
+                      {addingHour ? <span className="spinner" /> : '+ Agregar'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancelar</button>
                 <button type="submit" disabled={submitting} className="btn-primary flex-1">

@@ -54,6 +54,11 @@ export default function ReservasPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
+  // Turnos disponibles (servicios "slot" con horario configurado — Mi Negocio / recurso)
+  const [slotDate, setSlotDate] = useState('')
+  const [availableSlots, setAvailableSlots] = useState<string[] | null>(null)
+  const [loadingSlots, setLoadingSlots] = useState(false)
+
   // Modal detalle / edición
   const [detailTarget, setDetailTarget] = useState<Reservation | null>(null)
   const [editingDetail, setEditingDetail] = useState(false)
@@ -117,12 +122,39 @@ export default function ReservasPage() {
 
   const selectedService = services.find(s => s.id === form.serviceId)
   const isLodging = selectedService?.bookingMode === 'block'
+  const isSlotService = selectedService?.bookingMode === 'slot'
   const nightsCount = isLodging && form.checkIn && form.checkOut
     ? Math.round((new Date(form.checkOut).getTime() - new Date(form.checkIn).getTime()) / 86_400_000)
     : null
 
+  // Turnos disponibles: solo aplica a servicios "slot" con recurso + fecha
+  // elegidos. Si no hay horario configurado (ni del recurso ni del negocio),
+  // el endpoint devuelve [] y se cae al datetime-local libre (ver JSX abajo)
+  // — el staff siempre puede overridear si hace falta.
+  useEffect(() => {
+    if (!isSlotService || !form.resourceId || !slotDate) {
+      setAvailableSlots(null)
+      return
+    }
+    setLoadingSlots(true)
+    bookableServicesApi.getAvailableSlots(form.serviceId, form.resourceId, slotDate)
+      .then(res => setAvailableSlots(res.slots))
+      .catch(() => setAvailableSlots([]))
+      .finally(() => setLoadingSlots(false))
+  }, [isSlotService, form.serviceId, form.resourceId, slotDate])
+
+  function selectSlot(startIso: string) {
+    if (!selectedService?.durationMinutes) return
+    const endIso = new Date(new Date(startIso).getTime() + selectedService.durationMinutes * 60_000).toISOString()
+    setForm(f => ({ ...f, startTime: toLocalInput(startIso), endTime: toLocalInput(endIso) }))
+  }
+
   async function handleCreateReservation(e: React.FormEvent) {
     e.preventDefault()
+    if (isSlotService && (!form.startTime || !form.endTime)) {
+      toast('Elegí un turno disponible', 'error')
+      return
+    }
     setSubmitting(true)
     setFieldErrors({})
     try {
@@ -160,6 +192,8 @@ export default function ReservasPage() {
   function openModal() {
     setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
     setFieldErrors({})
+    setSlotDate('')
+    setAvailableSlots(null)
     setModalOpen(true)
   }
 
@@ -454,6 +488,72 @@ export default function ReservasPage() {
                 <p className="col-span-2 text-xs text-slate-500">
                   {nightsCount > 0 ? `${nightsCount} noche${nightsCount === 1 ? '' : 's'}` : 'El check-out debe ser posterior al check-in'}
                 </p>
+              )}
+            </div>
+          ) : isSlotService ? (
+            <div>
+              <label className="label">Fecha</label>
+              <input
+                type="date"
+                className="input"
+                value={slotDate}
+                onChange={e => {
+                  setSlotDate(e.target.value)
+                  setForm(f => ({ ...f, startTime: '', endTime: '' }))
+                }}
+                required
+              />
+              {!form.resourceId && (
+                <p className="mt-2 text-xs text-slate-500">Elegí un recurso para ver los turnos disponibles.</p>
+              )}
+              {form.resourceId && slotDate && (
+                loadingSlots ? (
+                  <p className="mt-2 text-xs text-slate-500">Buscando turnos…</p>
+                ) : availableSlots && availableSlots.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {availableSlots.map(slot => {
+                      const active = form.startTime === toLocalInput(slot)
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => selectSlot(slot)}
+                          className={`text-xs px-3 py-1.5 rounded-md transition-colors ${active ? 'bg-emerald-500 text-white' : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'}`}
+                        >
+                          {new Date(slot).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : availableSlots && availableSlots.length === 0 ? (
+                  <div className="mt-2 space-y-3">
+                    <p className="text-xs text-slate-500">
+                      Sin horario configurado para este recurso — elegí el horario manualmente.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="label">Inicio</label>
+                        <input
+                          type="datetime-local"
+                          className="input"
+                          value={form.startTime}
+                          onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="label">Fin</label>
+                        <input
+                          type="datetime-local"
+                          className="input"
+                          value={form.endTime}
+                          onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : null
               )}
             </div>
           ) : (

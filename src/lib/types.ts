@@ -16,6 +16,18 @@ export interface CategoryField {
   options?: string[]
 }
 
+// ─── Horario de atención (negocio + override por recurso) ─────────────────────
+// Cascada: si un recurso tiene ventanas propias, reemplazan (no se combinan)
+// al horario por defecto del negocio para ese recurso. Ver
+// docs/conocimiento-del-negocio.md en app-main.
+
+export interface OperatingWindow {
+  id: string
+  dayOfWeek: number // 0 = lunes ... 6 = domingo
+  startTime: string // HH:MM:SS
+  endTime: string
+}
+
 // ─── Customer ─────────────────────────────────────────────────────────────────
 
 export interface CustomerTag {

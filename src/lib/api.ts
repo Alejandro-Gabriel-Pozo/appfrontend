@@ -152,6 +152,7 @@ import type {
   Stay, CheckInInput, CheckOutInput,
   CustomerRate,
   CustomerStatement, FinancialTransaction,
+  OperatingWindow,
 } from './types'
 
 export interface PaginatedResponse<T> {
@@ -193,6 +194,8 @@ export const bookableServicesApi = {
   update: (id: string, body: UpdateBookableServiceInput) =>
     apiFetch<BookableService>(`/api/bookable-services/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   remove: (id: string)                      => apiFetch<void>(`/api/bookable-services/${id}`, { method: 'DELETE' }),
+  getAvailableSlots: (serviceId: string, resourceId: string, date: string) =>
+    apiFetch<{ slots: string[] }>(`/api/bookable-services/${serviceId}/available-slots?resourceId=${encodeURIComponent(resourceId)}&date=${date}`),
 }
 
 export const resourceLocksApi = {
@@ -399,4 +402,20 @@ export const reportsApi = {
     const params = new URLSearchParams({ from, to, threshold: String(threshold) })
     return apiFetch<UnderutilizedResource[]>(`/api/reports/underutilized?${params}`)
   },
+}
+
+// ─── Horario de atención ────────────────────────────────────────────────────
+export const businessHoursApi = {
+  list: () => apiFetch<OperatingWindow[]>('/api/business-hours'),
+  create: (body: { dayOfWeek: number; startTime: string; endTime: string }) =>
+    apiFetch<OperatingWindow>('/api/business-hours', { method: 'POST', body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/business-hours/${id}`, { method: 'DELETE' }),
+}
+
+export const resourceHoursApi = {
+  list: (resourceId: string) => apiFetch<OperatingWindow[]>(`/api/resources/${resourceId}/hours`),
+  create: (resourceId: string, body: { dayOfWeek: number; startTime: string; endTime: string }) =>
+    apiFetch<OperatingWindow>(`/api/resources/${resourceId}/hours`, { method: 'POST', body: JSON.stringify(body) }),
+  remove: (resourceId: string, hourId: string) =>
+    apiFetch<void>(`/api/resources/${resourceId}/hours/${hourId}`, { method: 'DELETE' }),
 }
