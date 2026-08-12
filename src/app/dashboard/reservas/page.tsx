@@ -28,6 +28,8 @@ function fmt(iso: string) {
   return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
 }
 
+const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format
+
 /** Normaliza la respuesta del API que puede venir paginada o como array plano */
 function toArray<T>(res: PaginatedResponse<T> | T[]): T[] {
   return Array.isArray(res) ? res : res.data
@@ -48,7 +50,7 @@ export default function ReservasPage() {
 
   // Modal nueva reserva
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState({ resourceId: '', customerEmail: '', startTime: '', endTime: '' })
+  const [form, setForm] = useState({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -113,6 +115,12 @@ export default function ReservasPage() {
     }
   }
 
+  const selectedService = services.find(s => s.id === form.serviceId)
+  const isLodging = selectedService?.bookingMode === 'block'
+  const nightsCount = isLodging && form.checkIn && form.checkOut
+    ? Math.round((new Date(form.checkOut).getTime() - new Date(form.checkIn).getTime()) / 86_400_000)
+    : null
+
   async function handleCreateReservation(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
@@ -123,15 +131,22 @@ export default function ReservasPage() {
         toast('Cliente no encontrado. Crealo primero en la sección Clientes.', 'error')
         return
       }
+      // Alojamiento (bookingMode "block"): se reserva por fecha, no por hora
+      // — el check-in/check-out se manda como medianoche de esa fecha, que
+      // es como el backend calcula las noches (por día calendario).
+      const startTime = isLodging ? new Date(form.checkIn).toISOString() : new Date(form.startTime).toISOString()
+      const endTime = isLodging ? new Date(form.checkOut).toISOString() : new Date(form.endTime).toISOString()
+
       await reservationsApi.create({
         resourceId: form.resourceId,
         customer: { id: customer.id },
-        startTime: new Date(form.startTime).toISOString(),
-        endTime: new Date(form.endTime).toISOString(),
+        startTime,
+        endTime,
+        ...(form.serviceId && { serviceId: form.serviceId }),
       })
       toast('Reserva creada', 'success')
       setModalOpen(false)
-      setForm({ resourceId: '', customerEmail: '', startTime: '', endTime: '' })
+      setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
       load()
     } catch (err) {
       const fe = extractFieldErrors(err)
@@ -143,7 +158,7 @@ export default function ReservasPage() {
   }
 
   function openModal() {
-    setForm({ resourceId: '', customerEmail: '', startTime: '', endTime: '' })
+    setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
     setFieldErrors({})
     setModalOpen(true)
   }
@@ -273,6 +288,7 @@ export default function ReservasPage() {
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Recurso</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Inicio</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Fin</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Precio</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -291,6 +307,7 @@ export default function ReservasPage() {
                     <td className="px-4 py-3.5 text-slate-300">{getResourceName(r.resourceId)}</td>
                     <td className="px-4 py-3.5 text-slate-400 text-xs tabular-nums">{fmt(r.startTime)}</td>
                     <td className="px-4 py-3.5 text-slate-400 text-xs tabular-nums">{fmt(r.endTime)}</td>
+                    <td className="px-4 py-3.5 text-slate-300 text-xs tabular-nums">{fmtMoney(r.totalPrice)}</td>
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_CLASS[r.status]}`}>
                         {STATUS_LABEL[r.status]}
@@ -368,6 +385,21 @@ export default function ReservasPage() {
       >
         <form onSubmit={handleCreateReservation} className="p-6 space-y-4">
           <div>
+            <label className="label">Servicio (opcional)</label>
+            <select
+              className="input"
+              value={form.serviceId}
+              onChange={e => setForm(f => ({ ...f, serviceId: e.target.value }))}
+            >
+              <option value="">Sin servicio — horario libre</option>
+              {services.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.bookingMode === 'block' ? ' (alojamiento — por noche)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="label">Recurso</label>
             <select
               className="input"
@@ -376,7 +408,9 @@ export default function ReservasPage() {
               required
             >
               <option value="">Seleccioná un recurso…</option>
-              {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {resources
+                .filter(r => !selectedService || r.categoryId === selectedService.categoryId)
+                .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
             {fieldErrors['resourceId'] && (
               <p className="mt-1 text-xs text-red-400">{fieldErrors['resourceId']}</p>
@@ -394,28 +428,58 @@ export default function ReservasPage() {
             />
             <p className="mt-1 text-xs text-slate-500">El cliente debe estar registrado en el sistema.</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Inicio</label>
-              <input
-                type="datetime-local"
-                className="input"
-                value={form.startTime}
-                onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
-                required
-              />
+          {isLodging ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Check-in</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={form.checkIn}
+                  onChange={e => setForm(f => ({ ...f, checkIn: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Check-out</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={form.checkOut}
+                  onChange={e => setForm(f => ({ ...f, checkOut: e.target.value }))}
+                  required
+                />
+              </div>
+              {nightsCount != null && (
+                <p className="col-span-2 text-xs text-slate-500">
+                  {nightsCount > 0 ? `${nightsCount} noche${nightsCount === 1 ? '' : 's'}` : 'El check-out debe ser posterior al check-in'}
+                </p>
+              )}
             </div>
-            <div>
-              <label className="label">Fin</label>
-              <input
-                type="datetime-local"
-                className="input"
-                value={form.endTime}
-                onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
-                required
-              />
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Inicio</label>
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={form.startTime}
+                  onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Fin</label>
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={form.endTime}
+                  onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
+                  required
+                />
+              </div>
             </div>
-          </div>
+          )}
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -505,6 +569,10 @@ export default function ReservasPage() {
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Fin</p>
                   <p className="text-sm text-slate-200 tabular-nums">{fmt(detailTarget.endTime)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Precio</p>
+                  <p className="text-sm text-slate-200 tabular-nums">{fmtMoney(detailTarget.totalPrice)}</p>
                 </div>
                 {detailTarget.partySize != null && detailTarget.partySize > 1 && (
                   <div>

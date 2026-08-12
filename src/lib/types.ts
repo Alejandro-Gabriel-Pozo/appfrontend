@@ -18,11 +18,54 @@ export interface CategoryField {
 
 // ─── Customer ─────────────────────────────────────────────────────────────────
 
+export interface CustomerTag {
+  id: string
+  name: string
+}
+
+export interface CustomerRate {
+  id: string
+  businessId: string
+  customerId: string
+  resourceId: string | null
+  serviceId: string | null
+  price: number
+  active: boolean
+  notes?: string | null
+}
+
+// ─── Cuentas corrientes ─────────────────────────────────────────────────────
+
+export type TransactionType = 'CHARGE' | 'PAYMENT' | 'REFUND' | 'ADJUSTMENT'
+export type TransactionStatus = 'PENDING' | 'SETTLED' | 'FAILED' | 'VOIDED'
+
+export interface FinancialTransaction {
+  id: string
+  businessId: string
+  customerId: string
+  reservationId: string | null
+  type: TransactionType
+  amount: number
+  currency: string
+  status: TransactionStatus
+  notes?: string | null
+  createdAt: string
+}
+
+export interface CustomerStatement {
+  customerId: string
+  balance: number
+  transactions: FinancialTransaction[]
+}
+
 export interface Customer {
   id: string
   businessId: string
   fullName: string
   email: string
+  kind?: 'INDIVIDUAL' | 'COMPANY'
+  active?: boolean
+  tags?: CustomerTag[]
   createdAt: string
   updatedAt: string
 }
@@ -143,6 +186,7 @@ export interface Reservation {
   serviceId?: string | null
   partySize?: number
   notes?: string | null
+  totalPrice: number
   // El backend no trackea estas fechas a nivel de dominio para reservas
   // todavía (a diferencia de otras entidades) — quedan opcionales a
   // propósito, no asumir que siempre vienen.
