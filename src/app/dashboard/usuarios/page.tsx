@@ -7,13 +7,14 @@ import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import type { TeamMember, AssignableEmployeeRole } from '@/lib/types'
 
-const ASSIGNABLE_ROLES: AssignableEmployeeRole[] = ['ADMIN', 'RECEPTIONIST', 'WAITER']
+const ASSIGNABLE_ROLES: AssignableEmployeeRole[] = ['ADMIN', 'RECEPTIONIST', 'WAITER', 'HOUSEKEEPING']
 
 const ROLE_LABEL: Record<string, string> = {
   OWNER: 'Propietario',
   ADMIN: 'Administrador',
   RECEPTIONIST: 'Recepción',
   WAITER: 'Mesero',
+  HOUSEKEEPING: 'Limpieza',
 }
 
 type FormState = {

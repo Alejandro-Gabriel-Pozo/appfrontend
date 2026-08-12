@@ -113,7 +113,7 @@ export interface UpdateResourceInput {
 // identity — una misma persona puede tener membership en más de un negocio,
 // cada una con su propio id. Ver backend: src/api/routes/users.routes.ts.
 
-export type EmployeeRole = 'OWNER' | 'ADMIN' | 'RECEPTIONIST' | 'WAITER'
+export type EmployeeRole = 'OWNER' | 'ADMIN' | 'RECEPTIONIST' | 'WAITER' | 'HOUSEKEEPING'
 /** Roles asignables desde la API — OWNER se asigna solo al registrar el negocio. */
 export type AssignableEmployeeRole = Exclude<EmployeeRole, 'OWNER'>
 

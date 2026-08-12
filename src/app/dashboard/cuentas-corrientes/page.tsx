@@ -29,7 +29,7 @@ const STATUS_CLASS: Record<TransactionStatus, string> = {
 const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false })
 }
 
 export default function CuentasCorrientesPage() {

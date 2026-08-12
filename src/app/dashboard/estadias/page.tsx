@@ -10,7 +10,7 @@ import type { Stay, Resource, Customer, Reservation, Shift } from '@/lib/types'
 const SHIFT_LABEL: Record<Shift, string> = { MORNING: 'Mañana', AFTERNOON: 'Tarde', NIGHT: 'Noche' }
 
 function fmt(iso: string) {
-  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false })
 }
 
 function toArray<T>(res: PaginatedResponse<T> | T[]): T[] {

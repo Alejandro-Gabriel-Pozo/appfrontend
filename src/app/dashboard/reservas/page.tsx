@@ -25,7 +25,7 @@ const STATUS_CLASS: Record<ReservationStatus, string> = {
 const ALL_STATUSES: ReservationStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']
 
 function fmt(iso: string) {
-  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false })
 }
 
 const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format
@@ -520,7 +520,7 @@ export default function ReservasPage() {
                           onClick={() => selectSlot(slot)}
                           className={`text-xs px-3 py-1.5 rounded-md transition-colors ${active ? 'bg-emerald-500 text-white' : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'}`}
                         >
-                          {new Date(slot).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(slot).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                         </button>
                       )
                     })}

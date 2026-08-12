@@ -13,6 +13,7 @@ export default function MiNegocioPage() {
   const [addingDay, setAddingDay] = useState<number | null>(null)
   const [newStart, setNewStart] = useState('09:00')
   const [newEnd, setNewEnd] = useState('18:00')
+  const [applyAllDays, setApplyAllDays] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -32,6 +33,7 @@ export default function MiNegocioPage() {
     setAddingDay(dayOfWeek)
     setNewStart('09:00')
     setNewEnd('18:00')
+    setApplyAllDays(false)
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -39,8 +41,31 @@ export default function MiNegocioPage() {
     if (addingDay === null) return
     setSaving(true)
     try {
-      await businessHoursApi.create({ dayOfWeek: addingDay, startTime: newStart, endTime: newEnd })
-      toast('Franja agregada', 'success')
+      const days = applyAllDays ? [0, 1, 2, 3, 4, 5, 6] : [addingDay]
+      let created = 0
+      let skipped = 0
+      for (const dayOfWeek of days) {
+        try {
+          await businessHoursApi.create({ dayOfWeek, startTime: newStart, endTime: newEnd })
+          created++
+        } catch (err) {
+          // OPERATING_WINDOW_OVERLAP en "aplicar a todos" — se salta ese día
+          // (probablemente ya tiene franja) y se sigue con el resto, en vez
+          // de abortar todo por un solo conflicto.
+          if (applyAllDays) skipped++
+          else throw err
+        }
+      }
+      if (applyAllDays) {
+        toast(
+          skipped > 0
+            ? `Franja aplicada a ${created} día${created === 1 ? '' : 's'} — ${skipped} ya tenía${skipped === 1 ? '' : 'n'} una franja que se superponía`
+            : 'Franja aplicada a todos los días',
+          'success',
+        )
+      } else {
+        toast('Franja agregada', 'success')
+      }
       setAddingDay(null)
       load()
     } catch (err) {
@@ -100,19 +125,25 @@ export default function MiNegocioPage() {
                   ))}
                 </div>
                 {addingDay === dayOfWeek && (
-                  <form onSubmit={handleAdd} className="flex items-end gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                    <div>
-                      <label className="label">Desde</label>
-                      <input type="time" className="input" value={newStart} onChange={e => setNewStart(e.target.value)} required />
+                  <form onSubmit={handleAdd} className="mt-3 pt-3 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
+                    <div className="flex items-end gap-2">
+                      <div>
+                        <label className="label">Desde</label>
+                        <input type="time" className="input" value={newStart} onChange={e => setNewStart(e.target.value)} required />
+                      </div>
+                      <div>
+                        <label className="label">Hasta</label>
+                        <input type="time" className="input" value={newEnd} onChange={e => setNewEnd(e.target.value)} required />
+                      </div>
+                      <button type="submit" disabled={saving} className="btn-primary">
+                        {saving ? <span className="spinner" /> : 'Guardar'}
+                      </button>
+                      <button type="button" onClick={() => setAddingDay(null)} className="btn-secondary">Cancelar</button>
                     </div>
-                    <div>
-                      <label className="label">Hasta</label>
-                      <input type="time" className="input" value={newEnd} onChange={e => setNewEnd(e.target.value)} required />
-                    </div>
-                    <button type="submit" disabled={saving} className="btn-primary">
-                      {saving ? <span className="spinner" /> : 'Guardar'}
-                    </button>
-                    <button type="button" onClick={() => setAddingDay(null)} className="btn-secondary">Cancelar</button>
+                    <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      <input type="checkbox" checked={applyAllDays} onChange={e => setApplyAllDays(e.target.checked)} />
+                      Aplicar este horario a todos los días de la semana
+                    </label>
                   </form>
                 )}
               </div>

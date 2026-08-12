@@ -39,7 +39,7 @@ function addMinutesIso(startIso: string, minutes: number): string {
   return d.toISOString()
 }
 function fmt(iso: string): string {
-  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
+  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short', hour12: false })
 }
 
 const NO_SERVICE = '__none__'

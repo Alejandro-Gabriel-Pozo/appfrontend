@@ -29,7 +29,7 @@ const ITEM_TYPE_LABEL: Record<string, string> = {
 
 function fmtDate(iso: string | null) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
+  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short', hour12: false })
 }
 
 function fmtMoney(n: number) {

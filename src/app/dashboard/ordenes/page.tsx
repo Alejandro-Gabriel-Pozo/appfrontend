@@ -24,7 +24,7 @@ const STATUS_CLASS: Record<OrderStatus, string> = {
 const ALL_STATUSES: OrderStatus[] = ['DRAFT', 'CONFIRMED', 'CANCELLED', 'COMPLETED']
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false })
 }
 
 function fmtMoney(n: number) {

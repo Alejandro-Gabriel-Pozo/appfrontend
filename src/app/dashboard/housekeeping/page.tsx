@@ -306,10 +306,15 @@ export default function HousekeepingPage() {
                 <label className="label">Persona</label>
                 <select className="input" value={actionValue} onChange={e => setActionValue(e.target.value)}>
                   <option value="">Seleccioná…</option>
-                  {members.filter(m => m.active).map(m => (
+                  {members.filter(m => m.active && m.role === 'HOUSEKEEPING').map(m => (
                     <option key={m.identityId} value={m.identityId}>{m.email}</option>
                   ))}
                 </select>
+                {members.filter(m => m.active && m.role === 'HOUSEKEEPING').length === 0 && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    No hay personal con rol Limpieza todavía — creá uno en Usuarios.
+                  </p>
+                )}
               </div>
             ) : (
               <div>
