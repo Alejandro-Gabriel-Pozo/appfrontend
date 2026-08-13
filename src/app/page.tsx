@@ -6,9 +6,9 @@ import { getTokenImperative } from '@/context/AuthContext'
 export default function Home() {
   const router = useRouter()
   useEffect(() => {
-    // Antes leía localStorage.getItem('token') — el login hace rato guarda
-    // el token en sessionStorage bajo otra clave (ver AuthContext.tsx), así
-    // que esto siempre mandaba a /login aunque hubiera sesión activa.
+    // Antes leía localStorage.getItem('token') — el login guarda el token
+    // bajo otra clave, '_rh_token' en localStorage (ver AuthContext.tsx),
+    // así que esto siempre mandaba a /login aunque hubiera sesión activa.
     router.replace(getTokenImperative() ? '/dashboard' : '/login')
   }, [router])
   return (

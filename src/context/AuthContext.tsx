@@ -1,16 +1,26 @@
 'use client'
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 
-// ─── Token store en memoria (no localStorage) ────────────────────────────────
+// ─── Token store en memoria, respaldado por localStorage ─────────────────────
+// Hasta el 13/08/2026 esto usaba sessionStorage "por seguridad", pero
+// sessionStorage no mitiga XSS mejor que localStorage (ambos son igual de
+// legibles por JS malicioso si hay una vulnerabilidad de ese tipo — ver la
+// nota en ARCHITECTURE.md, que ya señalaba httpOnly cookies como el fix real,
+// pendiente). Lo único que cambiaba era la duración de la sesión — y
+// sessionStorage es exclusivo de cada pestaña, nunca se comparte entre ellas,
+// así que abrir una pestaña nueva (o duplicar la pestaña) perdía la sesión y
+// disparaba 401 en el primer fetch. localStorage sí se comparte entre
+// pestañas del mismo origen.
+//
 // Inicialización sincrónica al cargar el módulo: evita la ventana de tiempo
 // entre el primer render y el useEffect de hidratación donde _memoryToken
 // está vacío y los fetches del layout llegan sin token.
 let _memoryToken = (() => {
-  if (typeof window === 'undefined') return '' // SSR — no hay sessionStorage
+  if (typeof window === 'undefined') return '' // SSR — no hay localStorage
   try {
-    return sessionStorage.getItem('_rh_token') ?? ''
+    return localStorage.getItem('_rh_token') ?? ''
   } catch {
-    return '' // iframe sandbox sin acceso a sessionStorage
+    return '' // iframe sandbox sin acceso a localStorage
   }
 })()
 
@@ -60,35 +70,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // (para evitar flash de redirect en usuarios ya autenticados)
   const [isLoading, setIsLoading] = useState(!_memoryToken)
 
-  // Sincronización de seguridad: por si sessionStorage cambia en otra pestaña
-  // (storage event) o si el IIFE de arriba falló silenciosamente
+  // Hidratación inicial (por si el IIFE de arriba falló silenciosamente) +
+  // listener real de 'storage': con localStorage este evento sí se dispara
+  // en las OTRAS pestañas cuando una pestaña hace login/logout — antes,
+  // con sessionStorage, este mismo código nunca podía dispararse entre
+  // pestañas (sessionStorage es exclusivo de cada una), así que login/logout
+  // en una pestaña no se enteraba en las demás.
   useEffect(() => {
     try {
-      const stored = sessionStorage.getItem('_rh_token') ?? ''
+      const stored = localStorage.getItem('_rh_token') ?? ''
       if (stored && stored !== _memoryToken) {
         _memoryToken = stored
         setTokenState(stored)
         setUser(parseJwt(stored))
       }
     } catch {
-      // sessionStorage bloqueado (iframe sandbox) — solo memoria
+      // localStorage bloqueado (iframe sandbox) — solo memoria
     } finally {
       setIsLoading(false)
     }
+
+    function onStorage(e: StorageEvent) {
+      if (e.key !== '_rh_token') return
+      const newToken = e.newValue ?? ''
+      _memoryToken = newToken
+      setTokenState(newToken)
+      setUser(newToken ? parseJwt(newToken) : null)
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
   }, [])
 
   const setToken = useCallback((t: string) => {
     _memoryToken = t
     setTokenState(t)
     setUser(parseJwt(t))
-    try { sessionStorage.setItem('_rh_token', t) } catch { /* sandboxed */ }
+    try { localStorage.setItem('_rh_token', t) } catch { /* sandboxed */ }
   }, [])
 
   const clearToken = useCallback(() => {
     _memoryToken = ''
     setTokenState('')
     setUser(null)
-    try { sessionStorage.removeItem('_rh_token') } catch { /* sandboxed */ }
+    try { localStorage.removeItem('_rh_token') } catch { /* sandboxed */ }
     // Compatibilidad: limpia localStorage viejo si existe
     try { localStorage.removeItem('token') } catch { /* sandboxed */ }
   }, [])
