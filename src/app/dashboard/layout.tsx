@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { ToastProvider } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
+import { businessModulesApi } from '@/lib/api'
 
 const NAV = [
   {
@@ -36,16 +37,19 @@ const NAV = [
     href: '/dashboard/estadias',
     label: 'Estadías',
     icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
+    moduleKey: 'ALOJAMIENTO',
   },
   {
     href: '/dashboard/housekeeping',
     label: 'Housekeeping',
     icon: 'M4 4h16v4H4V4zm0 6h16v10H4V10zm4 3h8',
+    moduleKey: 'HOUSEKEEPING',
   },
   {
     href: '/dashboard/ordenes',
     label: 'Órdenes',
     icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
+    moduleKey: 'POS_RESTAURANTE',
   },
   {
     href: '/dashboard/clientes',
@@ -56,16 +60,19 @@ const NAV = [
     href: '/dashboard/cuentas-corrientes',
     label: 'Cuentas Corrientes',
     icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z',
+    moduleKey: 'CUENTAS_CORRIENTES',
   },
   {
     href: '/dashboard/productos',
     label: 'Productos',
     icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+    moduleKey: 'POS_RESTAURANTE',
   },
   {
     href: '/dashboard/reportes',
     label: 'Reportes',
     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+    moduleKey: 'REPORTES',
   },
   {
     href: '/dashboard/usuarios',
@@ -109,11 +116,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, token, isLoading, clearToken } = useAuth()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // null mientras carga (o si falla el fetch) — con null no se oculta nada,
+  // el gate real ya lo hace el backend (402 MODULE_NOT_ENABLED); esto es
+  // solo para no mostrar en el nav un módulo que el negocio no tiene.
+  const [modules, setModules] = useState<Record<string, boolean> | null>(null)
 
   useEffect(() => {
     if (isLoading) return
     if (!token) router.push('/login')
   }, [isLoading, token, router])
+
+  useEffect(() => {
+    if (!token) return
+    businessModulesApi.get()
+      .then(({ modules }) => setModules(modules))
+      .catch(() => setModules(null))
+  }, [token])
+
+  const visibleNav = NAV.filter(
+    item => !item.moduleKey || modules === null || modules[item.moduleKey] !== false,
+  )
 
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
@@ -209,7 +231,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               Navegación
             </p>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {NAV.map(item => {
+              {visibleNav.map(item => {
                 const active =
                   pathname === item.href ||
                   (item.href !== '/dashboard' && pathname.startsWith(item.href))

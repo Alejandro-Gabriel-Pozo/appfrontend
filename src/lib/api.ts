@@ -12,6 +12,7 @@ if (!BASE && typeof window !== 'undefined') {
 // ─── Tipos de error públicos ──────────────────────────────────────────────────
 export type ApiError =
   | { code: 'PLAN_LIMIT_REACHED'; message: string; plan: string; limit: number }
+  | { code: 'MODULE_NOT_ENABLED'; message: string; module: string }
   | { code: 'VALIDATION_ERROR';   message: string; errors: ZodFlatErrors }
   | { code: 'PLATFORM_UNAVAILABLE'; message: string }
   | { code: 'UNAUTHORIZED' | 'TOKEN_EXPIRED'; message: string }
@@ -402,6 +403,14 @@ export const reportsApi = {
     const params = new URLSearchParams({ from, to, threshold: String(threshold) })
     return apiFetch<UnderutilizedResource[]>(`/api/reports/underutilized?${params}`)
   },
+}
+
+// ─── Módulos habilitados (entitlements) ──────────────────────────────────────
+// Record dinámico a propósito, en vez de un enum duplicado del backend:
+// la fuente de verdad de qué module_key existen es la tabla `modules` en
+// app-main — acá solo se consume lo que venga.
+export const businessModulesApi = {
+  get: () => apiFetch<{ modules: Record<string, boolean> }>('/api/business/modules'),
 }
 
 // ─── Horario de atención ────────────────────────────────────────────────────
