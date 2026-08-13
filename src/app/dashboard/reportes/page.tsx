@@ -18,6 +18,9 @@ export default function ReportesPage() {
   const [underTo, setUnderTo] = useState('')
   const [threshold, setThreshold] = useState('30')
 
+  const [arFrom, setArFrom] = useState('')
+  const [arTo, setArTo] = useState('')
+
   return (
     <div>
       <div className="page-header">
@@ -96,6 +99,27 @@ export default function ReportesPage() {
               <div>
                 <label className="label">Threshold de subutilización (%): <span className="text-indigo-400">{threshold}%</span></label>
                 <input type="range" min={0} max={100} value={threshold} onChange={e => setThreshold(e.target.value)} className="w-full accent-indigo-500 mt-1" />
+              </div>
+            </div>
+          }
+        />
+
+        <ApiSection
+          method="GET" title="Cuentas por cobrar por empresa (A1)"
+          endpoint="/api/reports/accounts-receivable"
+          onSubmit={async () => {
+            const params = new URLSearchParams({ from: arFrom, to: arTo })
+            const data = await apiFetch<unknown>(`/api/reports/accounts-receivable?${params}`)
+            return { status: 200, data }
+          }}
+          formContent={
+            <div className="space-y-3">
+              <p className="text-xs text-slate-500">
+                Agrupa las transferencias a cuenta por cobrar por empresa, para el cierre de mes. La emisión de la factura sigue siendo manual.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="label">Desde</label><input type="datetime-local" value={arFrom} onChange={e => setArFrom(e.target.value)} className="input" /></div>
+                <div><label className="label">Hasta</label><input type="datetime-local" value={arTo} onChange={e => setArTo(e.target.value)} className="input" /></div>
               </div>
             </div>
           }

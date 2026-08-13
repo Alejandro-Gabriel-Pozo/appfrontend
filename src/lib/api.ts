@@ -150,9 +150,10 @@ import type {
   BookableService, CreateBookableServiceInput, UpdateBookableServiceInput, ResourceLock,
   TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput,
   HousekeepingTask, CreateHousekeepingTaskInput,
-  Stay, CheckInInput, CheckOutInput,
+  Stay, CheckInInput, CheckOutInput, StayFolio,
   CustomerRate,
   CustomerStatement, FinancialTransaction,
+  AccountReceivable, AccountsReceivableReportRow,
   OperatingWindow,
 } from './types'
 
@@ -239,6 +240,11 @@ export const staysApi = {
   checkOut: (id: string, body: CheckOutInput = {}) =>
     apiFetch<Stay>(`/api/stays/${id}/check-out`, { method: 'POST', body: JSON.stringify(body) }),
   noShow: (id: string) => apiFetch<Stay>(`/api/stays/${id}/no-show`, { method: 'POST' }),
+  /** Saldo + transacciones de la estadía (A1, paso 6) — se consulta antes de intentar el check-out. */
+  getFolio: (id: string) => apiFetch<StayFolio>(`/api/stays/${id}/folio`),
+  /** Transfiere el saldo pendiente a cuenta por cobrar de una empresa. Solo MANAGEMENT (backend lo valida igual). */
+  transferToReceivable: (id: string, body: { companyCustomerId: string; notes?: string }) =>
+    apiFetch<AccountReceivable>(`/api/stays/${id}/transfer-to-receivable`, { method: 'POST', body: JSON.stringify(body) }),
 }
 
 // ─── Categories ───────────────────────────────────────────────────────────────
@@ -402,6 +408,11 @@ export const reportsApi = {
   underutilized: (from: string, to: string, threshold = 30) => {
     const params = new URLSearchParams({ from, to, threshold: String(threshold) })
     return apiFetch<UnderutilizedResource[]>(`/api/reports/underutilized?${params}`)
+  },
+  /** Cuentas por cobrar agrupadas por empresa/período (A1, paso 6). */
+  accountsReceivable: (from: string, to: string) => {
+    const params = new URLSearchParams({ from, to })
+    return apiFetch<AccountsReceivableReportRow[]>(`/api/reports/accounts-receivable?${params}`)
   },
 }
 
