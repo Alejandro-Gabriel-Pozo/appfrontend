@@ -206,6 +206,8 @@ export interface Reservation {
   // propósito, no asumir que siempre vienen.
   createdAt?: string
   updatedAt?: string
+  /** Transiciones válidas desde `status` — usar esto en vez de hardcodear la máquina de estados (A3). */
+  allowedTransitions?: ReservationStatus[]
 }
 
 // ─── Housekeeping ────────────────────────────────────────────────────────────
@@ -227,6 +229,8 @@ export interface HousekeepingTask {
   inspectedBy: string | null
   createdAt: string
   updatedAt: string
+  /** Transiciones válidas desde `status` — usar esto en vez de hardcodear la máquina de estados (A3). */
+  allowedTransitions?: HousekeepingStatus[]
 }
 
 export interface CreateHousekeepingTaskInput {
@@ -408,12 +412,15 @@ export interface Order {
   status: OrderStatus
   totalAmount: number
   notes: string | null
+  stayId?: string | null
   items: OrderItem[]
   confirmedAt: string | null
   cancelledAt: string | null
   completedAt: string | null
   createdAt: string
   updatedAt: string
+  /** Transiciones válidas desde `status` — usar esto en vez de hardcodear la máquina de estados (A3). */
+  allowedTransitions?: OrderStatus[]
 }
 
 export interface CreateOrderItemInput {

@@ -332,9 +332,9 @@ export default function OrderDetailPage() {
       </div>
 
       {/* ── Acciones de transición ── */}
-      {(isDraft || order.status === 'CONFIRMED') && (
+      {(order.allowedTransitions?.length ?? 0) > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
-          {isDraft && (
+          {order.allowedTransitions?.includes('CONFIRMED') && (
             <button
               className="btn-action btn-confirm"
               disabled={actionLoading !== null}
@@ -350,7 +350,7 @@ export default function OrderDetailPage() {
               )}
             </button>
           )}
-          {order.status === 'CONFIRMED' && (
+          {order.allowedTransitions?.includes('COMPLETED') && (
             <button
               className="btn-action btn-complete"
               disabled={actionLoading !== null}
@@ -366,20 +366,22 @@ export default function OrderDetailPage() {
               )}
             </button>
           )}
-          <button
-            className="btn-action btn-cancel"
-            disabled={actionLoading !== null}
-            onClick={() => setConfirmDialog({ open: true, action: 'cancel' })}
-          >
-            {actionLoading === 'cancel' ? '…' : (
-              <>
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Cancelar orden
-              </>
-            )}
-          </button>
+          {order.allowedTransitions?.includes('CANCELLED') && (
+            <button
+              className="btn-action btn-cancel"
+              disabled={actionLoading !== null}
+              onClick={() => setConfirmDialog({ open: true, action: 'cancel' })}
+            >
+              {actionLoading === 'cancel' ? '…' : (
+                <>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Cancelar orden
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
 

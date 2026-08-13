@@ -349,7 +349,7 @@ export default function ReservasPage() {
                     </td>
                     <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
-                        {r.status === 'PENDING' && (
+                        {r.allowedTransitions?.includes('CONFIRMED') && (
                           <button
                             onClick={() => doAction(r.id, 'confirm')}
                             disabled={actionLoading !== null}
@@ -358,7 +358,7 @@ export default function ReservasPage() {
                             {actionLoading === `${r.id}-confirm` ? '…' : 'Confirmar'}
                           </button>
                         )}
-                        {(r.status === 'PENDING' || r.status === 'CONFIRMED') && (
+                        {r.allowedTransitions?.includes('CANCELLED') && (
                           <button
                             onClick={() => doAction(r.id, 'cancel')}
                             disabled={actionLoading !== null}
@@ -367,7 +367,7 @@ export default function ReservasPage() {
                             {actionLoading === `${r.id}-cancel` ? '…' : 'Cancelar'}
                           </button>
                         )}
-                        {r.status === 'CONFIRMED' && (
+                        {r.allowedTransitions?.includes('COMPLETED') && (
                           <button
                             onClick={() => doAction(r.id, 'complete')}
                             disabled={actionLoading !== null}
@@ -698,7 +698,7 @@ export default function ReservasPage() {
                     Editar horario
                   </button>
                 )}
-                {detailTarget.status === 'PENDING' && (
+                {detailTarget.allowedTransitions?.includes('CONFIRMED') && (
                   <button
                     onClick={() => doDetailAction('confirm')}
                     disabled={actionLoading !== null}
@@ -707,7 +707,7 @@ export default function ReservasPage() {
                     Confirmar
                   </button>
                 )}
-                {(detailTarget.status === 'PENDING' || detailTarget.status === 'CONFIRMED') && (
+                {detailTarget.allowedTransitions?.includes('CANCELLED') && (
                   <button
                     onClick={() => doDetailAction('cancel')}
                     disabled={actionLoading !== null}
@@ -716,7 +716,7 @@ export default function ReservasPage() {
                     Cancelar reserva
                   </button>
                 )}
-                {detailTarget.status === 'CONFIRMED' && (
+                {detailTarget.allowedTransitions?.includes('COMPLETED') && (
                   <button
                     onClick={() => doDetailAction('complete')}
                     disabled={actionLoading !== null}

@@ -204,10 +204,16 @@ export default function HousekeepingPage() {
                   <td className="px-4 py-3.5 text-slate-400 text-xs">{getMemberEmail(t.assignedTo)}</td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                      {/* "Asignar" se ofrece solo desde PENDING a propósito (asignación
+                          inicial) — el dominio técnicamente permite reasignar desde
+                          ASSIGNED/IN_PROGRESS/DONE también, pero esa es una acción
+                          distinta que esta UI no expone. No usa allowedTransitions
+                          porque acá el chequeo es más angosto que lo que el backend
+                          permite (A3, docs/pendientes-2026-08-13.md). */}
                       {t.status === 'PENDING' && isManagement && (
                         <button onClick={() => openAction('assign', t)} className="text-xs px-2.5 py-1.5 rounded-md bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]">Asignar</button>
                       )}
-                      {(t.status === 'PENDING' || t.status === 'ASSIGNED') && (
+                      {t.allowedTransitions?.includes('IN_PROGRESS') && (
                         <button
                           onClick={() => doSimpleAction(t, 'start')}
                           disabled={actionLoading !== null}
@@ -216,10 +222,10 @@ export default function HousekeepingPage() {
                           {actionLoading === `${t.id}-start` ? '…' : 'Iniciar'}
                         </button>
                       )}
-                      {t.status === 'IN_PROGRESS' && (
+                      {t.allowedTransitions?.includes('DONE') && (
                         <button onClick={() => openAction('complete', t)} className="text-xs px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20">Completar</button>
                       )}
-                      {t.status === 'DONE' && (
+                      {t.allowedTransitions?.includes('INSPECTED') && (
                         <button
                           onClick={() => doSimpleAction(t, 'inspect')}
                           disabled={actionLoading !== null}
@@ -228,7 +234,7 @@ export default function HousekeepingPage() {
                           {actionLoading === `${t.id}-inspect` ? '…' : 'Inspeccionar'}
                         </button>
                       )}
-                      {isManagement && t.status === 'OUT_OF_SERVICE' && (
+                      {isManagement && t.allowedTransitions?.includes('PENDING') && (
                         <button
                           onClick={() => doSimpleAction(t, 'reset')}
                           disabled={actionLoading !== null}
@@ -237,7 +243,7 @@ export default function HousekeepingPage() {
                           {actionLoading === `${t.id}-reset` ? '…' : 'Reactivar'}
                         </button>
                       )}
-                      {isManagement && t.status !== 'OUT_OF_SERVICE' && t.status !== 'INSPECTED' && (
+                      {isManagement && t.allowedTransitions?.includes('OUT_OF_SERVICE') && (
                         <button onClick={() => openAction('outOfService', t)} className="text-xs px-2.5 py-1.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20">Fuera de servicio</button>
                       )}
                     </div>
