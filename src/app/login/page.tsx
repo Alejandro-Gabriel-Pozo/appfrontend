@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || 'https://app-chny.onrender.com'
+// Vacío a propósito: /api/* se pide same-origin, ver next.config.js (B2).
+const BASE = ''
 
 interface BusinessOption {
   businessId: string

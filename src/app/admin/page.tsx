@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ApiBlock from '@/components/ApiBlock'
 
-const BASE = 'https://app-chny.onrender.com'
+// Vacío a propósito: /api/* se pide same-origin, ver next.config.js (B2).
+const BASE = ''
 
 function SectionTitle({ icon, title }: { icon: string; title: string }) {
   return (

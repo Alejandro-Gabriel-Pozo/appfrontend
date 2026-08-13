@@ -14,13 +14,9 @@ import type {
 export { extractErrorMessage, extractFieldErrors }
 export type { ApiErrorWithStatus }
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
-
-if (!BASE && typeof window !== 'undefined') {
-  console.error(
-    '[customerApi] NEXT_PUBLIC_API_URL no está definida. Configurá la variable de entorno.',
-  )
-}
+// Vacío a propósito: /api/* se pide same-origin y next.config.js lo
+// reenvía server-side a NEXT_PUBLIC_API_URL (ver comentario ahí — B2).
+const BASE = ''
 
 // ─── Retry con backoff exponencial para cold starts de Render (503) ───────────
 // Misma lógica que lib/api.ts — solo GET/HEAD, mismos tiempos de espera.

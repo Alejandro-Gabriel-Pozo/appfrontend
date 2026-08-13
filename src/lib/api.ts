@@ -1,13 +1,10 @@
 'use client'
 import { getTokenImperative } from '@/context/AuthContext'
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
-
-if (!BASE && typeof window !== 'undefined') {
-  console.error(
-    '[api] NEXT_PUBLIC_API_URL no está definida. Configurá la variable de entorno.',
-  )
-}
+// Vacío a propósito: /api/* se pide same-origin y next.config.js lo
+// reenvía server-side a NEXT_PUBLIC_API_URL (ver comentario ahí — B2,
+// requisito para poder migrar a httpOnly cookie más adelante).
+const BASE = ''
 
 // ─── Tipos de error públicos ──────────────────────────────────────────────────
 export type ApiError =
