@@ -113,7 +113,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router      = useRouter()
   const rawPathname = usePathname()
   const pathname    = rawPathname ?? ''
-  const { user, token, isLoading, clearToken } = useAuth()
+  const { user, isAuthenticated, isLoading, logout: authLogout } = useAuth()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // null mientras carga (o si falla el fetch) — con null no se oculta nada,
@@ -123,15 +123,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (isLoading) return
-    if (!token) router.push('/login')
-  }, [isLoading, token, router])
+    if (!isAuthenticated) router.push('/login')
+  }, [isLoading, isAuthenticated, router])
 
   useEffect(() => {
-    if (!token) return
+    if (!isAuthenticated) return
     businessModulesApi.get()
       .then(({ modules }) => setModules(modules))
       .catch(() => setModules(null))
-  }, [token])
+  }, [isAuthenticated])
 
   const visibleNav = NAV.filter(
     item => !item.moduleKey || modules === null || modules[item.moduleKey] !== false,
@@ -139,8 +139,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
-  function logout() {
-    clearToken()
+  async function logout() {
+    await authLogout()
     router.push('/login')
   }
 
@@ -448,7 +448,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               padding: '24px 24px',
             }}
           >
-            {token ? children : null}
+            {isAuthenticated ? children : null}
           </main>
         </div>
 

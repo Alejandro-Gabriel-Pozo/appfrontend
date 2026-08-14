@@ -1,15 +1,16 @@
 'use client'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getTokenImperative } from '@/context/AuthContext'
 
 export default function Home() {
   const router = useRouter()
   useEffect(() => {
-    // Antes leía localStorage.getItem('token') — el login guarda el token
-    // bajo otra clave, '_rh_token' en localStorage (ver AuthContext.tsx),
-    // así que esto siempre mandaba a /login aunque hubiera sesión activa.
-    router.replace(getTokenImperative() ? '/dashboard' : '/login')
+    // Antes leía el token de localStorage de forma sincrónica. Con la
+    // cookie httpOnly (B2) ya no hay nada legible desde JS — hay que
+    // preguntarle al backend si la sesión es válida.
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(res => router.replace(res.ok ? '/dashboard' : '/login'))
+      .catch(() => router.replace('/login'))
   }, [router])
   return (
     <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">

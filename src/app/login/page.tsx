@@ -14,7 +14,7 @@ interface BusinessOption {
 
 export default function LoginPage() {
   const router = useRouter()
-  const { setToken } = useAuth()
+  const { refreshUser } = useAuth()
 
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -29,10 +29,13 @@ export default function LoginPage() {
     businesses: BusinessOption[]
   } | null>(null)
 
-  function applyLoginResult(data: { token?: string }) {
-    const token = data.token
-    if (!token) throw new Error('No se recibió token en la respuesta')
-    setToken(token)
+  async function applyLoginResult(data: { token?: string }) {
+    // El login ya seteó la cookie httpOnly de sesión (Set-Cookie, ver
+    // auth.routes.ts en app-main) — acá solo falta que el AuthContext se
+    // entere pidiendo /api/auth/me. `data.token` se sigue chequeando como
+    // señal de que la respuesta fue realmente un login exitoso.
+    if (!data.token) throw new Error('No se recibió token en la respuesta')
+    await refreshUser()
     router.replace('/dashboard')
   }
 
@@ -43,6 +46,7 @@ export default function LoginPage() {
     try {
       const res  = await fetch(`${BASE}/api/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       })
@@ -54,7 +58,7 @@ export default function LoginPage() {
         return
       }
 
-      applyLoginResult(data)
+      await applyLoginResult(data)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
     } finally {
@@ -69,12 +73,13 @@ export default function LoginPage() {
     try {
       const res  = await fetch(`${BASE}/api/login/select-business`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identityToken: pendingSelection.identityToken, businessId }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || data.error || 'No se pudo completar el ingreso')
-      applyLoginResult(data)
+      await applyLoginResult(data)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
       setPendingSelection(null)

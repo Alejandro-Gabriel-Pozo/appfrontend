@@ -1,9 +1,7 @@
 'use client'
-import { getTokenImperative } from '@/context/AuthContext'
 
 // Vacío a propósito: /api/* se pide same-origin y next.config.js lo
-// reenvía server-side a NEXT_PUBLIC_API_URL (ver comentario ahí — B2,
-// requisito para poder migrar a httpOnly cookie más adelante).
+// reenvía server-side a NEXT_PUBLIC_API_URL (ver comentario ahí — B2).
 const BASE = ''
 
 // ─── Tipos de error públicos ──────────────────────────────────────────────────
@@ -51,9 +49,11 @@ export async function apiFetch<T>(
     try {
       res = await fetch(`${BASE}${path}`, {
         ...options,
+        // La cookie httpOnly de sesión (B2) viaja sola en cada fetch
+        // same-origin — no hace falta armar un header Authorization a mano.
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${getTokenImperative()}`,
           ...options?.headers,
         },
       })
