@@ -1,14 +1,18 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { usersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { usersApi, rolesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
-import type { TeamMember, AssignableEmployeeRole } from '@/lib/types'
+import type { TeamMember, Role } from '@/lib/types'
 
-const ASSIGNABLE_ROLES: AssignableEmployeeRole[] = ['ADMIN', 'RECEPTIONIST', 'WAITER', 'HOUSEKEEPING']
-
+/**
+ * Labels de los 5 roles "sistema" (seedeados al crear el negocio, ver
+ * app-main platform.schema.sql BLOQUE ROLES). Un rol custom que el negocio
+ * cree no tiene entrada acá — se muestra con su propio `name` tal cual
+ * (ver uso de `ROLE_LABEL[role.name] ?? role.name` más abajo).
+ */
 const ROLE_LABEL: Record<string, string> = {
   OWNER: 'Propietario',
   ADMIN: 'Administrador',
@@ -20,15 +24,16 @@ const ROLE_LABEL: Record<string, string> = {
 type FormState = {
   email: string
   password: string
-  role: AssignableEmployeeRole
+  roleId: string
 }
 
-const EMPTY: FormState = { email: '', password: '', role: 'RECEPTIONIST' }
+const EMPTY: FormState = { email: '', password: '', roleId: '' }
 
 export default function UsuariosPage() {
   const { toast } = useToast()
   const { user: currentUser } = useAuth()
   const [members, setMembers] = useState<TeamMember[]>([])
+  const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -42,10 +47,18 @@ export default function UsuariosPage() {
 
   const isOwner = currentUser?.role === 'OWNER'
 
+  // OWNER nunca se asigna desde acá (se asigna solo al registrar el
+  // negocio) — mismo guard que ya aplica el backend en POST/PUT /api/users.
+  // Incluye roles custom que el negocio haya creado, no solo los 4 fijos
+  // de antes (14/08/2026).
+  const assignableRoles = roles.filter(r => r.name !== 'OWNER' && r.active)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setMembers(await usersApi.list())
+      const [membersRes, rolesRes] = await Promise.all([usersApi.list(), rolesApi.list()])
+      setMembers(membersRes)
+      setRoles(rolesRes)
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -55,16 +68,25 @@ export default function UsuariosPage() {
 
   useEffect(() => { load() }, [load])
 
+  function defaultAssignableRoleId(): string {
+    const receptionist = assignableRoles.find(r => r.name === 'RECEPTIONIST')
+    return (receptionist ?? assignableRoles[0])?.id ?? ''
+  }
+
   function openCreate() {
     setEditing(null)
-    setForm(EMPTY)
+    setForm({ ...EMPTY, roleId: defaultAssignableRoleId() })
     setFieldErrors({})
     setModalOpen(true)
   }
 
   function openEdit(m: TeamMember) {
     setEditing(m)
-    setForm({ email: m.email, password: '', role: (m.role === 'OWNER' ? 'ADMIN' : m.role) as AssignableEmployeeRole })
+    setForm({
+      email: m.email,
+      password: '',
+      roleId: m.roleName === 'OWNER' ? defaultAssignableRoleId() : m.roleId,
+    })
     setFieldErrors({})
     setModalOpen(true)
   }
@@ -76,15 +98,15 @@ export default function UsuariosPage() {
     try {
       if (editing) {
         // El email no se puede editar acá — es de la identity, no de la
-        // membership. role solo se manda si esta membership no es OWNER
+        // membership. roleId solo se manda si esta membership no es OWNER
         // (no tiene sentido pisar el rol de quien registró el negocio).
         await usersApi.update(editing.id, {
-          ...(editing.role !== 'OWNER' && { role: form.role }),
+          ...(editing.roleName !== 'OWNER' && { roleId: form.roleId }),
           ...(form.password && { password: form.password }),
         })
         toast('Usuario actualizado', 'success')
       } else {
-        await usersApi.create({ email: form.email, password: form.password, role: form.role })
+        await usersApi.create({ email: form.email, password: form.password, roleId: form.roleId })
         toast('Usuario creado', 'success')
       }
       setModalOpen(false)
@@ -164,7 +186,7 @@ export default function UsuariosPage() {
                   <td className="px-4 py-3.5 font-medium text-white">{m.email}</td>
                   <td className="px-4 py-3.5">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400">
-                      {ROLE_LABEL[m.role] ?? m.role}
+                      {ROLE_LABEL[m.roleName] ?? m.roleName}
                     </span>
                   </td>
                   <td className="px-4 py-3.5">
@@ -182,7 +204,7 @@ export default function UsuariosPage() {
                         </svg>
                       </button>
                       {/* El propietario nunca se borra desde acá, y solo el propietario puede borrar */}
-                      {isOwner && m.role !== 'OWNER' && (
+                      {isOwner && m.roleName !== 'OWNER' && (
                         <button onClick={() => setDeleteTarget(m)} className="p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors" aria-label="Desactivar">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -216,16 +238,16 @@ export default function UsuariosPage() {
             {fieldErrors['email'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['email']}</p>}
           </div>
 
-          {editing?.role !== 'OWNER' && (
+          {editing?.roleName !== 'OWNER' && (
             <div>
               <label className="label">Rol</label>
               <select
                 className="input"
-                value={form.role}
-                onChange={e => setForm(f => ({ ...f, role: e.target.value as AssignableEmployeeRole }))}
+                value={form.roleId}
+                onChange={e => setForm(f => ({ ...f, roleId: e.target.value }))}
               >
-                {ASSIGNABLE_ROLES.map(r => (
-                  <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+                {assignableRoles.map(r => (
+                  <option key={r.id} value={r.id}>{ROLE_LABEL[r.name] ?? r.name}</option>
                 ))}
               </select>
             </div>

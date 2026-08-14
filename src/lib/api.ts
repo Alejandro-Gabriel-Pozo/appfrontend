@@ -145,7 +145,7 @@ import type {
   CreateVariantInput, UpdateVariantInput,
   Order, OrderItem, CreateOrderInput, ListOrdersFilters,
   BookableService, CreateBookableServiceInput, UpdateBookableServiceInput, ResourceLock,
-  TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput,
+  TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput, Role,
   HousekeepingTask, CreateHousekeepingTaskInput,
   Stay, CheckInInput, CheckOutInput, StayFolio,
   CustomerRate,
@@ -211,6 +211,17 @@ export const usersApi = {
   update: (id: string, body: UpdateTeamMemberInput) =>
     apiFetch<TeamMember>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   remove: (id: string)                  => apiFetch<void>(`/api/users/${id}`, { method: 'DELETE' }),
+}
+
+// ─── Roles (14/08/2026 — reemplaza el enum fijo de rol) ─────────────────────────
+export const rolesApi = {
+  list:   ()                                          => apiFetch<Role[]>('/api/roles'),
+  get:    (id: string)                                => apiFetch<Role>(`/api/roles/${id}`),
+  create: (body: { name: string; permissionGroups: string[] }) =>
+    apiFetch<Role>('/api/roles', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: { name?: string; permissionGroups?: string[] }) =>
+    apiFetch<Role>(`/api/roles/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (id: string)                                => apiFetch<void>(`/api/roles/${id}`, { method: 'DELETE' }),
 }
 
 // ─── Housekeeping ───────────────────────────────────────────────────────────────
