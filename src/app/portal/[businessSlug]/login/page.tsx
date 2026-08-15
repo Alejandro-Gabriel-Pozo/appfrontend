@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useCustomerAuth } from '@/context/CustomerAuthContext'
 import { customerAuthApi, toCustomerSession, extractErrorMessage } from '@/lib/customerApi'
 import { readPendingBooking } from '@/lib/pendingBooking'
+import { GoogleSignInButton } from '@/components/GoogleSignInButton'
 
 export default function CustomerLoginPage() {
   const router = useRouter()
@@ -17,6 +18,11 @@ export default function CustomerLoginPage() {
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
 
+  function goToAccount() {
+    const pending = readPendingBooking()
+    router.replace(pending ? `/portal/${slug}/cuenta/reservas?prefill=1` : `/portal/${slug}/cuenta/reservas`)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -24,8 +30,21 @@ export default function CustomerLoginPage() {
     try {
       const res = await customerAuthApi.login(slug, { email, password })
       setSession(toCustomerSession(res, slug))
-      const pending = readPendingBooking()
-      router.replace(pending ? `/portal/${slug}/cuenta/reservas?prefill=1` : `/portal/${slug}/cuenta/reservas`)
+      goToAccount()
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogleCredential(idToken: string) {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await customerAuthApi.loginWithGoogle(slug, idToken)
+      setSession(toCustomerSession(res, slug))
+      goToAccount()
     } catch (err: unknown) {
       setError(extractErrorMessage(err))
     } finally {
@@ -86,6 +105,17 @@ export default function CustomerLoginPage() {
               {loading ? <><span className="spinner" /> Ingresando…</> : 'Ingresar'}
             </button>
           </form>
+
+          {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+            <div className="mt-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px" style={{ background: 'var(--border-md)' }} />
+                <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>o</span>
+                <div className="flex-1 h-px" style={{ background: 'var(--border-md)' }} />
+              </div>
+              <GoogleSignInButton onCredential={handleGoogleCredential} />
+            </div>
+          )}
 
           <p className="text-center text-xs mt-5" style={{ color: 'var(--text-tertiary)' }}>
             ¿No tenés cuenta?{' '}

@@ -141,6 +141,14 @@ export const customerAuthApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  // Punto 5/E5 (15/08/2026) — self-service: si el email no existe todavía
+  // se auto-crea, y si ya existe (cargado a mano por el negocio, o
+  // registrado antes por password) se vincula en vez de duplicar.
+  loginWithGoogle: (slug: string, idToken: string) =>
+    publicFetch<CustomerAuthResponse>(`/api/customer/${slug}/login/google`, {
+      method: 'POST',
+      body: JSON.stringify({ idToken }),
+    }),
 }
 
 /** Convierte una respuesta de auth + slug en la sesión persistible en CustomerAuthContext. */

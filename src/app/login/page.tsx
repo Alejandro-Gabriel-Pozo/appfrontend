@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
+import { GoogleSignInButton } from '@/components/GoogleSignInButton'
 
 // Vacío a propósito: /api/* se pide same-origin, ver next.config.js (B2).
 const BASE = ''
@@ -10,6 +11,22 @@ interface BusinessOption {
   businessId: string
   businessName: string
   role: string
+}
+
+// Separador + botón solo si hay credenciales de Google cargadas (punto 5/E5)
+// -- evita un "o" flotando sin nada abajo cuando no está configurado.
+function GoogleLoginSection({ onCredential }: { onCredential: (idToken: string) => void }) {
+  if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) return null
+  return (
+    <div className="mt-4">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 h-px" style={{ background: 'var(--border-md)' }} />
+        <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>o</span>
+        <div className="flex-1 h-px" style={{ background: 'var(--border-md)' }} />
+      </div>
+      <GoogleSignInButton onCredential={onCredential} />
+    </div>
+  )
 }
 
 export default function LoginPage() {
@@ -58,6 +75,31 @@ export default function LoginPage() {
         return
       }
 
+      await applyLoginResult(data)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error desconocido')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogleCredential(idToken: string) {
+    setLoading(true)
+    setError('')
+    try {
+      const res  = await fetch(`${BASE}/api/login/google`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'No se pudo iniciar sesión con Google')
+
+      if (data.needsBusinessSelection) {
+        setPendingSelection({ identityToken: data.identityToken, businesses: data.businesses })
+        return
+      }
       await applyLoginResult(data)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -257,6 +299,8 @@ export default function LoginPage() {
                   }
                 </button>
               </form>
+
+              <GoogleLoginSection onCredential={handleGoogleCredential} />
             </>
           )}
         </div>
