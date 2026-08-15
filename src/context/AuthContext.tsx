@@ -54,6 +54,26 @@ async function fetchMe(): Promise<AuthUser | null> {
   }
 }
 
+// Punto 3 (pendientes-2026-08-15.md): la sesión de staff duraba 24h fijas
+// sin forma de extenderla — cualquiera que se quedara trabajando más de un
+// turno tenía que volver a loguearse en medio del día. Cada 20 min (bien
+// por debajo del TTL del token, JWT_EXPIRES_IN default 24h) se pide un
+// token nuevo en segundo plano mientras la pestaña siga abierta y
+// autenticada. Silencioso a propósito: si falla (sesión ya vencida, red
+// caída), no redirige acá — el próximo fetch real a un endpoint protegido
+// ya dispara el interceptor de 401 de apiFetch (lib/api.ts). Solo aplica a
+// sesión de staff (cookie `rh_token`) — el portal de clientes es un login
+// aparte, fuera de alcance.
+const SESSION_REFRESH_INTERVAL_MS = 20 * 60 * 1000
+
+async function refreshSession(): Promise<void> {
+  try {
+    await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
+  } catch {
+    // Silencioso — ver comentario arriba.
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -69,6 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     queueMicrotask(refreshUser)
   }, [refreshUser])
+
+  // Mientras haya sesión activa, extenderla en segundo plano — ver comentario arriba.
+  useEffect(() => {
+    if (user === null) return
+    const id = setInterval(() => { void refreshSession() }, SESSION_REFRESH_INTERVAL_MS)
+    return () => clearInterval(id)
+  }, [user])
 
   const logout = useCallback(async () => {
     try {
