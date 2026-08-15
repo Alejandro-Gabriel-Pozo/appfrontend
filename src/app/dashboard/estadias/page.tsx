@@ -70,7 +70,7 @@ export default function EstadiasPage() {
     }
   }, [toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   const getResourceName = (id: string) => resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
   const getCustomerName = (id: string) => customers.find(c => c.id === id)?.fullName ?? id.slice(0, 8) + '…'

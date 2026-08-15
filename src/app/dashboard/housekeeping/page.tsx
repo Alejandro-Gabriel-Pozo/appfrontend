@@ -74,7 +74,7 @@ export default function HousekeepingPage() {
     }
   }, [date, toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   const getResourceName = (id: string) => resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
   const getMemberEmail = (id: string | null) => id ? members.find(m => m.identityId === id || m.id === id)?.email ?? id.slice(0, 8) + '…' : '—'

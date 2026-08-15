@@ -84,14 +84,16 @@ export default function MisReservasPage() {
     // Se lee directo de window.location en vez de useSearchParams() para no
     // arrastrar el requisito de <Suspense> de Next — esto es un one-shot al
     // montar la página, no algo que necesite reaccionar a cambios de URL.
-    const qs = new URLSearchParams(window.location.search)
-    if (qs.get('prefill') !== '1') return
-    const pending = readPendingBooking()
-    clearPendingBooking()
-    if (!pending) return
-    setConfirmPrefill(pending)
-    setCreateOpen(true)
-    router.replace(`/portal/${slug}/cuenta/reservas`)
+    queueMicrotask(() => {
+      const qs = new URLSearchParams(window.location.search)
+      if (qs.get('prefill') !== '1') return
+      const pending = readPendingBooking()
+      clearPendingBooking()
+      if (!pending) return
+      setConfirmPrefill(pending)
+      setCreateOpen(true)
+      router.replace(`/portal/${slug}/cuenta/reservas`)
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

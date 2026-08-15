@@ -48,11 +48,13 @@ export default function CuentasCorrientesPage() {
   const [paying, setPaying] = useState(false)
 
   useEffect(() => {
-    setLoadingCustomers(true)
-    customersApi.list()
-      .then(res => setCustomers(Array.isArray(res) ? res : res.data))
-      .catch(err => toast(extractErrorMessage(err), 'error'))
-      .finally(() => setLoadingCustomers(false))
+    queueMicrotask(() => {
+      setLoadingCustomers(true)
+      customersApi.list()
+        .then(res => setCustomers(Array.isArray(res) ? res : res.data))
+        .catch(err => toast(extractErrorMessage(err), 'error'))
+        .finally(() => setLoadingCustomers(false))
+    })
   }, [toast])
 
   const filtered = useMemo(() => {

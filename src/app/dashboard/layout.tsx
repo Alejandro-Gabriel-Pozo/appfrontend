@@ -137,7 +137,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     item => !item.moduleKey || modules === null || modules[item.moduleKey] !== false,
   )
 
-  useEffect(() => { setSidebarOpen(false) }, [pathname])
+  useEffect(() => { queueMicrotask(() => setSidebarOpen(false)) }, [pathname])
 
   async function logout() {
     await authLogout()

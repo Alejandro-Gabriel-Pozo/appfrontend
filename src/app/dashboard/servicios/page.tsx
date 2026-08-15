@@ -56,7 +56,7 @@ export default function ServiciosPage() {
     }
   }, [toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   function openCreate() {
     setEditing(null)

@@ -84,7 +84,7 @@ export default function ReservasPage() {
     }
   }, [toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   // Filtrado y paginación en cliente
   const filtered = useMemo(() => {
@@ -104,7 +104,7 @@ export default function ReservasPage() {
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // Resetear página al cambiar filtros
-  useEffect(() => { setPage(1) }, [search, filterStatus])
+  useEffect(() => { queueMicrotask(() => setPage(1)) }, [search, filterStatus])
 
   async function doAction(id: string, action: 'confirm' | 'cancel' | 'complete') {
     setActionLoading(`${id}-${action}`)
@@ -132,15 +132,17 @@ export default function ReservasPage() {
   // el endpoint devuelve [] y se cae al datetime-local libre (ver JSX abajo)
   // — el staff siempre puede overridear si hace falta.
   useEffect(() => {
-    if (!isSlotService || !form.resourceId || !slotDate) {
-      setAvailableSlots(null)
-      return
-    }
-    setLoadingSlots(true)
-    bookableServicesApi.getAvailableSlots(form.serviceId, form.resourceId, slotDate)
-      .then(res => setAvailableSlots(res.slots))
-      .catch(() => setAvailableSlots([]))
-      .finally(() => setLoadingSlots(false))
+    queueMicrotask(() => {
+      if (!isSlotService || !form.resourceId || !slotDate) {
+        setAvailableSlots(null)
+        return
+      }
+      setLoadingSlots(true)
+      bookableServicesApi.getAvailableSlots(form.serviceId, form.resourceId, slotDate)
+        .then(res => setAvailableSlots(res.slots))
+        .catch(() => setAvailableSlots([]))
+        .finally(() => setLoadingSlots(false))
+    })
   }, [isSlotService, form.serviceId, form.resourceId, slotDate])
 
   function selectSlot(startIso: string) {

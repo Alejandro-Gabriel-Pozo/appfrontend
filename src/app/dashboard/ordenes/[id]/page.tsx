@@ -107,7 +107,7 @@ export default function OrderDetailPage() {
     }
   }, [id, toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   // ─── Transiciones de estado ──────────────────────────────────────────────
   async function doAction(action: 'confirm' | 'cancel' | 'complete') {

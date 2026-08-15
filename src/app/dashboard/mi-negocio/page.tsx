@@ -27,7 +27,7 @@ export default function MiNegocioPage() {
     }
   }, [toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   function openAdd(dayOfWeek: number) {
     setAddingDay(dayOfWeek)

@@ -212,7 +212,7 @@ export default function ProductosPage() {
     }
   }, [toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   async function handleDelete(p: Product) {
     if (!confirm(`¿Eliminar "${p.name}"?`)) return

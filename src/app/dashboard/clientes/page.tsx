@@ -56,7 +56,7 @@ export default function ClientesPage() {
     }
   }, [toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return customers

@@ -218,7 +218,7 @@ export default function VariantesPage() {
     }
   }, [productId, toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   async function handleDelete(v: ProductVariant) {
     if (!confirm(`¿Eliminar variante "${v.name}"?`)) return

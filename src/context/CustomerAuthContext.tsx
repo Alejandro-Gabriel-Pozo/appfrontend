@@ -41,18 +41,24 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(!_memorySession)
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      const stored = raw ? (JSON.parse(raw) as CustomerSession) : null
-      if (stored && stored.token !== _memorySession?.token) {
-        _memorySession = stored
-        setSessionState(stored)
+    // Diferido a un microtask -- el registro del listener de 'storage' de
+    // abajo sí tiene que ser sincrónico (React necesita la función de
+    // limpieza devuelta ya mismo), pero la hidratación inicial del estado
+    // no.
+    queueMicrotask(() => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY)
+        const stored = raw ? (JSON.parse(raw) as CustomerSession) : null
+        if (stored && stored.token !== _memorySession?.token) {
+          _memorySession = stored
+          setSessionState(stored)
+        }
+      } catch {
+        // localStorage bloqueado — solo memoria
+      } finally {
+        setIsLoading(false)
       }
-    } catch {
-      // localStorage bloqueado — solo memoria
-    } finally {
-      setIsLoading(false)
-    }
+    })
 
     // Con localStorage este evento sí se dispara en las OTRAS pestañas —
     // login/logout en una pestaña del portal ahora se refleja en las demás.

@@ -79,7 +79,7 @@ export default function OrdenesPage() {
     }
   }, [toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   // Filtrado y paginación en cliente
   const filtered = useMemo(() => {
@@ -101,7 +101,7 @@ export default function OrdenesPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  useEffect(() => { setPage(1) }, [search, filterStatus])
+  useEffect(() => { queueMicrotask(() => setPage(1)) }, [search, filterStatus])
 
   function getCustomerName(customerId: string) {
     const c = customers.find(c => c.id === customerId)

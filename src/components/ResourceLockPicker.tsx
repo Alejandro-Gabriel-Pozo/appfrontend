@@ -44,7 +44,7 @@ export default function ResourceLockPicker({ open, onClose, service }: ResourceL
     }
   }, [service.id, toast])
 
-  useEffect(() => { if (open) load() }, [open, load])
+  useEffect(() => { if (open) queueMicrotask(load) }, [open, load])
 
   function toggle(resourceId: string) {
     setSelected(prev => {

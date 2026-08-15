@@ -38,7 +38,7 @@ export default function RecursosPage() {
     }
   }, [toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   function openCreate() {
     setEditing(null)

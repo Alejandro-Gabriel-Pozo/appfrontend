@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Al montar cada pestaña/carga de página, preguntar si hay sesión activa.
   useEffect(() => {
-    refreshUser()
+    queueMicrotask(refreshUser)
   }, [refreshUser])
 
   const logout = useCallback(async () => {

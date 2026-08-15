@@ -66,7 +66,7 @@ export default function UsuariosPage() {
     }
   }, [toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { queueMicrotask(load) }, [load])
 
   function defaultAssignableRoleId(): string {
     const receptionist = assignableRoles.find(r => r.name === 'RECEPTIONIST')
