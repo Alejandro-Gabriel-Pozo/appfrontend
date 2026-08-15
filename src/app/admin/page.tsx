@@ -114,26 +114,9 @@ export default function AdminPage() {
             <SectionTitle icon="📦" title="Recursos" />
             <div className="space-y-3">
               <ApiBlock method="GET" label="Ver todos los recursos" buildUrl={() => `${BASE}/api/resources`} />
-              <ApiBlock method="GET" label="Recursos por tipo"
-                buildUrl={v => `${BASE}/api/resources/type/${v.type}`}
-                inputs={[{ key: 'type', label: 'Tipo', options: ['CABIN','RESTAURANT_TABLE','SPA','TOUR_SEAT'], required: true }]}
-              />
               <ApiBlock method="GET" label="Recurso por ID"
                 buildUrl={v => `${BASE}/api/resources/${v.id}`}
                 inputs={[{ key: 'id', label: 'ID del recurso', placeholder: 'ej. resource_123', required: true }]}
-              />
-              <ApiBlock method="GET" label="Disponibilidad de recurso"
-                buildUrl={v => {
-                  const params = new URLSearchParams()
-                  if (v.startTime) params.set('startTime', new Date(v.startTime).toISOString())
-                  if (v.endTime) params.set('endTime', new Date(v.endTime).toISOString())
-                  return `${BASE}/api/resources/${v.id}/availability?${params}`
-                }}
-                inputs={[
-                  { key: 'id', label: 'ID del recurso', placeholder: 'ej. resource_123', required: true },
-                  { key: 'startTime', label: 'Desde', type: 'datetime-local', required: true },
-                  { key: 'endTime', label: 'Hasta', type: 'datetime-local', required: true },
-                ]}
               />
             </div>
           </section>
@@ -187,40 +170,40 @@ export default function AdminPage() {
               <ApiBlock method="GET" label="Reporte de ocupación"
                 buildUrl={v => {
                   const params = new URLSearchParams()
-                  if (v.startDate) params.set('startDate', new Date(v.startDate).toISOString())
-                  if (v.endDate) params.set('endDate', new Date(v.endDate).toISOString())
+                  if (v.from) params.set('from', new Date(v.from).toISOString())
+                  if (v.to) params.set('to', new Date(v.to).toISOString())
                   return `${BASE}/api/reports/occupancy?${params}`
                 }}
                 inputs={[
-                  { key: 'startDate', label: 'Desde', type: 'datetime-local', required: true },
-                  { key: 'endDate', label: 'Hasta', type: 'datetime-local', required: true },
+                  { key: 'from', label: 'Desde', type: 'datetime-local', required: true },
+                  { key: 'to', label: 'Hasta', type: 'datetime-local', required: true },
                 ]}
               />
               <ApiBlock method="GET" label="Resumen"
                 buildUrl={v => {
                   const params = new URLSearchParams()
-                  if (v.startDate) params.set('startDate', new Date(v.startDate).toISOString())
-                  if (v.endDate) params.set('endDate', new Date(v.endDate).toISOString())
+                  if (v.from) params.set('from', new Date(v.from).toISOString())
+                  if (v.to) params.set('to', new Date(v.to).toISOString())
                   if (v.limit) params.set('limit', v.limit)
-                  return `${BASE}/api/reports/summary?${params}`
+                  return `${BASE}/api/reports/occupancy/summary?${params}`
                 }}
                 inputs={[
-                  { key: 'startDate', label: 'Desde', type: 'datetime-local', required: true },
-                  { key: 'endDate', label: 'Hasta', type: 'datetime-local', required: true },
+                  { key: 'from', label: 'Desde', type: 'datetime-local', required: true },
+                  { key: 'to', label: 'Hasta', type: 'datetime-local', required: true },
                   { key: 'limit', label: 'Límite (default 5)', type: 'number', placeholder: '5' },
                 ]}
               />
               <ApiBlock method="GET" label="Recursos subutilizados"
                 buildUrl={v => {
                   const params = new URLSearchParams()
-                  if (v.startDate) params.set('startDate', new Date(v.startDate).toISOString())
-                  if (v.endDate) params.set('endDate', new Date(v.endDate).toISOString())
+                  if (v.from) params.set('from', new Date(v.from).toISOString())
+                  if (v.to) params.set('to', new Date(v.to).toISOString())
                   if (v.threshold) params.set('threshold', v.threshold)
-                  return `${BASE}/api/reports/underutilized?${params}`
+                  return `${BASE}/api/reports/occupancy/underutilized?${params}`
                 }}
                 inputs={[
-                  { key: 'startDate', label: 'Desde', type: 'datetime-local', required: true },
-                  { key: 'endDate', label: 'Hasta', type: 'datetime-local', required: true },
+                  { key: 'from', label: 'Desde', type: 'datetime-local', required: true },
+                  { key: 'to', label: 'Hasta', type: 'datetime-local', required: true },
                   { key: 'threshold', label: 'Umbral % (0-100, default 30)', type: 'number', placeholder: '30' },
                 ]}
               />

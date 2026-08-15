@@ -150,7 +150,7 @@ import type {
   Stay, CheckInInput, CheckOutInput, StayFolio,
   CustomerRate,
   CustomerStatement, FinancialTransaction,
-  AccountReceivable, AccountsReceivableReportRow,
+  AccountReceivable,
   OperatingWindow,
 } from './types'
 
@@ -188,7 +188,6 @@ export const resourcesApi = {
 // ─── Bookable Services / Resource Locks ────────────────────────────────────────
 export const bookableServicesApi = {
   list:   ()                                => apiFetch<BookableService[]>('/api/bookable-services'),
-  get:    (id: string)                      => apiFetch<BookableService>(`/api/bookable-services/${id}`),
   create: (body: CreateBookableServiceInput) => apiFetch<BookableService>('/api/bookable-services', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: UpdateBookableServiceInput) =>
     apiFetch<BookableService>(`/api/bookable-services/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
@@ -206,7 +205,6 @@ export const resourceLocksApi = {
 // ─── Team members (empleados) ───────────────────────────────────────────────────
 export const usersApi = {
   list:   ()                            => apiFetch<TeamMember[]>('/api/users'),
-  get:    (id: string)                  => apiFetch<TeamMember>(`/api/users/${id}`),
   create: (body: CreateTeamMemberInput) => apiFetch<TeamMember>('/api/users', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: UpdateTeamMemberInput) =>
     apiFetch<TeamMember>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
@@ -381,47 +379,6 @@ export const ordersApi = {
     apiFetch<OrderItem>(`/api/orders/${id}/items`, { method: 'POST', body: JSON.stringify(body) }),
   removeItem: (id: string, itemId: string) =>
     apiFetch<void>(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' }),
-}
-
-// ─── Reports ──────────────────────────────────────────────────────────────────
-export interface OccupancyReport {
-  resourceId:   string
-  resourceName: string
-  totalSlots:   number
-  bookedSlots:  number
-  occupancyPct: number
-}
-
-export interface OccupancySummary {
-  from:      string
-  to:        string
-  topResources: OccupancyReport[]
-}
-
-export interface UnderutilizedResource {
-  resourceId:   string
-  resourceName: string
-  occupancyPct: number
-}
-
-export const reportsApi = {
-  occupancy: (from: string, to: string) => {
-    const params = new URLSearchParams({ from, to })
-    return apiFetch<OccupancyReport[]>(`/api/reports/occupancy?${params}`)
-  },
-  summary: (from: string, to: string, limit = 5) => {
-    const params = new URLSearchParams({ from, to, limit: String(limit) })
-    return apiFetch<OccupancySummary>(`/api/reports/occupancy/summary?${params}`)
-  },
-  underutilized: (from: string, to: string, threshold = 30) => {
-    const params = new URLSearchParams({ from, to, threshold: String(threshold) })
-    return apiFetch<UnderutilizedResource[]>(`/api/reports/underutilized?${params}`)
-  },
-  /** Cuentas por cobrar agrupadas por empresa/período (A1, paso 6). */
-  accountsReceivable: (from: string, to: string) => {
-    const params = new URLSearchParams({ from, to })
-    return apiFetch<AccountsReceivableReportRow[]>(`/api/reports/accounts-receivable?${params}`)
-  },
 }
 
 // ─── Módulos habilitados (entitlements) ──────────────────────────────────────
