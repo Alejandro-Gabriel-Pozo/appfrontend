@@ -18,6 +18,13 @@ const nextConfig = {
     if (!backend) return []
     return [
       { source: '/api/:path*', destination: `${backend}/api/:path*` },
+      // /platform/* (panel superadmin, 15/08/2026) -- el backend lo monta
+      // SIN prefijo /api (app.ts: app.use('/platform', ...)), así que el
+      // rewrite de arriba no lo cubre. No lleva cookie (el login de
+      // plataforma devuelve el JWT en el body, ver PlatformAuthContext),
+      // pero igual conviene same-origin: evita configurar CORS aparte para
+      // esta única sección.
+      { source: '/platform/:path*', destination: `${backend}/platform/:path*` },
     ]
   },
 }
