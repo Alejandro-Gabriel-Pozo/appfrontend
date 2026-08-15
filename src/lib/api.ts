@@ -381,6 +381,23 @@ export const ordersApi = {
     apiFetch<void>(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' }),
 }
 
+// ─── Salud del outbox (dead-letter, A9.5/A8.7 — 15/08/2026) ──────────────────
+export interface DeadLetterEvent {
+  id: number
+  eventType: string
+  aggregateType: string
+  aggregateId: string
+  occurredAt: string
+  failedAt: string
+  retryCount: number
+  lastError: string | null
+}
+
+export const systemApi = {
+  getDeadLetter: () => apiFetch<{ count: number; events: DeadLetterEvent[] }>('/api/system/outbox/dead-letter'),
+  retry: (id: number) => apiFetch<void>(`/api/system/outbox/${id}/retry`, { method: 'POST' }),
+}
+
 // ─── Módulos habilitados (entitlements) ──────────────────────────────────────
 // Record dinámico a propósito, en vez de un enum duplicado del backend:
 // la fuente de verdad de qué module_key existen es la tabla `modules` en

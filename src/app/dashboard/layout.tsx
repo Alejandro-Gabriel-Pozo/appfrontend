@@ -3,9 +3,9 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ToastProvider } from '@/context/ToastContext'
+import { ToastProvider, useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
-import { businessModulesApi } from '@/lib/api'
+import { businessModulesApi, systemApi, type DeadLetterEvent } from '@/lib/api'
 
 const NAV = [
   {
@@ -109,11 +109,131 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/admin':       'Admin',
 }
 
+// A9.5/A8.7 (15/08/2026): antes un evento fallido se reintentaba para
+// siempre en silencio, sin ninguna señal para un humano más allá de un log
+// que nadie lee. Este aviso es esa señal — visible en cualquier página del
+// panel para OWNER/ADMIN mientras haya eventos en dead-letter.
+function OutboxAlertBanner() {
+  const { toast } = useToast()
+  const [events, setEvents] = useState<DeadLetterEvent[] | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [retryingId, setRetryingId] = useState<number | null>(null)
+
+  function reload() {
+    systemApi.getDeadLetter()
+      .then(({ events }) => setEvents(events))
+      .catch(() => setEvents(null))
+  }
+
+  useEffect(() => { reload() }, [])
+
+  async function handleRetry(id: number) {
+    setRetryingId(id)
+    try {
+      await systemApi.retry(id)
+      toast('Evento reencolado — se procesa en los próximos segundos.', 'success')
+      reload()
+    } catch {
+      toast('No se pudo reintentar el evento. Probá de nuevo.', 'error')
+    } finally {
+      setRetryingId(null)
+    }
+  }
+
+  if (!events || events.length === 0) return null
+
+  return (
+    <div
+      style={{
+        marginBottom: 16,
+        borderRadius: 10,
+        border: '1px solid rgba(239,68,68,0.35)',
+        background: 'rgba(239,68,68,0.08)',
+        overflow: 'hidden',
+      }}
+    >
+      <button
+        onClick={() => setExpanded(e => !e)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          padding: '10px 14px',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#fca5a5', fontWeight: 600 }}>
+          <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          {events.length === 1
+            ? '1 evento no se pudo procesar automáticamente'
+            : `${events.length} eventos no se pudieron procesar automáticamente`}
+        </span>
+        <span style={{ fontSize: 11, color: '#9ca3af' }}>{expanded ? 'Ocultar' : 'Ver detalle'}</span>
+      </button>
+
+      {expanded && (
+        <div style={{ borderTop: '1px solid rgba(239,68,68,0.25)', padding: '8px 14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <p style={{ fontSize: 11.5, color: '#9ca3af', margin: '4px 0 2px' }}>
+            Cada uno se reintentó varias veces solo, sin éxito. Reintentar de nuevo puede resolverlo si ya se corrigió lo que lo bloqueaba.
+          </p>
+          {events.map(ev => (
+            <div
+              key={ev.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                padding: '8px 10px',
+                borderRadius: 8,
+                background: 'rgba(255,255,255,0.03)',
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: 12.5, color: '#e2e4ea', fontWeight: 500 }}>{ev.eventType}</p>
+                <p style={{ fontSize: 11, color: '#6b7280' }}>
+                  {new Date(ev.failedAt).toLocaleString('es-AR')} · {ev.retryCount} intentos
+                  {ev.lastError ? ` · ${ev.lastError}` : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => handleRetry(ev.id)}
+                disabled={retryingId === ev.id}
+                style={{
+                  flexShrink: 0,
+                  padding: '5px 12px',
+                  borderRadius: 6,
+                  fontSize: 11.5,
+                  fontWeight: 500,
+                  color: '#fff',
+                  background: retryingId === ev.id ? '#7f1d1d' : '#dc2626',
+                  border: 'none',
+                  cursor: retryingId === ev.id ? 'default' : 'pointer',
+                }}
+              >
+                {retryingId === ev.id ? 'Reintentando…' : 'Reintentar'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router      = useRouter()
   const rawPathname = usePathname()
   const pathname    = rawPathname ?? ''
   const { user, isAuthenticated, isLoading, logout: authLogout } = useAuth()
+  const isManagement = user?.role === 'OWNER' || user?.role === 'ADMIN'
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // null mientras carga (o si falla el fetch) — con null no se oculta nada,
@@ -448,6 +568,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               padding: '24px 24px',
             }}
           >
+            {isAuthenticated && isManagement && <OutboxAlertBanner />}
             {isAuthenticated ? children : null}
           </main>
         </div>
