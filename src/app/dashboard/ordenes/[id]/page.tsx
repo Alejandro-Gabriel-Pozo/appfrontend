@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ordersApi, customersApi, productsApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
@@ -53,7 +53,6 @@ function Skeleton({ h = 20, w = '100%', radius = 8 }: { h?: number; w?: number |
 
 export default function OrderDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const { toast } = useToast()
   const id = params?.id as string
 
@@ -145,7 +144,7 @@ export default function OrderDetailPage() {
     if (!newItem.productId || newItem.quantity < 1) return
     setAddingItem(true)
     try {
-      const updated = await ordersApi.addItem(id, {
+      await ordersApi.addItem(id, {
         itemType:  'PRODUCT',
         productId: newItem.productId,
         quantity:  newItem.quantity,

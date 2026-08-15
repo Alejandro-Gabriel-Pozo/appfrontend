@@ -253,7 +253,7 @@ export default function RecursosPage() {
                 <div>
                   <label className="label">Horario propio (opcional)</label>
                   <p className="text-xs text-slate-500 mb-2">
-                    Si no cargás nada, este recurso usa el horario de "Mi Negocio". Útil para
+                    Si no cargás nada, este recurso usa el horario de &quot;Mi Negocio&quot;. Útil para
                     un empleado con horario distinto al del negocio (ej. un barbero part-time).
                   </p>
                   <div className="flex flex-wrap gap-2 mb-2">
