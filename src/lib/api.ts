@@ -406,6 +406,21 @@ export const businessModulesApi = {
   get: () => apiFetch<{ modules: Record<string, boolean> }>('/api/business/modules'),
 }
 
+// ─── Identidad del negocio (punto 5/E5, 15/08/2026) ──────────────────────────
+// Hoy solo nombre + contacto -- lo que necesita el remitente del mail de
+// reserva confirmada (A2.9: config por tenant, no una constante del sistema).
+export interface BusinessProfile {
+  id: string
+  displayName: string | null
+  contactEmail: string | null
+}
+
+export const businessProfileApi = {
+  get: () => apiFetch<BusinessProfile>('/api/business-profile'),
+  update: (body: { displayName?: string | null; contactEmail?: string | null }) =>
+    apiFetch<BusinessProfile>('/api/business-profile', { method: 'PUT', body: JSON.stringify(body) }),
+}
+
 // ─── Horario de atención ────────────────────────────────────────────────────
 export const businessHoursApi = {
   list: () => apiFetch<OperatingWindow[]>('/api/business-hours'),

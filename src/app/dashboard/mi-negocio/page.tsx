@@ -1,10 +1,83 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { businessHoursApi, extractErrorMessage } from '@/lib/api'
+import { businessHoursApi, businessProfileApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import type { OperatingWindow } from '@/lib/types'
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+// Identidad del negocio (punto 5/E5, 15/08/2026): nombre + contacto que ve
+// el cliente en el mail de reserva confirmada, en vez de un remitente
+// genérico de la plataforma (A2.9 — esto es config por tenant).
+function BusinessIdentitySection() {
+  const { toast } = useToast()
+  const [displayName, setDisplayName] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    queueMicrotask(async () => {
+      try {
+        const profile = await businessProfileApi.get()
+        setDisplayName(profile.displayName ?? '')
+        setContactEmail(profile.contactEmail ?? '')
+      } catch (err) {
+        toast(extractErrorMessage(err), 'error')
+      } finally {
+        setLoading(false)
+      }
+    })
+  }, [toast])
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      await businessProfileApi.update({
+        displayName: displayName.trim() || null,
+        contactEmail: contactEmail.trim() || null,
+      })
+      toast('Identidad del negocio guardada', 'success')
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <div className="card p-4 h-32 animate-pulse" />
+
+  return (
+    <div className="card p-4">
+      <p className="text-sm font-medium text-white mb-1">Identidad del negocio</p>
+      <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)' }}>
+        Así se identifica tu negocio en los mails que reciben tus clientes (ej. confirmación de reserva).
+      </p>
+      <form onSubmit={handleSave} className="space-y-3">
+        <div>
+          <label className="label">Nombre para mostrar</label>
+          <input
+            type="text" className="input" value={displayName}
+            onChange={e => setDisplayName(e.target.value)}
+            placeholder="Ej. Hotel Los Álamos"
+          />
+        </div>
+        <div>
+          <label className="label">Email de contacto (reply-to)</label>
+          <input
+            type="email" className="input" value={contactEmail}
+            onChange={e => setContactEmail(e.target.value)}
+            placeholder="contacto@tunegocio.com"
+          />
+        </div>
+        <button type="submit" disabled={saving} className="btn-primary">
+          {saving ? <span className="spinner" /> : 'Guardar'}
+        </button>
+      </form>
+    </div>
+  )
+}
 
 export default function MiNegocioPage() {
   const { toast } = useToast()
@@ -94,6 +167,10 @@ export default function MiNegocioPage() {
             tener horario propio que reemplaza a este — se configura en Recursos.
           </p>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <BusinessIdentitySection />
       </div>
 
       {loading ? (
