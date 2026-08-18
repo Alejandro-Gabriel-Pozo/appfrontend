@@ -224,6 +224,46 @@ export interface ResourceLock {
   sortOrder: number
 }
 
+/**
+ * Tarifa de un servicio (18/08/2026, spec de mejoras PMS) — un mismo
+ * BookableService puede tener varias RatePlan simultáneas (Rack,
+ * Corporativa, No reembolsable). `validFrom`/`validTo` en formato
+ * YYYY-MM-DD (fecha de calendario, no instante) — `null` = sin
+ * restricción de ese extremo.
+ */
+export interface RatePlan {
+  id: string
+  serviceId: string
+  name: string
+  price: number
+  includesBreakfast: boolean
+  cancellationPolicy: string | null
+  validFrom: string | null
+  validTo: string | null
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateRatePlanInput {
+  name: string
+  price: number
+  includesBreakfast?: boolean
+  cancellationPolicy?: string | null
+  validFrom?: string | null
+  validTo?: string | null
+}
+
+export interface UpdateRatePlanInput {
+  name?: string
+  price?: number
+  includesBreakfast?: boolean
+  cancellationPolicy?: string | null
+  validFrom?: string | null
+  validTo?: string | null
+  active?: boolean
+}
+
 export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
 
 export interface Reservation {
@@ -240,6 +280,8 @@ export interface Reservation {
   /** Desglose de huéspedes (hotelería, 18/08/2026) — null/undefined = no aplica a este tipo de reserva (ej. Turnos). */
   adultos?: number | null
   ninos?: number | null
+  /** Tarifa elegida al reservar (spec de mejoras PMS, 18/08/2026) — trazabilidad, no la fuente del precio. */
+  ratePlanId?: string | null
   totalPrice: number
   // El backend no trackea estas fechas a nivel de dominio para reservas
   // todavía (a diferencia de otras entidades) — quedan opcionales a

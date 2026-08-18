@@ -145,6 +145,7 @@ import type {
   CreateVariantInput, UpdateVariantInput,
   Order, OrderItem, CreateOrderInput, ListOrdersFilters,
   BookableService, CreateBookableServiceInput, UpdateBookableServiceInput, ResourceLock,
+  RatePlan, CreateRatePlanInput, UpdateRatePlanInput,
   TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput, Role,
   HousekeepingTask, CreateHousekeepingTaskInput,
   Stay, CheckInInput, CheckOutInput, StayFolio,
@@ -203,6 +204,17 @@ export const resourceLocksApi = {
   list:    (serviceId: string)                        => apiFetch<ResourceLock[]>(`/api/bookable-services/${serviceId}/resource-locks`),
   replace: (serviceId: string, resourceIds: string[]) =>
     apiFetch<ResourceLock[]>(`/api/bookable-services/${serviceId}/resource-locks`, { method: 'PUT', body: JSON.stringify({ resourceIds }) }),
+}
+
+// ─── Rate Plans (18/08/2026, spec de mejoras PMS) ───────────────────────────────
+export const ratePlansApi = {
+  list:   (serviceId: string)                    => apiFetch<RatePlan[]>(`/api/bookable-services/${serviceId}/rate-plans`),
+  create: (serviceId: string, body: CreateRatePlanInput) =>
+    apiFetch<RatePlan>(`/api/bookable-services/${serviceId}/rate-plans`, { method: 'POST', body: JSON.stringify(body) }),
+  update: (serviceId: string, ratePlanId: string, body: UpdateRatePlanInput) =>
+    apiFetch<RatePlan>(`/api/bookable-services/${serviceId}/rate-plans/${ratePlanId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (serviceId: string, ratePlanId: string) =>
+    apiFetch<void>(`/api/bookable-services/${serviceId}/rate-plans/${ratePlanId}`, { method: 'DELETE' }),
 }
 
 // ─── Team members (empleados) ───────────────────────────────────────────────────
@@ -292,12 +304,12 @@ export const reservationsApi = {
     )
   },
   get:      (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}`),
-  create: (body: { resourceId: string; customer: { id: string }; startTime: string; endTime: string; serviceId?: string; details?: Record<string, unknown>; adultos?: number; ninos?: number }) =>
+  create: (body: { resourceId: string; customer: { id: string }; startTime: string; endTime: string; serviceId?: string; details?: Record<string, unknown>; adultos?: number; ninos?: number; ratePlanId?: string }) =>
     apiFetch<Reservation>('/api/reservations', { method: 'POST', body: JSON.stringify(body) }),
   // El backend registra PUT /api/reservations/:id (no PATCH) — antes esto
   // mandaba PATCH y el backend nunca tuvo ese handler, así que editar una
   // reserva desde el dashboard devolvía 404 en silencio.
-  update: (id: string, body: { startTime?: string; endTime?: string; details?: Record<string, unknown>; resourceId?: string; adultos?: number | null; ninos?: number | null }) =>
+  update: (id: string, body: { startTime?: string; endTime?: string; details?: Record<string, unknown>; resourceId?: string; adultos?: number | null; ninos?: number | null; ratePlanId?: string | null }) =>
     apiFetch<Reservation>(`/api/reservations/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   confirm:  (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/confirm`,  { method: 'POST' }),
   cancel:   (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/cancel`,   { method: 'POST' }),

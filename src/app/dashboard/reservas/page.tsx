@@ -2,11 +2,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useUpdate, useInvalidate } from '@refinedev/core'
-import { reservationsApi, resourcesApi, customersApi, bookableServicesApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { reservationsApi, resourcesApi, customersApi, bookableServicesApi, categoriesApi, ratePlansApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import RoomCalendar from '@/components/RoomCalendar'
-import type { Reservation, Resource, ReservationStatus, BookableService, Category } from '@/lib/types'
+import type { Reservation, Resource, ReservationStatus, BookableService, Category, RatePlan } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Primera pantalla migrada (18/08/2026) — módulo PMS, acento brass. El scope
@@ -85,7 +85,12 @@ export default function ReservasPage() {
 
   // Modal nueva reserva
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
+  const [form, setForm] = useState({ resourceId: '', serviceId: '', ratePlanId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
+  // Tarifas del servicio elegido (spec de mejoras PMS, 18/08/2026) —
+  // selector de DOS pasos: elegir servicio primero, después (si tiene
+  // tarifas) elegir cuál. Sin tarifas cargadas, el servicio sigue usando
+  // su precio de catálogo como siempre.
+  const [serviceRatePlans, setServiceRatePlans] = useState<RatePlan[]>([])
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -168,6 +173,22 @@ export default function ReservasPage() {
 
   const selectedService = services.find(s => s.id === form.serviceId)
   const isSlotService = selectedService?.bookingMode === 'slot'
+
+  // Selector de dos pasos (spec de mejoras PMS, 18/08/2026): al elegir un
+  // servicio, se traen sus tarifas. Sin tarifas cargadas para ese servicio,
+  // el segundo paso simplemente no aparece y la reserva sigue usando el
+  // precio de catálogo del servicio, como siempre.
+  useEffect(() => {
+    // form.serviceId === '' no dispara fetch -- el guard de renderizado
+    // (`form.serviceId && serviceRatePlans.length > 0`) ya evita mostrar
+    // tarifas de un servicio previo mientras no hay ninguno elegido.
+    if (!form.serviceId) return
+    let cancelled = false
+    ratePlansApi.list(form.serviceId)
+      .then(plans => { if (!cancelled) setServiceRatePlans(plans) })
+      .catch(err => { if (!cancelled) toast(extractErrorMessage(err), 'error') })
+    return () => { cancelled = true }
+  }, [form.serviceId, toast])
   // Reservas es 100% alojamiento (E1) — check-in/check-out por día
   // calendario es el caso por defecto, se elija o no un "servicio"
   // puntual. El único caso que necesita hora exacta es un servicio con
@@ -230,13 +251,14 @@ export default function ReservasPage() {
           startTime,
           endTime,
           ...(form.serviceId && { serviceId: form.serviceId }),
+          ...(form.ratePlanId && { ratePlanId: form.ratePlanId }),
           adultos: form.adultos,
           ...(form.ninos > 0 && { ninos: form.ninos }),
         },
       })
       toast('Reserva creada', 'success')
       setModalOpen(false)
-      setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
+      setForm({ resourceId: '', serviceId: '', ratePlanId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setFieldErrors(fe)
@@ -247,7 +269,7 @@ export default function ReservasPage() {
   }
 
   function openModal() {
-    setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
+    setForm({ resourceId: '', serviceId: '', ratePlanId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
     setFieldErrors({})
     setSlotDate('')
     setAvailableSlots(null)
@@ -263,7 +285,7 @@ export default function ReservasPage() {
     const dateStr = toUTCDateInput(date.toISOString())
     const nextDateStr = toUTCDateInput(new Date(date.getTime() + 86_400_000).toISOString())
     setForm({
-      resourceId, serviceId: '', customerEmail: '',
+      resourceId, serviceId: '', ratePlanId: '', customerEmail: '',
       checkIn: dateStr, checkOut: nextDateStr,
       startTime: '', endTime: '',
       adultos: 1, ninos: 0,
@@ -545,7 +567,7 @@ export default function ReservasPage() {
             <select
               className="input"
               value={form.serviceId}
-              onChange={e => setForm(f => ({ ...f, serviceId: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, serviceId: e.target.value, ratePlanId: '' }))}
             >
               <option value="">Sin servicio — horario libre</option>
               {lodgingServices.map(s => (
@@ -555,6 +577,21 @@ export default function ReservasPage() {
               ))}
             </select>
           </div>
+          {form.serviceId && serviceRatePlans.length > 0 && (
+            <div>
+              <label className="label">Tarifa (opcional)</label>
+              <select
+                className="input"
+                value={form.ratePlanId}
+                onChange={e => setForm(f => ({ ...f, ratePlanId: e.target.value }))}
+              >
+                <option value="">Precio de catálogo (${selectedService?.price.toLocaleString('es-AR')})</option>
+                {serviceRatePlans.map(rp => (
+                  <option key={rp.id} value={rp.id}>{rp.name} — ${rp.price.toLocaleString('es-AR')}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="label">Recurso</label>
             <select

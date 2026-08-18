@@ -7,6 +7,7 @@ import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import ResourceLockPicker from '@/components/ResourceLockPicker'
+import RatePlanManager from '@/components/RatePlanManager'
 import type { BookableService, Category, BookingMode } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
@@ -59,6 +60,7 @@ export default function ServiciosPage() {
   const [deleting, setDeleting] = useState(false)
 
   const [lockTarget, setLockTarget] = useState<BookableService | null>(null)
+  const [ratePlanTarget, setRatePlanTarget] = useState<BookableService | null>(null)
 
   // Categorías no está migrado a esta pantalla — se sigue trayendo directo
   // para el <select>, igual que antes.
@@ -188,6 +190,7 @@ export default function ServiciosPage() {
                   <td>
                     <div className="flex items-center justify-end gap-1.5">
                       <button onClick={() => setLockTarget(s)} className="btn-mini btn-mini-neutral">Recursos</button>
+                      <button onClick={() => setRatePlanTarget(s)} className="btn-mini btn-mini-neutral">Tarifas</button>
                       <button onClick={() => openEdit(s)} className="btn-mini btn-mini-neutral">Editar</button>
                       <button onClick={() => setDeleteTarget(s)} className="btn-mini btn-mini-clay">Eliminar</button>
                     </div>
@@ -315,6 +318,15 @@ export default function ServiciosPage() {
           open={lockTarget !== null}
           onClose={() => setLockTarget(null)}
           service={lockTarget}
+        />
+      )}
+
+      {/* Modal de tarifas (18/08/2026, spec de mejoras PMS) */}
+      {ratePlanTarget && (
+        <RatePlanManager
+          open={ratePlanTarget !== null}
+          onClose={() => setRatePlanTarget(null)}
+          service={ratePlanTarget}
         />
       )}
     </div>
