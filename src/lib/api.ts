@@ -147,7 +147,7 @@ import type {
   BookableService, CreateBookableServiceInput, UpdateBookableServiceInput, ResourceLock,
   RatePlan, CreateRatePlanInput, UpdateRatePlanInput,
   TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput, Role,
-  HousekeepingTask, CreateHousekeepingTaskInput,
+  HousekeepingTask, CreateHousekeepingTaskInput, LateCheckout,
   Stay, CheckInInput, CheckOutInput, StayFolio,
   CustomerRate,
   CustomerStatement, FinancialTransaction,
@@ -252,6 +252,12 @@ export const housekeepingApi = {
   outOfService: (id: string, reason?: string) =>
     apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/out-of-service`, { method: 'POST', body: JSON.stringify({ reason }) }),
   reset: (id: string) => apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/reset`, { method: 'POST' }),
+  /**
+   * Badge de solo lectura (18/08/2026, pendientes-2026-08-18.md punto N):
+   * reservas con late check-out APROBADO cuyo checkout cae en `date`.
+   */
+  lateCheckouts: (date?: string) =>
+    apiFetch<LateCheckout[]>(`/api/housekeeping/late-checkouts${date ? `?date=${date}` : ''}`),
 }
 
 // ─── Stays (check-in / check-out) ────────────────────────────────────────────────
@@ -314,6 +320,19 @@ export const reservationsApi = {
   confirm:  (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/confirm`,  { method: 'POST' }),
   cancel:   (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/cancel`,   { method: 'POST' }),
   complete: (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/complete`, { method: 'POST' }),
+  /**
+   * Flujo de horario de check-in/check-out fuera del estándar (18/08/2026,
+   * pendientes-2026-08-18.md punto N). `scheduleRequest` lo puede iniciar
+   * el propio huésped o el staff; approve/reject son solo staff
+   * (FRONT_DESK) -- el backend igual lo valida, esto solo evita mostrar el
+   * botón a quien no puede usarlo.
+   */
+  requestScheduleChange: (id: string, body: { requestedCheckInTime?: string; requestedCheckOutTime?: string }) =>
+    apiFetch<Reservation>(`/api/reservations/${id}/schedule-request`, { method: 'POST', body: JSON.stringify(body) }),
+  approveScheduleChange: (id: string, body: { chargeAmount?: number } = {}) =>
+    apiFetch<Reservation>(`/api/reservations/${id}/schedule-request/approve`, { method: 'POST', body: JSON.stringify(body) }),
+  rejectScheduleChange: (id: string) =>
+    apiFetch<Reservation>(`/api/reservations/${id}/schedule-request/reject`, { method: 'POST' }),
 }
 
 // ─── Customers ────────────────────────────────────────────────────────────────
@@ -470,18 +489,32 @@ export const businessModulesApi = {
 }
 
 // ─── Identidad del negocio (punto 5/E5, 15/08/2026) ──────────────────────────
-// Hoy solo nombre + contacto -- lo que necesita el remitente del mail de
-// reserva confirmada (A2.9: config por tenant, no una constante del sistema).
+// Nombre + contacto -- lo que necesita el remitente del mail de reserva
+// confirmada (A2.9: config por tenant, no una constante del sistema).
+// currency/timezone sumados 17/08/2026 (auditoría de hardcodes) y
+// defaultCheckInTime/defaultCheckOutTime el 18/08/2026 (flujo de horario de
+// check-in/check-out, pendientes-2026-08-18.md punto N) -- currency/timezone
+// siguen sin UI de edición en el dashboard (gap preexistente, no de este
+// cambio), se listan acá solo para que el tipo no mienta sobre lo que
+// devuelve GET /api/business-profile.
 export interface BusinessProfile {
   id: string
   displayName: string | null
   contactEmail: string | null
+  currency: string
+  timezone: string
+  defaultCheckInTime: string
+  defaultCheckOutTime: string
 }
 
 export const businessProfileApi = {
   get: () => apiFetch<BusinessProfile>('/api/business-profile'),
-  update: (body: { displayName?: string | null; contactEmail?: string | null }) =>
-    apiFetch<BusinessProfile>('/api/business-profile', { method: 'PUT', body: JSON.stringify(body) }),
+  update: (body: {
+    displayName?: string | null
+    contactEmail?: string | null
+    defaultCheckInTime?: string
+    defaultCheckOutTime?: string
+  }) => apiFetch<BusinessProfile>('/api/business-profile', { method: 'PUT', body: JSON.stringify(body) }),
 }
 
 // ─── Horario de atención ────────────────────────────────────────────────────

@@ -38,6 +38,19 @@ const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
 
 const ALL_STATUSES: ReservationStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']
 
+// Flujo de horario de check-in/check-out fuera del estándar (18/08/2026,
+// pendientes-2026-08-18.md punto N).
+const SCHEDULE_STATUS_LABEL: Record<'PENDING' | 'APPROVED' | 'REJECTED', string> = {
+  PENDING: 'Pendiente de aprobación',
+  APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado',
+}
+const SCHEDULE_STATUS_BADGE_CLASS: Record<'PENDING' | 'APPROVED' | 'REJECTED', string> = {
+  PENDING: 'badge-pending',
+  APPROVED: 'badge-confirmed',
+  REJECTED: 'badge-cancelled',
+}
+
 // Reservas es 100% alojamiento (E1, 18/08/2026) — toda reserva acá es por
 // noche/día calendario, nunca por hora exacta. Se muestra y edita en UTC,
 // nunca en hora local: una reserva creada como "check-in 21/8" se guarda
@@ -105,6 +118,13 @@ export default function ReservasPage() {
   const [detailForm, setDetailForm] = useState({ startTime: '', endTime: '', adultos: 1, ninos: 0 })
   const [detailFieldErrors, setDetailFieldErrors] = useState<Record<string, string>>({})
   const [detailSubmitting, setDetailSubmitting] = useState(false)
+
+  // Horario especial (early check-in / late check-out) — pendientes-2026-08-18.md punto N.
+  const [scheduleRequestOpen, setScheduleRequestOpen] = useState(false)
+  const [scheduleRequestForm, setScheduleRequestForm] = useState({ requestedCheckInTime: '', requestedCheckOutTime: '' })
+  const [scheduleSubmitting, setScheduleSubmitting] = useState(false)
+  const [scheduleApproveOpen, setScheduleApproveOpen] = useState(false)
+  const [scheduleChargeAmount, setScheduleChargeAmount] = useState('')
 
   // Recursos/servicios no están migrados a esta pantalla — se siguen
   // trayendo directo, igual que antes.
@@ -331,6 +351,13 @@ export default function ReservasPage() {
       adultos: r.adultos ?? 1, ninos: r.ninos ?? 0,
     })
     setDetailFieldErrors({})
+    setScheduleRequestOpen(false)
+    setScheduleApproveOpen(false)
+    setScheduleRequestForm({
+      requestedCheckInTime: r.requestedCheckInTime?.slice(0, 5) ?? '',
+      requestedCheckOutTime: r.requestedCheckOutTime?.slice(0, 5) ?? '',
+    })
+    setScheduleChargeAmount('')
   }
 
   async function handleUpdateDetail(e: React.FormEvent) {
@@ -368,6 +395,66 @@ export default function ReservasPage() {
       const labels = { confirm: 'Reserva confirmada', cancel: 'Reserva cancelada', complete: 'Reserva completada' }
       const updated = await reservationsApi[action](detailTarget.id)
       toast(labels[action], 'success')
+      setDetailTarget(updated)
+      invalidate({ resource: 'reservas', invalidates: ['list'] })
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function submitScheduleRequest(e: React.FormEvent) {
+    e.preventDefault()
+    if (!detailTarget) return
+    const { requestedCheckInTime, requestedCheckOutTime } = scheduleRequestForm
+    if (!requestedCheckInTime && !requestedCheckOutTime) {
+      toast('Pedí una hora de check-in o de check-out', 'error')
+      return
+    }
+    setScheduleSubmitting(true)
+    try {
+      const updated = await reservationsApi.requestScheduleChange(detailTarget.id, {
+        ...(requestedCheckInTime && { requestedCheckInTime }),
+        ...(requestedCheckOutTime && { requestedCheckOutTime }),
+      })
+      toast('Horario especial pedido — queda pendiente de aprobación', 'success')
+      setDetailTarget(updated)
+      setScheduleRequestOpen(false)
+      invalidate({ resource: 'reservas', invalidates: ['list'] })
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setScheduleSubmitting(false)
+    }
+  }
+
+  async function approveSchedule() {
+    if (!detailTarget) return
+    setActionLoading(`${detailTarget.id}-approve-schedule`)
+    try {
+      const amount = scheduleChargeAmount.trim() === '' ? undefined : parseFloat(scheduleChargeAmount)
+      const updated = await reservationsApi.approveScheduleChange(detailTarget.id, { chargeAmount: amount })
+      toast('Horario especial aprobado', 'success')
+      setDetailTarget(updated)
+      setScheduleApproveOpen(false)
+      invalidate({ resource: 'reservas', invalidates: ['list'] })
+    } catch (err) {
+      // NEXT_ARRIVAL_CONFLICT (409) llega acá con un mensaje ya en
+      // castellano ("Conflicto: próxima llegada a las HH:MM") — no hace
+      // falta traducirlo de nuevo, se muestra tal cual.
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function rejectSchedule() {
+    if (!detailTarget) return
+    setActionLoading(`${detailTarget.id}-reject-schedule`)
+    try {
+      const updated = await reservationsApi.rejectScheduleChange(detailTarget.id)
+      toast('Horario especial rechazado', 'success')
       setDetailTarget(updated)
       invalidate({ resource: 'reservas', invalidates: ['list'] })
     } catch (err) {
@@ -891,6 +978,28 @@ export default function ReservasPage() {
                 </div>
               )}
 
+              {/* Horario especial (early check-in / late check-out) — pendientes-2026-08-18.md punto N. */}
+              {detailTarget.scheduleApprovalStatus && (
+                <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Horario especial pedido</p>
+                    <span className={SCHEDULE_STATUS_BADGE_CLASS[detailTarget.scheduleApprovalStatus]}>
+                      {SCHEDULE_STATUS_LABEL[detailTarget.scheduleApprovalStatus]}
+                    </span>
+                  </div>
+                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>
+                    {detailTarget.requestedCheckInTime && `Check-in: ${detailTarget.requestedCheckInTime.slice(0, 5)}`}
+                    {detailTarget.requestedCheckInTime && detailTarget.requestedCheckOutTime && '  ·  '}
+                    {detailTarget.requestedCheckOutTime && `Check-out: ${detailTarget.requestedCheckOutTime.slice(0, 5)}`}
+                  </p>
+                  {detailTarget.scheduleApprovalStatus === 'APPROVED' && !!detailTarget.scheduleChargeAmount && (
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                      Cargo aplicado: {fmtMoney(detailTarget.scheduleChargeAmount)}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
                 {detailTarget.status === 'PENDING' && (
                   <button
@@ -899,6 +1008,32 @@ export default function ReservasPage() {
                   >
                     Editar horario
                   </button>
+                )}
+                {(detailTarget.status === 'PENDING' || detailTarget.status === 'CONFIRMED') && (
+                  <button
+                    onClick={() => setScheduleRequestOpen(o => !o)}
+                    className="btn-mini btn-mini-neutral"
+                  >
+                    {detailTarget.scheduleApprovalStatus ? 'Volver a pedir horario' : 'Pedir horario especial'}
+                  </button>
+                )}
+                {detailTarget.scheduleApprovalStatus === 'PENDING' && (
+                  <>
+                    <button
+                      onClick={() => setScheduleApproveOpen(o => !o)}
+                      disabled={actionLoading !== null}
+                      className="btn-mini btn-mini-sage"
+                    >
+                      Aprobar horario
+                    </button>
+                    <button
+                      onClick={rejectSchedule}
+                      disabled={actionLoading !== null}
+                      className="btn-mini btn-mini-clay"
+                    >
+                      {actionLoading === `${detailTarget.id}-reject-schedule` ? '…' : 'Rechazar horario'}
+                    </button>
+                  </>
                 )}
                 {detailTarget.allowedTransitions?.includes('CONFIRMED') && (
                   <button
@@ -928,6 +1063,64 @@ export default function ReservasPage() {
                   </button>
                 )}
               </div>
+
+              {scheduleRequestOpen && (
+                <form onSubmit={submitScheduleRequest} className="space-y-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    Dejá el campo vacío para no pedir cambio en ese horario. El estándar del negocio se configura en Mi Negocio.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">Check-in pedido</label>
+                      <input
+                        type="time" className="input"
+                        value={scheduleRequestForm.requestedCheckInTime}
+                        onChange={e => setScheduleRequestForm(f => ({ ...f, requestedCheckInTime: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Check-out pedido</label>
+                      <input
+                        type="time" className="input"
+                        value={scheduleRequestForm.requestedCheckOutTime}
+                        onChange={e => setScheduleRequestForm(f => ({ ...f, requestedCheckOutTime: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setScheduleRequestOpen(false)} className="btn-secondary flex-1">Cancelar</button>
+                    <button type="submit" disabled={scheduleSubmitting} className="btn-primary flex-1">
+                      {scheduleSubmitting ? <span className="spinner" /> : null}
+                      Enviar pedido
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {scheduleApproveOpen && (
+                <div className="space-y-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                  <div>
+                    <label className="label">Cargo por el horario especial (opcional)</label>
+                    <input
+                      type="number" className="input" min={0} step="0.01"
+                      value={scheduleChargeAmount}
+                      onChange={e => setScheduleChargeAmount(e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setScheduleApproveOpen(false)} className="btn-secondary flex-1">Cancelar</button>
+                    <button
+                      type="button" onClick={approveSchedule}
+                      disabled={actionLoading !== null}
+                      className="btn-primary flex-1"
+                    >
+                      {actionLoading === `${detailTarget.id}-approve-schedule` ? <span className="spinner" /> : null}
+                      Confirmar aprobación
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Modal>

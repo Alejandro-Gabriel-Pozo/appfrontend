@@ -20,6 +20,11 @@ function BusinessIdentitySection() {
   const { toast } = useToast()
   const [displayName, setDisplayName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
+  // HH:MM — el input type="time" no quiere segundos; el backend acepta
+  // HH:MM o HH:MM:SS (timeOnly, request.schemas.ts), así que no hace falta
+  // agregarlos acá.
+  const [checkInTime, setCheckInTime] = useState('14:00')
+  const [checkOutTime, setCheckOutTime] = useState('11:00')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -29,6 +34,8 @@ function BusinessIdentitySection() {
         const profile = await businessProfileApi.get()
         setDisplayName(profile.displayName ?? '')
         setContactEmail(profile.contactEmail ?? '')
+        setCheckInTime(profile.defaultCheckInTime.slice(0, 5))
+        setCheckOutTime(profile.defaultCheckOutTime.slice(0, 5))
       } catch (err) {
         toast(extractErrorMessage(err), 'error')
       } finally {
@@ -44,6 +51,8 @@ function BusinessIdentitySection() {
       await businessProfileApi.update({
         displayName: displayName.trim() || null,
         contactEmail: contactEmail.trim() || null,
+        defaultCheckInTime: checkInTime,
+        defaultCheckOutTime: checkOutTime,
       })
       toast('Identidad del negocio guardada', 'success')
     } catch (err) {
@@ -78,6 +87,29 @@ function BusinessIdentitySection() {
             placeholder="contacto@tunegocio.com"
           />
         </div>
+        <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="flex-1">
+            <label className="label">Check-in estándar</label>
+            <input
+              type="time" className="input" value={checkInTime}
+              onChange={e => setCheckInTime(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex-1">
+            <label className="label">Check-out estándar</label>
+            <input
+              type="time" className="input" value={checkOutTime}
+              onChange={e => setCheckOutTime(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          Hora de pared que usan Reservas/Estadías por defecto. Un huésped puede pedir
+          un horario distinto (early check-in / late check-out) desde el detalle de su
+          reserva — queda pendiente de aprobación de recepción.
+        </p>
         <button type="submit" disabled={saving} className="btn-primary">
           {saving ? <span className="spinner" /> : 'Guardar'}
         </button>

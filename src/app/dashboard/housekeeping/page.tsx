@@ -6,7 +6,7 @@ import { housekeepingApi, resourcesApi, usersApi, categoriesApi, extractErrorMes
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import Modal from '@/components/Modal'
-import type { HousekeepingTask, HousekeepingStatus, Shift, Resource, TeamMember, Category } from '@/lib/types'
+import type { HousekeepingTask, HousekeepingStatus, Shift, Resource, TeamMember, Category, LateCheckout } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Segunda pantalla migrada (18/08/2026) — módulo PMS, acento brass, patrón
@@ -85,6 +85,7 @@ export default function HousekeepingPage() {
   const [resources, setResources] = useState<Resource[]>([])
   const [members, setMembers] = useState<TeamMember[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [lateCheckouts, setLateCheckouts] = useState<LateCheckout[]>([])
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const [createOpen, setCreateOpen] = useState(false)
@@ -108,6 +109,18 @@ export default function HousekeepingPage() {
         .catch(err => toast(extractErrorMessage(err), 'error'))
     })
   }, [toast])
+
+  // Badge de late check-out (18/08/2026, pendientes-2026-08-18.md punto N) —
+  // se recalcula por fecha, igual que el tablero de tareas de arriba.
+  useEffect(() => {
+    queueMicrotask(() => {
+      housekeepingApi.lateCheckouts(date)
+        .then(setLateCheckouts)
+        .catch(err => toast(extractErrorMessage(err), 'error'))
+    })
+  }, [date, toast])
+
+  const getLateCheckout = (resourceId: string) => lateCheckouts.find(l => l.resourceId === resourceId) ?? null
 
   // Backlog E1 (13/08/2026, ampliado 18/08 tras encontrar el mismo bug acá) —
   // housekeeping es limpieza de habitaciones/unidades, no tiene sentido para
@@ -255,6 +268,7 @@ export default function HousekeepingPage() {
           {lodgingResources.map(r => {
             const task = getTaskForResource(r.id)
             const tile = task ? STATUS_TILE[task.status] : EMPTY_TILE
+            const lateCheckout = getLateCheckout(r.id)
             return (
               <button
                 key={r.id}
@@ -287,6 +301,20 @@ export default function HousekeepingPage() {
                 <span style={{ fontSize: 11.5, color: 'var(--bastion-slate)' }}>
                   {task ? `${STATUS_LABEL[task.status]} · ${SHIFT_LABEL[task.shift]}` : 'Sin tarea'}
                 </span>
+                {lateCheckout && (
+                  <span
+                    title={`Late check-out aprobado hasta las ${lateCheckout.approvedCheckOutTime?.slice(0, 5) ?? '—'}`}
+                    style={{
+                      position: 'absolute', top: 10, left: 10,
+                      fontSize: 10, fontWeight: 600, letterSpacing: 0.2,
+                      padding: '2px 6px', borderRadius: 999,
+                      background: 'var(--bastion-clay-bg)', color: 'var(--bastion-clay)',
+                      border: '1px solid var(--bastion-clay)',
+                    }}
+                  >
+                    ⏰ hasta {lateCheckout.approvedCheckOutTime?.slice(0, 5) ?? '—'}
+                  </span>
+                )}
               </button>
             )
           })}
@@ -296,6 +324,19 @@ export default function HousekeepingPage() {
       {/* Modal detalle de ficha — con tarea: estado + acciones; sin tarea: atajo a planificar */}
       {selectedResource && (
         <Modal open={selectedResource !== null} onClose={() => setSelectedResource(null)} title={selectedResource.name}>
+          {getLateCheckout(selectedResource.id) && (
+            <div
+              className="mb-4"
+              style={{
+                padding: '10px 12px', borderRadius: 10,
+                background: 'var(--bastion-clay-bg)', border: '1px solid var(--bastion-clay)',
+                fontSize: 13, color: 'var(--bastion-clay)',
+              }}
+            >
+              ⏰ Late check-out aprobado — no limpiar antes de las{' '}
+              <strong>{getLateCheckout(selectedResource.id)!.approvedCheckOutTime?.slice(0, 5) ?? '—'}</strong>.
+            </div>
+          )}
           {selectedTask ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
