@@ -1,10 +1,17 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { ordersApi, customersApi, productsApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import type { Order, OrderStatus, Customer, Product, CreateOrderItemInput } from '@/lib/types'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Primera pantalla POS migrada (18/08/2026) — acento clay (.bastion-clay).
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const PAGE_SIZE = 20
 
@@ -15,11 +22,15 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   COMPLETED: 'Completada',
 }
 
-const STATUS_CLASS: Record<OrderStatus, string> = {
-  DRAFT:     'bg-slate-500/10 text-slate-400',
-  CONFIRMED: 'bg-emerald-500/10 text-emerald-400',
-  CANCELLED: 'bg-red-500/10 text-red-400',
-  COMPLETED: 'bg-blue-500/10 text-blue-400',
+// Semáforo Bastión (sección 5 del doc, mismo criterio que Reservas/
+// Housekeeping — es universal, no cambia con el acento de módulo):
+// borrador=brass (pendiente de confirmar), confirmada=sage, completada=gris
+// neutro (ya cerrada), cancelada=clay.
+const STATUS_BADGE_CLASS: Record<OrderStatus, string> = {
+  DRAFT:     'badge-pending',
+  CONFIRMED: 'badge-confirmed',
+  COMPLETED: 'badge-completed',
+  CANCELLED: 'badge-cancelled',
 }
 
 const ALL_STATUSES: OrderStatus[] = ['DRAFT', 'CONFIRMED', 'CANCELLED', 'COMPLETED']
@@ -194,12 +205,12 @@ export default function OrdenesPage() {
   }
 
   return (
-    <div>
+    <div className={`bastion bastion-clay ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-xl font-semibold text-white">Órdenes</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Carrito unificado de reservas y productos</p>
+          <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Órdenes</h1>
+          <p className="page-subtitle">Carrito unificado de reservas y productos</p>
         </div>
         <button onClick={openModal} className="btn-primary flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -234,66 +245,50 @@ export default function OrdenesPage() {
       {loading ? (
         <div className="space-y-2">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-16 rounded-lg bg-white/[0.04] animate-pulse" />
+            <div key={i} className="h-16 rounded-lg skeleton" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16 text-center">
-          <svg className="w-10 h-10 text-slate-600 mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+        <div className="card empty-state">
+          <svg className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          <p className="text-slate-400 font-medium">
-            {search || filterStatus ? 'Sin resultados para ese filtro' : 'Sin órdenes'}
-          </p>
-          {!search && !filterStatus && (
-            <p className="text-slate-600 text-sm mt-1">Creá la primera con el botón de arriba</p>
-          )}
+          <h3>{search || filterStatus ? 'Sin resultados para ese filtro' : 'Sin órdenes'}</h3>
+          {!search && !filterStatus && <p>Creá la primera con el botón de arriba</p>}
         </div>
       ) : (
         <>
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="card table-wrapper" style={{ overflow: 'hidden' }}>
+            <table className="table">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">ID</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Cliente</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Ítems</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Total</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Creada</th>
-                  <th className="px-4 py-3" />
+                <tr>
+                  <th>ID</th>
+                  <th>Cliente</th>
+                  <th>Ítems</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                  <th>Creada</th>
+                  <th />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody>
                 {paginated.map(o => (
-                  <tr key={o.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3.5">
-                      <span className="font-mono text-xs text-slate-500">{o.id.slice(0, 8)}…</span>
+                  <tr key={o.id}>
+                    <td className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{o.id.slice(0, 8)}…</td>
+                    <td className="table-cell-primary">{getCustomerName(o.customerId)}</td>
+                    <td className="mono">{o.items.length} ítem{o.items.length !== 1 ? 's' : ''}</td>
+                    <td className="mono" style={{ fontWeight: 600 }}>{fmtMoney(o.totalAmount)}</td>
+                    <td>
+                      <span className={STATUS_BADGE_CLASS[o.status]}>{STATUS_LABEL[o.status]}</span>
                     </td>
-                    <td className="px-4 py-3.5">
-                      <p className="font-medium text-white">{getCustomerName(o.customerId)}</p>
-                    </td>
-                    <td className="px-4 py-3.5 text-slate-400 tabular-nums">
-                      {o.items.length} ítem{o.items.length !== 1 ? 's' : ''}
-                    </td>
-                    <td className="px-4 py-3.5 text-slate-300 font-medium tabular-nums">
-                      {fmtMoney(o.totalAmount)}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_CLASS[o.status]}`}>
-                        {STATUS_LABEL[o.status]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-slate-400 text-xs tabular-nums">
-                      {fmtDate(o.createdAt)}
-                    </td>
-                    <td className="px-4 py-3.5">
+                    <td className="mono" style={{ fontSize: 12 }}>{fmtDate(o.createdAt)}</td>
+                    <td>
                       <div className="flex items-center justify-end gap-1.5">
                         {o.status === 'DRAFT' && (
                           <button
                             onClick={() => doAction(o.id, 'confirm')}
                             disabled={actionLoading !== null}
-                            className="text-xs px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                            className="btn-mini btn-mini-sage"
                           >
                             {actionLoading === `${o.id}-confirm` ? '…' : 'Confirmar'}
                           </button>
@@ -302,7 +297,7 @@ export default function OrdenesPage() {
                           <button
                             onClick={() => doAction(o.id, 'complete')}
                             disabled={actionLoading !== null}
-                            className="text-xs px-2.5 py-1.5 rounded-md bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                            className="btn-mini btn-mini-neutral"
                           >
                             {actionLoading === `${o.id}-complete` ? '…' : 'Completar'}
                           </button>
@@ -311,7 +306,7 @@ export default function OrdenesPage() {
                           <button
                             onClick={() => doAction(o.id, 'cancel')}
                             disabled={actionLoading !== null}
-                            className="text-xs px-2.5 py-1.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                            className="btn-mini btn-mini-clay"
                           >
                             {actionLoading === `${o.id}-cancel` ? '…' : 'Cancelar'}
                           </button>
@@ -327,21 +322,23 @@ export default function OrdenesPage() {
           {/* Paginación */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 text-sm">
-              <span className="text-slate-500">
+              <span style={{ color: 'var(--text-tertiary)' }}>
                 {filtered.length} resultado{filtered.length !== 1 ? 's' : ''} · página {page} de {totalPages}
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1.5 rounded-md bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] disabled:opacity-30 transition-colors"
+                  className="btn-secondary"
+                  style={{ padding: '6px 12px' }}
                 >
                   ← Anterior
                 </button>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-1.5 rounded-md bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] disabled:opacity-30 transition-colors"
+                  className="btn-secondary"
+                  style={{ padding: '6px 12px' }}
                 >
                   Siguiente →
                 </button>
@@ -366,12 +363,12 @@ export default function OrdenesPage() {
               onChange={e => setForm(f => ({ ...f, customerEmail: e.target.value }))}
               required
             />
-            <p className="mt-1 text-xs text-slate-500">El cliente debe estar registrado en el sistema.</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>El cliente debe estar registrado en el sistema.</p>
           </div>
 
           {/* Notas */}
           <div>
-            <label className="label">Notas <span className="text-slate-600">(opcional)</span></label>
+            <label className="label">Notas <span style={{ color: 'var(--text-tertiary)' }}>(opcional)</span></label>
             <textarea
               className="input resize-none"
               rows={2}
@@ -429,15 +426,16 @@ export default function OrdenesPage() {
             {draftItems.length > 0 ? (
               <ul className="space-y-1.5">
                 {draftItems.map((item, i) => (
-                  <li key={i} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.04] text-sm">
-                    <span className="text-slate-300">{item.productName}</span>
-                    <span className="text-slate-500 tabular-nums text-xs">
+                  <li key={i} className="flex items-center justify-between px-3 py-2 rounded-lg text-sm" style={{ background: 'var(--surface-4)' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>{item.productName}</span>
+                    <span className="mono" style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
                       {item.quantity} × {fmtMoney(item.unitPrice)}
                     </span>
                     <button
                       type="button"
                       onClick={() => removeDraftItem(i)}
-                      className="ml-3 text-red-400 hover:text-red-300 text-xs"
+                      className="ml-3 text-xs"
+                      style={{ color: 'var(--danger)' }}
                       aria-label="Quitar ítem"
                     >
                       ✕
@@ -446,11 +444,11 @@ export default function OrdenesPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-slate-600 mt-1">Ningún ítem agregado aún.</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Ningún ítem agregado aún.</p>
             )}
 
             {draftItems.length > 0 && (
-              <p className="text-right text-sm font-medium text-white mt-2">
+              <p className="text-right text-sm mt-2" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
                 Total: {fmtMoney(draftTotal)}
               </p>
             )}

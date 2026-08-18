@@ -157,5 +157,10 @@ cada vez que una pantalla nueva se sume.
       check-out con folio, transferir a cuenta por cobrar). El modal de "no
       show" se reescribió local en vez de usar `<ConfirmDialog>` (compartido
       por pantallas sin migrar, con colores hardcodeados fuera de Bastión).
-- [ ] Órdenes, Recursos, Servicios, Categorías, Productos, Clientes,
-      Usuarios, Cuentas Corrientes, Reportes, Mi Negocio, Admin
+- [x] **Órdenes** (18/08/2026) — primera pantalla POS, acento **clay**
+      (`.bastion.bastion-clay`, modificador nuevo — hasta acá todo era
+      brass). El semáforo de estado NO cambia con el módulo: borrador=brass,
+      confirmada=sage, completada=gris, cancelada=clay (mismo criterio que
+      Reservas/Housekeeping/Estadías).
+- [ ] Recursos, Servicios, Categorías, Productos, Clientes, Usuarios,
+      Cuentas Corrientes, Reportes, Mi Negocio, Admin

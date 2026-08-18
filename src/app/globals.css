@@ -648,6 +648,20 @@
     font-family: var(--font-bastion-sans, 'IBM Plex Sans', system-ui, sans-serif);
   }
 
+  /* Modificador POS — .bastion.bastion-clay (Órdenes, Productos, Cuentas
+     Corrientes...). Solo cambia el acento "de módulo" (botón primario,
+     .btn-mini-neutral-ish de acción principal) de brass a clay — el
+     semáforo de estado (badge-pending/confirmed/completed/cancelled)
+     NO cambia, sigue siendo el mismo para todo el dashboard (sección 5.1
+     del doc: "un acento por módulo... salvo para estados"). */
+  .bastion.bastion-clay {
+    --accent: var(--bastion-clay);
+    --accent-dark: #A8482F;
+    --accent-hover: var(--bastion-clay);
+    --accent-dim: var(--bastion-clay-bg);
+    --accent-border: rgba(193,85,61,0.35);
+  }
+
   .bastion h1, .bastion h2, .bastion h3 {
     font-family: var(--font-bastion-serif, 'Fraunces', serif);
     color: var(--bastion-ink);
