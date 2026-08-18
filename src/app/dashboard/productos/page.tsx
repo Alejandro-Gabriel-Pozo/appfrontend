@@ -19,9 +19,15 @@ function fmt(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
 }
 
-const EMPTY_CREATE: CreateProductInput = {
+// basePrice admite '' mientras se tipea (18/08/2026, pedido del dueño: un
+// campo de precio vacío no debería mostrar "0" a la fuerza -- forzarlo a 0
+// en cada tecleo hacía que el campo "peleara" con quien lo estaba llenando).
+// Se coerciona a number recién en handleSubmit.
+type ProductFormState = Omit<CreateProductInput, 'basePrice'> & { basePrice: number | '' }
+
+const EMPTY_CREATE: ProductFormState = {
   name: '',
-  basePrice: 0,
+  basePrice: '',
   description: null,
   sku: null,
   categoryId: null,
@@ -54,7 +60,7 @@ function ProductModal({
   const { mutateAsync: createProduct } = useCreate<Product>()
   const { mutateAsync: updateProduct } = useUpdate<Product>()
 
-  const [form, setForm] = useState<CreateProductInput>(
+  const [form, setForm] = useState<ProductFormState>(
     isEdit
       ? {
           name: mode.product.name,
@@ -81,7 +87,7 @@ function ProductModal({
         type === 'checkbox'
           ? checked
           : type === 'number'
-          ? parseFloat(value) || 0
+          ? (value === '' ? '' : parseFloat(value))
           : value || null,
     }))
   }
@@ -90,11 +96,14 @@ function ProductModal({
     e.preventDefault()
     setLoading(true)
     try {
+      // basePrice puede haber quedado '' (campo vacío) -- se coerciona a
+      // number recién acá, no en cada tecleo (ver ProductFormState).
+      const values: CreateProductInput = { ...form, basePrice: Number(form.basePrice) || 0 }
       if (isEdit) {
-        const body: UpdateProductInput = { ...form }
+        const body: UpdateProductInput = values
         await updateProduct({ resource: 'productos', id: mode.product.id, values: body })
       } else {
-        await createProduct({ resource: 'productos', values: form })
+        await createProduct({ resource: 'productos', values })
       }
       toast(isEdit ? 'Producto actualizado' : 'Producto creado', 'success')
       onClose()
@@ -207,7 +216,7 @@ function ProductModal({
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
-            <button type="submit" disabled={loading || !form.name || form.basePrice < 0} className="btn-primary">
+            <button type="submit" disabled={loading || !form.name || Number(form.basePrice) < 0} className="btn-primary">
               {loading ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear producto'}
             </button>
           </div>

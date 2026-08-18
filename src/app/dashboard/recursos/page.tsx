@@ -12,7 +12,11 @@ const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], v
 const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
 const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
-const EMPTY: Omit<Resource, 'id'> = { name: '', categoryId: '', basePrice: 0, active: true }
+// basePrice admite '' mientras se tipea (18/08/2026, pedido del dueño) --
+// ver ProductFormState en dashboard/productos/page.tsx para el mismo criterio.
+type ResourceFormState = Omit<Resource, 'id' | 'basePrice'> & { basePrice: number | '' }
+
+const EMPTY: ResourceFormState = { name: '', categoryId: '', basePrice: '', active: true }
 
 const DAY_LABEL = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
@@ -30,7 +34,7 @@ export default function RecursosPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Resource | null>(null)
-  const [form, setForm] = useState<Omit<Resource, 'id'>>(EMPTY)
+  const [form, setForm] = useState<ResourceFormState>(EMPTY)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Resource | null>(null)
@@ -96,11 +100,14 @@ export default function RecursosPage() {
     setSubmitting(true)
     setFieldErrors({})
     try {
+      // basePrice puede haber quedado '' (campo vacío) -- se coerciona a
+      // number recién acá, no en cada tecleo (ver ResourceFormState).
+      const values = { ...form, basePrice: Number(form.basePrice) || 0 }
       if (editing) {
-        await updateResource({ resource: 'recursos', id: editing.id, values: form })
+        await updateResource({ resource: 'recursos', id: editing.id, values })
         toast('Recurso actualizado', 'success')
       } else {
-        await createResource({ resource: 'recursos', values: form })
+        await createResource({ resource: 'recursos', values })
         toast('Recurso creado', 'success')
       }
       setModalOpen(false)
@@ -240,7 +247,7 @@ export default function RecursosPage() {
                   className="input"
                   style={fieldErrors['basePrice'] ? { borderColor: 'var(--danger)' } : undefined}
                   value={form.basePrice}
-                  onChange={e => setForm(f => ({ ...f, basePrice: parseFloat(e.target.value) || 0 }))}
+                  onChange={e => setForm(f => ({ ...f, basePrice: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                   required
                 />
                 {fieldErrors['basePrice'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['basePrice']}</p>}

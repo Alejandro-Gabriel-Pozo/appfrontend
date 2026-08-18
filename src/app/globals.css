@@ -406,6 +406,21 @@
   }
   .input:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  /* Saca las flechas nativas de incrementar/decrementar de los inputs
+     numéricos (precio, cantidad, etc.) — pedido explícito del dueño
+     (18/08/2026): un campo de precio es "un área donde se colocan
+     números", no un control continuo tipo spinner. `type="number"` se
+     mantiene (teclado numérico en mobile, valida que no se tipeen
+     letras) — esto solo saca las flechas visuales, no cambia el tipo. */
+  .input[type='number']::-webkit-outer-spin-button,
+  .input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
   .label {
     @apply block text-xs font-medium mb-1.5;
     color: var(--text-secondary);

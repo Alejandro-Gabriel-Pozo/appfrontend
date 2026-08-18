@@ -24,11 +24,13 @@ type FormState = {
   description: string
   bookingMode: BookingMode
   durationMinutes: number | null
-  price: number
+  // '' mientras se tipea (18/08/2026, pedido del dueño) -- ver
+  // ProductFormState en dashboard/productos/page.tsx para el mismo criterio.
+  price: number | ''
 }
 
 const EMPTY: FormState = {
-  name: '', categoryId: '', description: '', bookingMode: 'slot', durationMinutes: 30, price: 0,
+  name: '', categoryId: '', description: '', bookingMode: 'slot', durationMinutes: 30, price: '',
 }
 
 const MODE_LABEL: Record<BookingMode, string> = {
@@ -98,7 +100,7 @@ export default function ServiciosPage() {
         ...(form.description && { description: form.description }),
         bookingMode: form.bookingMode,
         durationMinutes: form.bookingMode === 'slot' ? form.durationMinutes : null,
-        price: form.price,
+        price: Number(form.price) || 0,
       }
       if (editing) {
         await updateService({ resource: 'servicios', id: editing.id, values: body })
@@ -269,7 +271,7 @@ export default function ServiciosPage() {
               className="input"
               style={fieldErrors['price'] ? { borderColor: 'var(--danger)' } : undefined}
               value={form.price}
-              onChange={e => setForm(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
+              onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
               required
             />
             {fieldErrors['price'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['price']}</p>}
