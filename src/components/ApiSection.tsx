@@ -39,8 +39,8 @@ export default function ApiSection({ method, title, endpoint, onSubmit, formCont
       >
         <span className={methodBadge}>{method}</span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white">{title}</p>
-          <code className="text-xs text-slate-600 font-mono">{endpoint}</code>
+          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{title}</p>
+          <code className="text-xs font-mono" style={{ color: 'var(--text-tertiary)' }}>{endpoint}</code>
         </div>
         <div className="flex items-center gap-2">
           {!formContent && (
@@ -50,7 +50,8 @@ export default function ApiSection({ method, title, endpoint, onSubmit, formCont
           )}
           {formContent && (
             <svg
-              className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+              style={{ color: 'var(--text-tertiary)' }}
               fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -77,7 +78,7 @@ export default function ApiSection({ method, title, endpoint, onSubmit, formCont
                 <span className={`text-xs font-bold px-2 py-0.5 rounded ${result.status >= 400 ? 'bg-red-500/15 text-red-400' : result.status >= 200 ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'}`}>
                   {result.status}
                 </span>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                   {result.status >= 200 && result.status < 300 ? 'Éxito' : result.status >= 400 ? 'Error' : 'Sin respuesta'}
                 </span>
               </div>
@@ -96,7 +97,7 @@ export default function ApiSection({ method, title, endpoint, onSubmit, formCont
             <span className={`text-xs font-bold px-2 py-0.5 rounded ${result.status >= 400 ? 'bg-red-500/15 text-red-400' : 'bg-emerald-500/15 text-emerald-400'}`}>
               {result.status}
             </span>
-            <span className="text-xs text-slate-500">{result.status >= 200 && result.status < 300 ? 'Éxito' : 'Error'}</span>
+            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{result.status >= 200 && result.status < 300 ? 'Éxito' : 'Error'}</span>
           </div>
           <pre className={`response-block${result.status >= 400 ? ' error' : ''}`}>
             {JSON.stringify(result.data, null, 2)}

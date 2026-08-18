@@ -162,5 +162,28 @@ cada vez que una pantalla nueva se sume.
       brass). El semáforo de estado NO cambia con el módulo: borrador=brass,
       confirmada=sage, completada=gris, cancelada=clay (mismo criterio que
       Reservas/Housekeeping/Estadías).
-- [ ] Recursos, Servicios, Categorías, Productos, Clientes, Usuarios,
-      Cuentas Corrientes, Reportes, Mi Negocio, Admin
+- [x] **Recursos** (18/08/2026) — acento brass (módulo `PMS_ESTADIAS`).
+- [x] **Servicios** (18/08/2026) — acento brass (módulo `PMS_ESTADIAS`).
+- [x] **Categorías** (18/08/2026) — acento brass (módulo `PMS_ESTADIAS`).
+- [x] **Productos** (18/08/2026) — acento **clay** (módulo `POS_VENTAS`),
+      incluye la subpágina `[id]/variantes`.
+- [x] **Clientes** (18/08/2026) — acento brass por defecto (sin módulo propio).
+- [x] **Usuarios** (18/08/2026) — acento brass por defecto (sin módulo propio).
+- [x] **Cuentas Corrientes** (18/08/2026) — acento **clay** (módulo
+      `CUENTAS_CORRIENTES`).
+- [x] **Reportes** (18/08/2026) — acento brass por defecto; se retinteó
+      `ApiSection.tsx` (único consumidor) porque el texto quedaba blanco
+      sobre blanco al envolverlo en `.bastion`, no solo por estética.
+- [x] **Mi Negocio** (18/08/2026) — acento brass por defecto. Bug encontrado
+      en el QA visual: combinar `.page-content` (max-width + margin auto) con
+      un `maxWidth` inline en el mismo div del truco de full-bleed
+      (`margin: -24px`) dejaba el fondo pergamino sin llegar al borde
+      derecho. Se separó en un div externo (fondo full-bleed, sin límite de
+      ancho) y uno interno (`maxWidth` para el contenido).
+- [x] **Admin** (18/08/2026) — acento brass por defecto; el banner de
+      advertencia usa los tokens `--warning*` en vez de amber hardcodeado.
+
+Con esto, las 14 pantallas de ABM/gestión del dashboard (+ la subpágina de
+variantes de Productos) tienen Bastión aplicado. Quedan sin migrar el shell
+compartido (sidebar/topbar) y dos componentes de uso puntual con texto sin
+retintar pero legible (`ResourceLockPicker.tsx`) — ver nota en el código.

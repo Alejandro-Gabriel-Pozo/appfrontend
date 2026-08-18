@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
 import { categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
@@ -7,6 +8,15 @@ import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import ResourceLockPicker from '@/components/ResourceLockPicker'
 import type { BookableService, Category, BookingMode } from '@/lib/types'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Acento brass (core, sin gate de módulo). ResourceLockPicker (modal de
+// recursos bloqueados) queda con su texto interno sin retintar a propósito
+// — es un componente compartido chico, gris-sobre-blanco sigue siendo
+// legible, no vale la pena editarlo para un solo consumidor todavía.
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 type FormState = {
   name: string
@@ -124,11 +134,11 @@ export default function ServiciosPage() {
   const getCatName = (id: string) => categories.find(c => c.id === id)?.name ?? id
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+      <div className="page-header">
         <div>
-          <h1 className="text-xl font-semibold text-white">Servicios</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Servicios agendables y qué recursos físicos bloquean</p>
+          <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Servicios</h1>
+          <p className="page-subtitle">Servicios agendables y qué recursos físicos bloquean</p>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -141,62 +151,43 @@ export default function ServiciosPage() {
       {loading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-14 rounded-lg bg-white/[0.04] animate-pulse" />
+            <div key={i} className="h-14 rounded-lg skeleton" />
           ))}
         </div>
       ) : services.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16 text-center">
-          <svg className="w-10 h-10 text-slate-600 mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+        <div className="card empty-state">
+          <svg className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-slate-400 font-medium">Sin servicios todavía</p>
-          <p className="text-slate-600 text-sm mt-1">Creá el primero con el botón de arriba</p>
+          <h3>Sin servicios todavía</h3>
+          <p>Creá el primero con el botón de arriba</p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="card table-wrapper" style={{ overflow: 'hidden' }}>
+          <table className="table">
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Nombre</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Categoría</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Duración</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Precio</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Modo</th>
-                <th className="px-4 py-3" />
+              <tr>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Duración</th>
+                <th>Precio</th>
+                <th>Modo</th>
+                <th />
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <tbody>
               {services.map(s => (
-                <tr key={s.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-white">{s.name}</td>
-                  <td className="px-4 py-3.5">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400">
-                      {getCatName(s.categoryId)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-slate-300">
-                    {s.durationMinutes != null ? `${s.durationMinutes} min` : '—'}
-                  </td>
-                  <td className="px-4 py-3.5 text-slate-300">${s.price.toLocaleString('es-AR')}</td>
-                  <td className="px-4 py-3.5 text-slate-400 text-xs">{MODE_LABEL[s.bookingMode]}</td>
-                  <td className="px-4 py-3.5">
+                <tr key={s.id}>
+                  <td className="table-cell-primary">{s.name}</td>
+                  <td><span className="badge-completed">{getCatName(s.categoryId)}</span></td>
+                  <td className="mono">{s.durationMinutes != null ? `${s.durationMinutes} min` : '—'}</td>
+                  <td className="mono">${s.price.toLocaleString('es-AR')}</td>
+                  <td style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{MODE_LABEL[s.bookingMode]}</td>
+                  <td>
                     <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => setLockTarget(s)}
-                        className="text-xs px-2.5 py-1.5 rounded-md bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] transition-colors"
-                      >
-                        Recursos
-                      </button>
-                      <button onClick={() => openEdit(s)} className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors" aria-label="Editar">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      <button onClick={() => setDeleteTarget(s)} className="p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors" aria-label="Eliminar">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      <button onClick={() => setLockTarget(s)} className="btn-mini btn-mini-neutral">Recursos</button>
+                      <button onClick={() => openEdit(s)} className="btn-mini btn-mini-neutral">Editar</button>
+                      <button onClick={() => setDeleteTarget(s)} className="btn-mini btn-mini-clay">Eliminar</button>
                     </div>
                   </td>
                 </tr>
@@ -212,19 +203,21 @@ export default function ServiciosPage() {
           <div>
             <label className="label">Nombre</label>
             <input
-              className={`input ${fieldErrors['name'] ? 'border-red-500/60' : ''}`}
+              className="input"
+              style={fieldErrors['name'] ? { borderColor: 'var(--danger)' } : undefined}
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               placeholder="Ej: Corte de pelo, Tintura"
               required
             />
-            {fieldErrors['name'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['name']}</p>}
+            {fieldErrors['name'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['name']}</p>}
           </div>
 
           <div>
             <label className="label">Categoría</label>
             <select
-              className={`input ${fieldErrors['categoryId'] ? 'border-red-500/60' : ''}`}
+              className="input"
+              style={fieldErrors['categoryId'] ? { borderColor: 'var(--danger)' } : undefined}
               value={form.categoryId}
               onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
               required
@@ -232,7 +225,7 @@ export default function ServiciosPage() {
               <option value="">Seleccioná una categoría…</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            {fieldErrors['categoryId'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['categoryId']}</p>}
+            {fieldErrors['categoryId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['categoryId']}</p>}
           </div>
 
           <div>
@@ -254,15 +247,16 @@ export default function ServiciosPage() {
               <input
                 type="number"
                 min={1}
-                className={`input ${fieldErrors['durationMinutes'] ? 'border-red-500/60' : ''}`}
+                className="input"
+                style={fieldErrors['durationMinutes'] ? { borderColor: 'var(--danger)' } : undefined}
                 value={form.durationMinutes ?? ''}
                 onChange={e => setForm(f => ({ ...f, durationMinutes: e.target.value ? parseInt(e.target.value, 10) : null }))}
                 required
               />
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
                 No se puede ajustar al reservar — si hace falta otra duración, creá un servicio distinto.
               </p>
-              {fieldErrors['durationMinutes'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['durationMinutes']}</p>}
+              {fieldErrors['durationMinutes'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['durationMinutes']}</p>}
             </div>
           )}
 
@@ -272,12 +266,13 @@ export default function ServiciosPage() {
               type="number"
               min={0}
               step={0.01}
-              className={`input ${fieldErrors['price'] ? 'border-red-500/60' : ''}`}
+              className="input"
+              style={fieldErrors['price'] ? { borderColor: 'var(--danger)' } : undefined}
               value={form.price}
               onChange={e => setForm(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
               required
             />
-            {fieldErrors['price'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['price']}</p>}
+            {fieldErrors['price'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['price']}</p>}
           </div>
 
           <div>

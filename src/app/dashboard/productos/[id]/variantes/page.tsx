@@ -2,9 +2,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { productsApi, variantsApi, extractErrorMessage } from '@/lib/api'
 import type { Product, ProductVariant, CreateVariantInput, UpdateVariantInput } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Acento clay (POS_RESTAURANTE, mismo módulo que Productos).
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -93,22 +100,16 @@ function VariantModal({
 
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 50,
-        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(3px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{
-        background: '#13151e', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)',
-        width: '100%', maxWidth: 460, padding: 24, display: 'flex', flexDirection: 'column', gap: 14,
-      }}>
+      <div className="card" style={{ width: '100%', maxWidth: 460, padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, color: '#fff', margin: 0 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>
             {isEdit ? 'Editar variante' : 'Nueva variante'}
           </h2>
-          <button onClick={onClose} style={{ color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
+          <button onClick={onClose} style={{ color: 'var(--text-tertiary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
@@ -118,19 +119,15 @@ function VariantModal({
             { label: `Precio override (base: ${fmt(null, basePrice)})`, name: 'priceOverride', type: 'number' },
           ].map(({ label, name, type }) => (
             <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</label>
+              <label className="label" style={{ marginBottom: 0 }}>{label}</label>
               <input
                 name={name}
                 type={type}
+                className="input"
                 value={(form[name as keyof CreateVariantInput] as string | number) ?? ''}
                 onChange={handleChange}
                 step={type === 'number' ? '0.01' : undefined}
                 placeholder={name === 'priceOverride' ? 'Vacío = hereda del producto' : ''}
-                style={{
-                  padding: '8px 10px', borderRadius: 8,
-                  background: '#1a1d28', border: '1px solid rgba(255,255,255,0.1)',
-                  color: '#e2e4ea', fontSize: 13, outline: 'none',
-                }}
               />
             </div>
           ))}
@@ -141,47 +138,36 @@ function VariantModal({
               { label: 'Alerta mínima', name: 'stockMinAlert' },
             ].map(({ label, name }) => (
               <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</label>
+                <label className="label" style={{ marginBottom: 0 }}>{label}</label>
                 <input
                   name={name}
                   type="number"
+                  className="input"
                   value={(form[name as keyof CreateVariantInput] as number) ?? 0}
                   onChange={handleChange}
                   min={0}
-                  style={{
-                    padding: '8px 10px', borderRadius: 8,
-                    background: '#1a1d28', border: '1px solid rgba(255,255,255,0.1)',
-                    color: '#e2e4ea', fontSize: 13, outline: 'none',
-                  }}
                 />
               </div>
             ))}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Atributos (JSON)
-            </label>
+            <label className="label" style={{ marginBottom: 0 }}>Atributos (JSON)</label>
             <textarea
+              className="input mono"
               value={attrRaw}
               onChange={e => setAttrRaw(e.target.value)}
               rows={3}
               placeholder='{ "talle": "M", "color": "rojo" }'
-              style={{
-                padding: '8px 10px', borderRadius: 8,
-                background: '#1a1d28', border: '1px solid rgba(255,255,255,0.1)',
-                color: '#e2e4ea', fontSize: 12, outline: 'none', resize: 'vertical', fontFamily: 'monospace',
-              }}
+              style={{ fontSize: 12, resize: 'vertical' }}
             />
           </div>
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-            <button type="button" onClick={onClose}
-              style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: 'none', color: '#9ca3af', fontSize: 13, cursor: 'pointer' }}
-            >Cancelar</button>
-            <button type="submit" disabled={loading || !form.name}
-              style={{ padding: '8px 16px', borderRadius: 8, background: '#10b981', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
-            >{loading ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear variante'}</button>
+            <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={loading || !form.name} className="btn-primary">
+              {loading ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear variante'}
+            </button>
           </div>
         </form>
       </div>
@@ -242,39 +228,32 @@ export default function VariantesPage() {
   const basePrice = product?.basePrice ?? 0
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className={`bastion bastion-clay ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Back + Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <div className="page-header" style={{ alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <Link
             href="/dashboard/productos"
-            style={{ fontSize: 12, color: '#6b7280', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+            style={{ fontSize: 12, color: 'var(--text-tertiary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
           >
             <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
             Volver a Productos
           </Link>
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: 0 }}>
+          <h1 className="page-title" style={{ fontSize: 20, fontWeight: 600 }}>
             {product ? `Variantes — ${product.name}` : 'Variantes'}
           </h1>
           {product && (
-            <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
-              Precio base: <span style={{ color: '#10b981', fontWeight: 600 }}>
+            <p className="page-subtitle" style={{ marginTop: 0 }}>
+              Precio base: <span className="mono" style={{ color: 'var(--bastion-sage)', fontWeight: 600 }}>
                 {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(product.basePrice)}
               </span>
               {' · '}{variants.length} variante{variants.length !== 1 ? 's' : ''}
             </p>
           )}
         </div>
-        <button
-          onClick={() => setModal({ kind: 'create' })}
-          style={{
-            padding: '8px 14px', borderRadius: 8, background: '#10b981',
-            border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}
-        >
+        <button onClick={() => setModal({ kind: 'create' })} className="btn-primary flex items-center gap-2">
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
@@ -283,76 +262,63 @@ export default function VariantesPage() {
       </div>
 
       {/* Tabla */}
-      <div style={{ background: '#13151e', borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#4b5563', fontSize: 13 }}>Cargando…</div>
-        ) : variants.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#4b5563', fontSize: 13 }}>
-            No hay variantes aún. ¡Creá la primera!
-          </div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      {loading ? (
+        <div className="space-y-2">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-12 rounded-lg skeleton" />)}
+        </div>
+      ) : variants.length === 0 ? (
+        <div className="card empty-state">
+          <p>No hay variantes aún. ¡Creá la primera!</p>
+        </div>
+      ) : (
+        <div className="card table-wrapper" style={{ overflow: 'hidden' }}>
+          <table className="table">
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                {['Nombre', 'SKU', 'Precio efectivo', 'Stock', 'Atributos', 'Estado', 'Acciones'].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 600, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left' }}>{h}</th>
-                ))}
+              <tr>
+                <th>Nombre</th>
+                <th>SKU</th>
+                <th>Precio efectivo</th>
+                <th>Stock</th>
+                <th>Atributos</th>
+                <th>Estado</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {variants.map((v, i) => (
-                <tr
-                  key={v.id}
-                  style={{ borderBottom: i < variants.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', transition: 'background 120ms' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <td style={{ padding: '10px 14px', fontSize: 13, color: '#e2e4ea', fontWeight: 500 }}>{v.name}</td>
-                  <td style={{ padding: '10px 14px', fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>{v.sku ?? '—'}</td>
-                  <td style={{ padding: '10px 14px', fontSize: 13, color: v.priceOverride !== null ? '#a78bfa' : '#10b981', fontWeight: 600 }}>
+              {variants.map(v => (
+                <tr key={v.id}>
+                  <td className="table-cell-primary">{v.name}</td>
+                  <td className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{v.sku ?? '—'}</td>
+                  <td className="mono" style={{ fontWeight: 600, color: v.priceOverride !== null ? 'var(--bastion-brass)' : 'var(--bastion-sage)' }}>
                     {fmt(v.priceOverride, basePrice)}
                     {v.priceOverride !== null && (
-                      <span style={{ fontSize: 10, color: '#6b7280', marginLeft: 4 }}>(override)</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginLeft: 4 }}>(override)</span>
                     )}
                   </td>
-                  <td style={{ padding: '10px 14px', fontSize: 13, color: v.stockQuantity <= v.stockMinAlert ? '#f59e0b' : '#9ca3af' }}>
+                  <td className="mono" style={{ color: v.stockQuantity <= v.stockMinAlert ? 'var(--warning)' : 'var(--text-secondary)' }}>
                     {v.stockQuantity}
                     {v.stockQuantity <= v.stockMinAlert && v.stockMinAlert > 0 && (
-                      <span title="Stock bajo mínimo" style={{ marginLeft: 4, color: '#f59e0b' }}>⚠</span>
+                      <span title="Stock bajo mínimo" style={{ marginLeft: 4 }}>⚠</span>
                     )}
                   </td>
-                  <td style={{ padding: '10px 14px', fontSize: 11, color: '#6b7280', fontFamily: 'monospace', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <td className="mono" style={{ fontSize: 11, color: 'var(--text-tertiary)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {Object.keys(v.attributes).length > 0
                       ? Object.entries(v.attributes).map(([k, val]) => `${k}: ${val}`).join(', ')
                       : '—'}
                   </td>
-                  <td style={{ padding: '10px 14px' }}>
-                    <span style={{
-                      fontSize: 11, padding: '3px 8px', borderRadius: 20, fontWeight: 500,
-                      background: v.active ? 'rgba(16,185,129,0.12)' : 'rgba(107,114,128,0.12)',
-                      color: v.active ? '#10b981' : '#6b7280',
-                    }}>
-                      {v.active ? 'Activa' : 'Inactiva'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 14px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        onClick={() => setModal({ kind: 'edit', variant: v })}
-                        style={{ padding: '5px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 11 }}
-                      >Editar</button>
-                      <button
-                        onClick={() => handleDelete(v)}
-                        style={{ padding: '5px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.08)', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11 }}
-                      >Eliminar</button>
+                  <td><span className={v.active ? 'badge-confirmed' : 'badge-completed'}>{v.active ? 'Activa' : 'Inactiva'}</span></td>
+                  <td>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => setModal({ kind: 'edit', variant: v })} className="btn-mini btn-mini-neutral">Editar</button>
+                      <button onClick={() => handleDelete(v)} className="btn-mini btn-mini-clay">Eliminar</button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Modal */}
       {modal && (

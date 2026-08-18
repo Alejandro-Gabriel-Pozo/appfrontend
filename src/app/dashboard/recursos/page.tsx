@@ -1,9 +1,16 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
 import { categoriesApi, resourceHoursApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import type { Resource, Category, OperatingWindow } from '@/lib/types'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Acento brass (core, sin gate de módulo).
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const EMPTY: Omit<Resource, 'id'> = { name: '', categoryId: '', basePrice: 0, active: true }
 
@@ -123,12 +130,12 @@ export default function RecursosPage() {
   const getCatName = (id: string) => categories.find(c => c.id === id)?.name ?? id
 
   return (
-    <div>
+    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-xl font-semibold text-white">Recursos</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Mesas, cabañas, servicios reservables</p>
+          <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Recursos</h1>
+          <p className="page-subtitle">Mesas, cabañas, servicios reservables</p>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -142,50 +149,38 @@ export default function RecursosPage() {
       {loading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-14 rounded-lg bg-white/[0.04] animate-pulse" />
+            <div key={i} className="h-14 rounded-lg skeleton" />
           ))}
         </div>
       ) : resources.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16 text-center">
-          <svg className="w-10 h-10 text-slate-600 mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+        <div className="card empty-state">
+          <svg className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <p className="text-slate-400 font-medium">Sin recursos todavía</p>
-          <p className="text-slate-600 text-sm mt-1">Creá el primero con el botón de arriba</p>
+          <h3>Sin recursos todavía</h3>
+          <p>Creá el primero con el botón de arriba</p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="card table-wrapper" style={{ overflow: 'hidden' }}>
+          <table className="table">
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Nombre</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Categoría</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Precio base</th>
-                <th className="px-4 py-3" />
+              <tr>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Precio base</th>
+                <th />
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <tbody>
               {resources.map(r => (
-                <tr key={r.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-white">{r.name}</td>
-                  <td className="px-4 py-3.5">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400">
-                      {getCatName(r.categoryId)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-slate-300">${r.basePrice.toLocaleString('es-AR')}</td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(r)} className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors" aria-label="Editar">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      <button onClick={() => setDeleteTarget(r)} className="p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors" aria-label="Eliminar">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                <tr key={r.id}>
+                  <td className="table-cell-primary">{r.name}</td>
+                  <td><span className="badge-completed">{getCatName(r.categoryId)}</span></td>
+                  <td className="mono">${r.basePrice.toLocaleString('es-AR')}</td>
+                  <td>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button onClick={() => openEdit(r)} className="btn-mini btn-mini-neutral">Editar</button>
+                      <button onClick={() => setDeleteTarget(r)} className="btn-mini btn-mini-clay">Eliminar</button>
                     </div>
                   </td>
                 </tr>
@@ -197,11 +192,11 @@ export default function RecursosPage() {
 
       {/* Modal crear/editar */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1a1d27] rounded-xl border border-white/[0.08] w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
-              <h2 className="font-semibold text-white">{editing ? 'Editar recurso' : 'Nuevo recurso'}</h2>
-              <button onClick={() => setModalOpen(false)} className="p-1 rounded text-slate-400 hover:text-white transition-colors" aria-label="Cerrar">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}>
+          <div className="card" style={{ width: '100%', maxWidth: 480, maxHeight: '90dvh', overflowY: 'auto' }}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+              <h2 style={{ fontWeight: 600, fontSize: 15 }}>{editing ? 'Editar recurso' : 'Nuevo recurso'}</h2>
+              <button onClick={() => setModalOpen(false)} className="p-1 rounded" style={{ color: 'var(--text-tertiary)' }} aria-label="Cerrar">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -211,18 +206,20 @@ export default function RecursosPage() {
               <div>
                 <label className="label">Nombre</label>
                 <input
-                  className={`input ${fieldErrors['name'] ? 'border-red-500/60' : ''}`}
+                  className="input"
+                  style={fieldErrors['name'] ? { borderColor: 'var(--danger)' } : undefined}
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Ej: Mesa 4, Cabaña del Río"
                   required
                 />
-                {fieldErrors['name'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['name']}</p>}
+                {fieldErrors['name'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['name']}</p>}
               </div>
               <div>
                 <label className="label">Categoría</label>
                 <select
-                  className={`input ${fieldErrors['categoryId'] ? 'border-red-500/60' : ''}`}
+                  className="input"
+                  style={fieldErrors['categoryId'] ? { borderColor: 'var(--danger)' } : undefined}
                   value={form.categoryId}
                   onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
                   required
@@ -232,7 +229,7 @@ export default function RecursosPage() {
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
-                {fieldErrors['categoryId'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['categoryId']}</p>}
+                {fieldErrors['categoryId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['categoryId']}</p>}
               </div>
               <div>
                 <label className="label">Precio base ($)</label>
@@ -240,29 +237,30 @@ export default function RecursosPage() {
                   type="number"
                   min={0}
                   step={0.01}
-                  className={`input ${fieldErrors['basePrice'] ? 'border-red-500/60' : ''}`}
+                  className="input"
+                  style={fieldErrors['basePrice'] ? { borderColor: 'var(--danger)' } : undefined}
                   value={form.basePrice}
                   onChange={e => setForm(f => ({ ...f, basePrice: parseFloat(e.target.value) || 0 }))}
                   required
                 />
-                {fieldErrors['basePrice'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['basePrice']}</p>}
+                {fieldErrors['basePrice'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['basePrice']}</p>}
               </div>
 
               {editing && (
                 <div>
                   <label className="label">Horario propio (opcional)</label>
-                  <p className="text-xs text-slate-500 mb-2">
+                  <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
                     Si no cargás nada, este recurso usa el horario de &quot;Mi Negocio&quot;. Útil para
                     un empleado con horario distinto al del negocio (ej. un barbero part-time).
                   </p>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {ownHours.length === 0 && (
-                      <p className="text-xs text-slate-600">Sin horario propio — hereda el del negocio.</p>
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Sin horario propio — hereda el del negocio.</p>
                     )}
                     {ownHours.map(w => (
-                      <span key={w.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400">
+                      <span key={w.id} className="badge-confirmed" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                         {DAY_LABEL[w.dayOfWeek]} {w.startTime.slice(0, 5)}–{w.endTime.slice(0, 5)}
-                        <button type="button" onClick={() => handleRemoveHour(w.id)} className="hover:text-white" aria-label="Quitar franja">×</button>
+                        <button type="button" onClick={() => handleRemoveHour(w.id)} aria-label="Quitar franja">×</button>
                       </span>
                     ))}
                   </div>
@@ -293,11 +291,11 @@ export default function RecursosPage() {
 
       {/* Modal confirmar borrado */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1a1d27] rounded-xl border border-white/[0.08] w-full max-w-sm shadow-2xl p-6">
-            <h2 className="font-semibold text-white mb-2">¿Eliminar recurso?</h2>
-            <p className="text-sm text-slate-400 mb-6">
-              Vas a eliminar <span className="text-white font-medium">{deleteTarget.name}</span>. Esta acción no se puede deshacer.
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}>
+          <div className="card p-6" style={{ width: '100%', maxWidth: 400 }}>
+            <h2 style={{ fontWeight: 600, marginBottom: 8 }}>¿Eliminar recurso?</h2>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+              Vas a eliminar <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{deleteTarget.name}</span>. Esta acción no se puede deshacer.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteTarget(null)} className="btn-secondary flex-1">Cancelar</button>

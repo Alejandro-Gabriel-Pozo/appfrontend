@@ -1,9 +1,16 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { customersApi, customerAccountApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import type { Customer, CustomerStatement, TransactionType, TransactionStatus } from '@/lib/types'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Acento clay (mismo criterio que Órdenes/Productos — plata/POS).
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const TYPE_LABEL: Record<TransactionType, string> = {
   CHARGE: 'Cargo',
@@ -19,11 +26,12 @@ const STATUS_LABEL: Record<TransactionStatus, string> = {
   VOIDED: 'Anulado',
 }
 
-const STATUS_CLASS: Record<TransactionStatus, string> = {
-  PENDING: 'bg-yellow-500/10 text-yellow-400',
-  SETTLED: 'bg-emerald-500/10 text-emerald-400',
-  FAILED: 'bg-red-500/10 text-red-400',
-  VOIDED: 'bg-slate-500/10 text-slate-400',
+// Semáforo Bastión: pendiente=brass, confirmado=sage, fallido=clay, anulado=gris.
+const STATUS_BADGE_CLASS: Record<TransactionStatus, string> = {
+  PENDING: 'badge-pending',
+  SETTLED: 'badge-confirmed',
+  FAILED: 'badge-cancelled',
+  VOIDED: 'badge-completed',
 }
 
 const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format
@@ -106,11 +114,11 @@ export default function CuentasCorrientesPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+    <div className={`bastion bastion-clay ${fraunces.variable} ${plexSans.variable} ${plexMono.variable} grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Columna izquierda: buscar/elegir cliente */}
       <div>
-        <h1 className="text-xl font-semibold text-white mb-1">Cuentas Corrientes</h1>
-        <p className="text-sm text-slate-400 mb-4">Elegí un cliente para ver su cuenta</p>
+        <h1 className="page-title mb-1" style={{ fontSize: 20, fontWeight: 600 }}>Cuentas Corrientes</h1>
+        <p className="page-subtitle mb-4">Elegí un cliente para ver su cuenta</p>
         <input
           type="search"
           className="input w-full mb-3"
@@ -120,24 +128,26 @@ export default function CuentasCorrientesPage() {
         />
         {loadingCustomers ? (
           <div className="space-y-2">
-            {[...Array(5)].map((_, i) => <div key={i} className="h-10 rounded-lg bg-white/[0.04] animate-pulse" />)}
+            {[...Array(5)].map((_, i) => <div key={i} className="h-10 rounded-lg skeleton" />)}
           </div>
         ) : (
-          <div className="card overflow-hidden max-h-[70vh] overflow-y-auto">
+          <div className="card" style={{ overflow: 'hidden', maxHeight: '70vh', overflowY: 'auto' }}>
             {filtered.map(c => (
               <button
                 key={c.id}
                 onClick={() => loadStatement(c)}
-                className={`w-full text-left px-4 py-3 border-b border-white/[0.04] last:border-0 transition-colors ${
-                  selected?.id === c.id ? 'bg-emerald-500/10' : 'hover:bg-white/[0.03]'
-                }`}
+                className="w-full text-left px-4 py-3"
+                style={{
+                  borderBottom: '1px solid var(--border)',
+                  background: selected?.id === c.id ? 'var(--accent-dim)' : 'transparent',
+                }}
               >
-                <p className="text-sm font-medium text-white">{c.fullName}</p>
-                <p className="text-xs text-slate-500">{c.email}</p>
+                <p className="text-sm" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{c.fullName}</p>
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{c.email}</p>
               </button>
             ))}
             {filtered.length === 0 && (
-              <p className="text-sm text-slate-500 px-4 py-6 text-center">Sin resultados</p>
+              <p className="text-sm px-4 py-6 text-center" style={{ color: 'var(--text-tertiary)' }}>Sin resultados</p>
             )}
           </div>
         )}
@@ -146,64 +156,60 @@ export default function CuentasCorrientesPage() {
       {/* Columna derecha: estado de cuenta */}
       <div>
         {!selected ? (
-          <div className="card flex flex-col items-center justify-center py-24 text-center">
-            <svg className="w-10 h-10 text-slate-600 mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <div className="card empty-state" style={{ padding: '96px 0' }}>
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
             </svg>
-            <p className="text-slate-400 font-medium">Elegí un cliente de la lista</p>
+            <p>Elegí un cliente de la lista</p>
           </div>
         ) : loadingStatement || !statement ? (
           <div className="space-y-2">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-14 rounded-lg bg-white/[0.04] animate-pulse" />)}
+            {[...Array(4)].map((_, i) => <div key={i} className="h-14 rounded-lg skeleton" />)}
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-semibold text-white">{selected.fullName}</h2>
-                <p className="text-sm text-slate-400">{selected.email}</p>
+                <h2 style={{ fontSize: 17, fontWeight: 600 }}>{selected.fullName}</h2>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{selected.email}</p>
               </div>
               <button onClick={openPay} className="btn-primary">Registrar pago</button>
             </div>
 
             <div className="card p-5 mb-6">
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Saldo</p>
-              <p className={`text-2xl font-semibold ${statement.balance > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+              <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-tertiary)' }}>Saldo</p>
+              <p className="text-2xl font-semibold mono" style={{ color: statement.balance > 0 ? 'var(--danger)' : 'var(--bastion-sage)' }}>
                 {fmtMoney(statement.balance)}
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
                 {statement.balance > 0 ? 'El cliente debe este monto' : 'Sin saldo pendiente'}
               </p>
             </div>
 
             {statement.transactions.length === 0 ? (
-              <div className="card flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-slate-400 font-medium">Sin movimientos todavía</p>
+              <div className="card empty-state">
+                <p>Sin movimientos todavía</p>
               </div>
             ) : (
-              <div className="card overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="card table-wrapper" style={{ overflow: 'hidden' }}>
+                <table className="table">
                   <thead>
-                    <tr className="border-b border-white/[0.06]">
-                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Tipo</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Monto</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Notas</th>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Tipo</th>
+                      <th>Monto</th>
+                      <th>Estado</th>
+                      <th>Notas</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.04]">
+                  <tbody>
                     {statement.transactions.map(tx => (
-                      <tr key={tx.id} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="px-4 py-3.5 text-slate-400 text-xs tabular-nums">{fmtDate(tx.createdAt)}</td>
-                        <td className="px-4 py-3.5 text-slate-200">{TYPE_LABEL[tx.type]}</td>
-                        <td className="px-4 py-3.5 text-slate-200 tabular-nums">{fmtMoney(tx.amount)}</td>
-                        <td className="px-4 py-3.5">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_CLASS[tx.status]}`}>
-                            {STATUS_LABEL[tx.status]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-slate-500 text-xs">{tx.notes ?? '—'}</td>
+                      <tr key={tx.id}>
+                        <td className="mono" style={{ fontSize: 12 }}>{fmtDate(tx.createdAt)}</td>
+                        <td>{TYPE_LABEL[tx.type]}</td>
+                        <td className="mono">{fmtMoney(tx.amount)}</td>
+                        <td><span className={STATUS_BADGE_CLASS[tx.status]}>{STATUS_LABEL[tx.status]}</span></td>
+                        <td className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{tx.notes ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>

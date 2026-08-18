@@ -1,11 +1,18 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useUpdate, useInvalidate } from '@refinedev/core'
 import { customersApi, customerRatesApi, resourcesApi, bookableServicesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import type { Customer, CustomerRate, Resource, BookableService } from '@/lib/types'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Sin módulo propio — acento brass por defecto (sección 6 del doc).
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const KIND_LABEL: Record<'INDIVIDUAL' | 'COMPANY', string> = {
   INDIVIDUAL: 'Individual',
@@ -182,11 +189,11 @@ export default function ClientesPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+      <div className="page-header">
         <div>
-          <h1 className="text-xl font-semibold text-white">Clientes</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Gestión de clientes, tipo de cuenta y etiquetas</p>
+          <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Clientes</h1>
+          <p className="page-subtitle">Gestión de clientes, tipo de cuenta y etiquetas</p>
         </div>
         <button onClick={() => setCreateOpen(true)} className="btn-primary flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -209,51 +216,43 @@ export default function ClientesPage() {
       {loading ? (
         <div className="space-y-2">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-14 rounded-lg bg-white/[0.04] animate-pulse" />
+            <div key={i} className="h-14 rounded-lg skeleton" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16 text-center">
-          <svg className="w-10 h-10 text-slate-600 mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+        <div className="card empty-state">
+          <svg className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4" />
           </svg>
-          <p className="text-slate-400 font-medium">{search ? 'Sin resultados para esa búsqueda' : 'Sin clientes todavía'}</p>
+          <p>{search ? 'Sin resultados para esa búsqueda' : 'Sin clientes todavía'}</p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="card table-wrapper" style={{ overflow: 'hidden' }}>
+          <table className="table">
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Nombre</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Tipo</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
-                <th className="px-4 py-3" />
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th />
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <tbody>
               {filtered.map(c => (
-                <tr key={c.id} className="hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => openEdit(c)}>
-                  <td className="px-4 py-3.5 font-medium text-white">{c.fullName}</td>
-                  <td className="px-4 py-3.5 text-slate-300">{c.email}</td>
-                  <td className="px-4 py-3.5">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400">
-                      {KIND_LABEL[c.kind ?? 'INDIVIDUAL']}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5">
+                <tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => openEdit(c)}>
+                  <td className="table-cell-primary">{c.fullName}</td>
+                  <td className="mono" style={{ fontSize: 12 }}>{c.email}</td>
+                  <td><span className="badge-completed">{KIND_LABEL[c.kind ?? 'INDIVIDUAL']}</span></td>
+                  <td>
                     {(c.active ?? true) ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400">Activo</span>
+                      <span className="badge-confirmed">Activo</span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-500/10 text-slate-400">Inactivo</span>
+                      <span className="badge-completed">Inactivo</span>
                     )}
                   </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <button onClick={(e) => { e.stopPropagation(); openEdit(c) }} className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors" aria-label="Editar">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
+                  <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => openEdit(c)} className="btn-mini btn-mini-neutral">Editar</button>
                   </td>
                 </tr>
               ))}
@@ -308,11 +307,12 @@ export default function ClientesPage() {
                   <option value="COMPANY">Empresa</option>
                 </select>
               </div>
-              <label className="flex items-center gap-2 text-sm text-slate-300">
+              <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
                 <input
                   type="checkbox"
                   checked={editForm.active}
                   onChange={e => setEditForm(f => ({ ...f, active: e.target.checked }))}
+                  style={{ accentColor: 'var(--accent)' }}
                 />
                 Cliente activo
               </label>
@@ -326,18 +326,14 @@ export default function ClientesPage() {
               <label className="label">Etiquetas</label>
               <div className="flex flex-wrap gap-2 mb-3">
                 {(editTarget.tags ?? []).length === 0 && (
-                  <p className="text-xs text-slate-500">Sin etiquetas todavía.</p>
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Sin etiquetas todavía.</p>
                 )}
                 {(editTarget.tags ?? []).map(tag => (
-                  <span
-                    key={tag.id}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-300"
-                  >
+                  <span key={tag.id} className="badge-pending" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     {tag.name}
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tag.id)}
-                      className="hover:text-white"
                       aria-label={`Quitar etiqueta ${tag.name}`}
                     >
                       ×
@@ -362,17 +358,17 @@ export default function ClientesPage() {
               <label className="label">Tarifas especiales</label>
               <div className="space-y-2 mb-3">
                 {rates.length === 0 && (
-                  <p className="text-xs text-slate-500">Sin tarifas especiales — usa el precio de catálogo.</p>
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Sin tarifas especiales — usa el precio de catálogo.</p>
                 )}
                 {rates.map(rate => (
-                  <div key={rate.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                    <div className="text-sm text-slate-200">
+                  <div key={rate.id} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'var(--surface-4)', border: '1px solid var(--border)' }}>
+                    <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                       {rate.resourceId ? getResourceName(rate.resourceId) : getServiceName(rate.serviceId!)}
-                      <span className="text-slate-500 text-xs ml-2">{rate.resourceId ? 'recurso' : 'servicio'}</span>
+                      <span className="text-xs ml-2" style={{ color: 'var(--text-tertiary)' }}>{rate.resourceId ? 'recurso' : 'servicio'}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-emerald-400">${rate.price.toLocaleString('es-AR')}</span>
-                      <button type="button" onClick={() => setRateToRemove(rate)} className="text-slate-500 hover:text-red-400" aria-label="Quitar tarifa especial">
+                      <span className="text-sm mono" style={{ color: 'var(--bastion-sage)' }}>${rate.price.toLocaleString('es-AR')}</span>
+                      <button type="button" onClick={() => setRateToRemove(rate)} style={{ color: 'var(--text-tertiary)' }} aria-label="Quitar tarifa especial">
                         ×
                       </button>
                     </div>

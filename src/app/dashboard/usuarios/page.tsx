@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
 import { rolesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
@@ -7,6 +8,12 @@ import { useAuth } from '@/context/AuthContext'
 import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import type { TeamMember, Role } from '@/lib/types'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Sin módulo propio — acento brass por defecto (sección 6 del doc).
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 /**
  * Labels de los 5 roles "sistema" (seedeados al crear el negocio, ver
@@ -135,11 +142,11 @@ export default function UsuariosPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+      <div className="page-header">
         <div>
-          <h1 className="text-xl font-semibold text-white">Usuarios</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Empleados con acceso al panel</p>
+          <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Usuarios</h1>
+          <p className="page-subtitle">Empleados con acceso al panel</p>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -150,7 +157,7 @@ export default function UsuariosPage() {
       </div>
 
       {!isOwner && (
-        <div className="mb-4 px-4 py-3 rounded-lg text-xs bg-blue-500/10 text-blue-300 border border-blue-500/20">
+        <div className="mb-4 px-4 py-3 rounded-lg text-xs badge-completed" style={{ display: 'block' }}>
           Solo el propietario del negocio puede desactivar usuarios. Vos podés crear y editar.
         </div>
       )}
@@ -158,57 +165,39 @@ export default function UsuariosPage() {
       {loading ? (
         <div className="space-y-2">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-14 rounded-lg bg-white/[0.04] animate-pulse" />
+            <div key={i} className="h-14 rounded-lg skeleton" />
           ))}
         </div>
       ) : members.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16 text-center">
-          <svg className="w-10 h-10 text-slate-600 mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+        <div className="card empty-state">
+          <svg className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <p className="text-slate-400 font-medium">Sin usuarios todavía</p>
+          <p>Sin usuarios todavía</p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="card table-wrapper" style={{ overflow: 'hidden' }}>
+          <table className="table">
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Rol</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
-                <th className="px-4 py-3" />
+              <tr>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th />
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <tbody>
               {members.map(m => (
-                <tr key={m.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-white">{m.email}</td>
-                  <td className="px-4 py-3.5">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400">
-                      {ROLE_LABEL[m.roleName] ?? m.roleName}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      m.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-500/10 text-slate-400'
-                    }`}>
-                      {m.active ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(m)} className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors" aria-label="Editar">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
+                <tr key={m.id}>
+                  <td className="table-cell-primary">{m.email}</td>
+                  <td><span className="badge-completed">{ROLE_LABEL[m.roleName] ?? m.roleName}</span></td>
+                  <td><span className={m.active ? 'badge-confirmed' : 'badge-completed'}>{m.active ? 'Activo' : 'Inactivo'}</span></td>
+                  <td>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button onClick={() => openEdit(m)} className="btn-mini btn-mini-neutral">Editar</button>
                       {/* El propietario nunca se borra desde acá, y solo el propietario puede borrar */}
                       {isOwner && m.roleName !== 'OWNER' && (
-                        <button onClick={() => setDeleteTarget(m)} className="p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors" aria-label="Desactivar">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                        <button onClick={() => setDeleteTarget(m)} className="btn-mini btn-mini-clay">Desactivar</button>
                       )}
                     </div>
                   </td>
@@ -226,15 +215,16 @@ export default function UsuariosPage() {
             <label className="label">Email</label>
             <input
               type="email"
-              className={`input ${fieldErrors['email'] ? 'border-red-500/60' : ''}`}
+              className="input"
+              style={fieldErrors['email'] ? { borderColor: 'var(--danger)' } : undefined}
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
               placeholder="empleado@negocio.com"
               disabled={!!editing}
               required
             />
-            {editing && <p className="mt-1 text-xs text-slate-500">El email no se puede cambiar desde acá.</p>}
-            {fieldErrors['email'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['email']}</p>}
+            {editing && <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>El email no se puede cambiar desde acá.</p>}
+            {fieldErrors['email'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['email']}</p>}
           </div>
 
           {editing?.roleName !== 'OWNER' && (
@@ -256,7 +246,8 @@ export default function UsuariosPage() {
             <label className="label">{editing ? 'Nueva contraseña (opcional)' : 'Contraseña'}</label>
             <input
               type="password"
-              className={`input ${fieldErrors['password'] ? 'border-red-500/60' : ''}`}
+              className="input"
+              style={fieldErrors['password'] ? { borderColor: 'var(--danger)' } : undefined}
               value={form.password}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               placeholder={editing ? 'Dejar vacío para no cambiarla' : '••••••••'}
@@ -264,11 +255,11 @@ export default function UsuariosPage() {
               required={!editing}
             />
             {editing && (
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
                 Si esta persona trabaja en más de un negocio, no vas a poder cambiarle la contraseña desde acá.
               </p>
             )}
-            {fieldErrors['password'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['password']}</p>}
+            {fieldErrors['password'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['password']}</p>}
           </div>
 
           <div className="flex gap-3 pt-2">

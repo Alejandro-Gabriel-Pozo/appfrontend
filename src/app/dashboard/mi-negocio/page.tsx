@@ -1,8 +1,15 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { businessHoursApi, businessProfileApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import type { OperatingWindow } from '@/lib/types'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Sin módulo propio — acento brass por defecto (sección 6 del doc).
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
@@ -46,11 +53,11 @@ function BusinessIdentitySection() {
     }
   }
 
-  if (loading) return <div className="card p-4 h-32 animate-pulse" />
+  if (loading) return <div className="card p-4 h-32 skeleton" />
 
   return (
     <div className="card p-4">
-      <p className="text-sm font-medium text-white mb-1">Identidad del negocio</p>
+      <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Identidad del negocio</p>
       <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)' }}>
         Así se identifica tu negocio en los mails que reciben tus clientes (ej. confirmación de reserva).
       </p>
@@ -158,10 +165,11 @@ export default function MiNegocioPage() {
   }
 
   return (
-    <div className="page-content" style={{ maxWidth: '40rem' }}>
+    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div style={{ maxWidth: '40rem' }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Mi Negocio</h1>
+          <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Mi Negocio</h1>
           <p className="page-subtitle">
             Horario de atención por defecto. Un recurso puntual (ej. un empleado) puede
             tener horario propio que reemplaza a este — se configura en Recursos.
@@ -175,7 +183,7 @@ export default function MiNegocioPage() {
 
       {loading ? (
         <div className="space-y-2">
-          {[...Array(7)].map((_, i) => <div key={i} className="h-14 rounded-lg bg-white/[0.04] animate-pulse" />)}
+          {[...Array(7)].map((_, i) => <div key={i} className="h-14 rounded-lg skeleton" />)}
         </div>
       ) : (
         <div className="space-y-3">
@@ -184,7 +192,7 @@ export default function MiNegocioPage() {
             return (
               <div key={dayOfWeek} className="card p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-white">{label}</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</p>
                   <button onClick={() => openAdd(dayOfWeek)} className="btn-ghost text-xs">+ Agregar franja</button>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -192,12 +200,9 @@ export default function MiNegocioPage() {
                     <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Cerrado</p>
                   )}
                   {dayWindows.map(w => (
-                    <span
-                      key={w.id}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400"
-                    >
+                    <span key={w.id} className="badge-confirmed" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {w.startTime.slice(0, 5)}–{w.endTime.slice(0, 5)}
-                      <button onClick={() => handleRemove(w.id)} className="hover:text-white" aria-label="Quitar franja">×</button>
+                      <button onClick={() => handleRemove(w.id)} aria-label="Quitar franja">×</button>
                     </span>
                   ))}
                 </div>
@@ -228,6 +233,7 @@ export default function MiNegocioPage() {
           })}
         </div>
       )}
+    </div>
     </div>
   )
 }

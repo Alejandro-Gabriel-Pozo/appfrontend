@@ -1,7 +1,14 @@
 'use client'
 import { useState } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import ApiSection from '@/components/ApiSection'
 import { apiFetch } from '@/lib/api'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Sin módulo propio — acento brass por defecto (sección 6 del doc).
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 export default function ReportesPage() {
   const [occFrom, setOccFrom] = useState('')
@@ -22,10 +29,10 @@ export default function ReportesPage() {
   const [arTo, setArTo] = useState('')
 
   return (
-    <div>
+    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Reportes</h1>
+          <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Reportes</h1>
           <p className="page-subtitle">Ocupación, resumen, categorías y recursos subutilizados</p>
         </div>
       </div>
@@ -97,8 +104,8 @@ export default function ReportesPage() {
                 <div><label className="label">Hasta</label><input type="datetime-local" value={underTo} onChange={e => setUnderTo(e.target.value)} className="input" /></div>
               </div>
               <div>
-                <label className="label">Threshold de subutilización (%): <span className="text-indigo-400">{threshold}%</span></label>
-                <input type="range" min={0} max={100} value={threshold} onChange={e => setThreshold(e.target.value)} className="w-full accent-indigo-500 mt-1" />
+                <label className="label">Threshold de subutilización (%): <span style={{ color: 'var(--accent)' }}>{threshold}%</span></label>
+                <input type="range" min={0} max={100} value={threshold} onChange={e => setThreshold(e.target.value)} className="w-full mt-1" style={{ accentColor: 'var(--accent)' }} />
               </div>
             </div>
           }
@@ -114,7 +121,7 @@ export default function ReportesPage() {
           }}
           formContent={
             <div className="space-y-3">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                 Agrupa las transferencias a cuenta por cobrar por empresa, para el cierre de mes. La emisión de la factura sigue siendo manual.
               </p>
               <div className="grid grid-cols-2 gap-3">
