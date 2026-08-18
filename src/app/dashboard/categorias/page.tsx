@@ -31,7 +31,7 @@ export default function CategoriasPage() {
 
   const [modalOpen, setModalOpen]     = useState(false)
   const [editing, setEditing]         = useState<Category | null>(null)
-  const [form, setForm]               = useState({ name: '', description: '' })
+  const [form, setForm]               = useState({ name: '', description: '', isLodging: false })
   const [submitting, setSubmitting]   = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
   // Banner 402 — los datos vienen del backend, nunca hardcodeados
@@ -39,13 +39,13 @@ export default function CategoriasPage() {
 
   function openCreate() {
     setEditing(null)
-    setForm({ name: '', description: '' })
+    setForm({ name: '', description: '', isLodging: false })
     setModalOpen(true)
   }
 
   function openEdit(c: Category) {
     setEditing(c)
-    setForm({ name: c.name, description: c.description ?? '' })
+    setForm({ name: c.name, description: c.description ?? '', isLodging: c.isLodging })
     setModalOpen(true)
   }
 
@@ -147,6 +147,7 @@ export default function CategoriasPage() {
                 </span>
               </div>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{c.fields.length} campo{c.fields.length !== 1 ? 's' : ''} definido{c.fields.length !== 1 ? 's' : ''}</p>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{c.isLodging ? 'Alojamiento — Reservas/Estadías' : 'Servicio — Turnos'}</p>
               <div className="flex gap-2 mt-auto pt-2" style={{ borderTop: '1px solid var(--border)' }}>
                 <button onClick={() => openEdit(c)} className="btn-secondary text-xs py-1.5 flex-1">Editar</button>
                 <button onClick={() => setDeleteTarget(c)} className="btn-mini btn-mini-clay" style={{ padding: '7px 12px' }}>Eliminar</button>
@@ -177,6 +178,21 @@ export default function CategoriasPage() {
                 <label className="label">Descripción <span style={{ color: 'var(--text-tertiary)' }}>(opcional)</span></label>
                 <textarea className="input resize-none" rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Descripción breve…" />
               </div>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)' }}>
+                <input
+                  type="checkbox"
+                  checked={form.isLodging}
+                  onChange={e => setForm(f => ({ ...f, isLodging: e.target.checked }))}
+                  style={{ accentColor: 'var(--accent)', width: 16, height: 16, marginTop: 2 }}
+                />
+                <span>
+                  Es alojamiento (habitaciones, cabañas…)
+                  <br />
+                  <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+                    Determina el panel: alojamiento va por Reservas/Estadías, el resto por Turnos.
+                  </span>
+                </span>
+              </label>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancelar</button>
                 <button type="submit" disabled={submitting} className="btn-primary flex-1">

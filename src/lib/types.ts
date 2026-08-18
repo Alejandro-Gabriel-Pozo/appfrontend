@@ -6,6 +6,8 @@ export interface Category {
   description?: string
   fields: CategoryField[]
   active: boolean
+  /** Backlog E1 — true = categoría de alojamiento (Reservas + Estadías), false = servicios (Turnos). */
+  isLodging: boolean
 }
 
 export interface WasteReason {

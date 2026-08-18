@@ -2,10 +2,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useUpdate, useInvalidate } from '@refinedev/core'
-import { reservationsApi, resourcesApi, customersApi, bookableServicesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { reservationsApi, resourcesApi, customersApi, bookableServicesApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
-import type { Reservation, Resource, ReservationStatus, BookableService } from '@/lib/types'
+import type { Reservation, Resource, ReservationStatus, BookableService, Category } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Primera pantalla migrada (18/08/2026) — módulo PMS, acento brass. El scope
@@ -60,6 +60,7 @@ export default function ReservasPage() {
 
   const [resources, setResources] = useState<Resource[]>([])
   const [services, setServices] = useState<BookableService[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   // Filtros y paginación
@@ -89,15 +90,32 @@ export default function ReservasPage() {
   // trayendo directo, igual que antes.
   useEffect(() => {
     queueMicrotask(() => {
-      Promise.all([resourcesApi.list(), bookableServicesApi.list()])
-        .then(([recs, svcs]) => { setResources(recs); setServices(svcs) })
+      Promise.all([resourcesApi.list(), bookableServicesApi.list(), categoriesApi.list()])
+        .then(([recs, svcs, cats]) => { setResources(recs); setServices(svcs); setCategories(cats) })
         .catch(err => toast(extractErrorMessage(err), 'error'))
     })
   }, [toast])
 
+  // Backlog E1 (13/08/2026, alcance completo 18/08) — Reservas queda
+  // acotada a alojamiento (categorías con isLodging=true), Turnos maneja
+  // todo lo demás. lodgingResourceIds resuelve recurso → categoría →
+  // isLodging una sola vez por render, no en cada .filter().
+  const lodgingCategoryIds = useMemo(
+    () => new Set(categories.filter(c => c.isLodging).map(c => c.id)),
+    [categories],
+  )
+  const lodgingResourceIds = useMemo(
+    () => new Set(resources.filter(r => lodgingCategoryIds.has(r.categoryId)).map(r => r.id)),
+    [resources, lodgingCategoryIds],
+  )
+  const lodgingServices = useMemo(
+    () => services.filter(s => lodgingCategoryIds.has(s.categoryId)),
+    [services, lodgingCategoryIds],
+  )
+
   // Filtrado y paginación en cliente
   const filtered = useMemo(() => {
-    let list = reservations
+    let list = reservations.filter(r => lodgingResourceIds.has(r.resourceId))
     if (filterStatus) list = list.filter(r => r.status === filterStatus)
     if (search.trim()) {
       const q = search.trim().toLowerCase()
@@ -107,7 +125,7 @@ export default function ReservasPage() {
       )
     }
     return list
-  }, [reservations, filterStatus, search])
+  }, [reservations, lodgingResourceIds, filterStatus, search])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -130,9 +148,11 @@ export default function ReservasPage() {
   }
 
   const selectedService = services.find(s => s.id === form.serviceId)
-  const isLodging = selectedService?.bookingMode === 'block'
+  // bookingMode del servicio elegido (forma del form: rango de fechas sin
+  // hora) — NO confundir con category.isLodging (a qué panel pertenece).
+  const isBlockBooking = selectedService?.bookingMode === 'block'
   const isSlotService = selectedService?.bookingMode === 'slot'
-  const nightsCount = isLodging && form.checkIn && form.checkOut
+  const nightsCount = isBlockBooking && form.checkIn && form.checkOut
     ? Math.round((new Date(form.checkOut).getTime() - new Date(form.checkIn).getTime()) / 86_400_000)
     : null
 
@@ -177,8 +197,8 @@ export default function ReservasPage() {
       // Alojamiento (bookingMode "block"): se reserva por fecha, no por hora
       // — el check-in/check-out se manda como medianoche de esa fecha, que
       // es como el backend calcula las noches (por día calendario).
-      const startTime = isLodging ? new Date(form.checkIn).toISOString() : new Date(form.startTime).toISOString()
-      const endTime = isLodging ? new Date(form.checkOut).toISOString() : new Date(form.endTime).toISOString()
+      const startTime = isBlockBooking ? new Date(form.checkIn).toISOString() : new Date(form.startTime).toISOString()
+      const endTime = isBlockBooking ? new Date(form.checkOut).toISOString() : new Date(form.endTime).toISOString()
 
       await createReservation({
         resource: 'reservas',
@@ -278,7 +298,7 @@ export default function ReservasPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Reservas</h1>
-          <p className="page-subtitle">Historial y gestión de reservas</p>
+          <p className="page-subtitle">Reservas de alojamiento (habitaciones, cabañas…) — servicios puntuales están en Turnos</p>
         </div>
         <button onClick={openModal} className="btn-primary flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -322,7 +342,13 @@ export default function ReservasPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <h3>{search || filterStatus ? 'Sin resultados para ese filtro' : 'Sin reservas'}</h3>
-          {!search && !filterStatus && <p>Creá la primera con el botón de arriba</p>}
+          {!search && !filterStatus && (
+            lodgingCategoryIds.size === 0 ? (
+              <p>No hay ninguna categoría marcada como alojamiento todavía — marcá una en Categorías para poder reservar acá.</p>
+            ) : (
+              <p>Creá la primera con el botón de arriba</p>
+            )
+          )}
         </div>
       ) : (
         <>
@@ -436,7 +462,7 @@ export default function ReservasPage() {
               onChange={e => setForm(f => ({ ...f, serviceId: e.target.value }))}
             >
               <option value="">Sin servicio — horario libre</option>
-              {services.map(s => (
+              {lodgingServices.map(s => (
                 <option key={s.id} value={s.id}>
                   {s.name}{s.bookingMode === 'block' ? ' (alojamiento — por noche)' : ''}
                 </option>
@@ -453,6 +479,7 @@ export default function ReservasPage() {
             >
               <option value="">Seleccioná un recurso…</option>
               {resources
+                .filter(r => lodgingResourceIds.has(r.id))
                 .filter(r => !selectedService || r.categoryId === selectedService.categoryId)
                 .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
@@ -472,7 +499,7 @@ export default function ReservasPage() {
             />
             <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>El cliente debe estar registrado en el sistema.</p>
           </div>
-          {isLodging ? (
+          {isBlockBooking ? (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Check-in</label>

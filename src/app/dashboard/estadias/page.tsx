@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
-import { staysApi, resourcesApi, customersApi, reservationsApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { staysApi, resourcesApi, customersApi, reservationsApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import type { PaginatedResponse } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
@@ -68,14 +68,21 @@ export default function EstadiasPage() {
   // — se siguen trayendo directo, igual que antes.
   const loadCatalog = useCallback(async () => {
     try {
-      const [r, c, res] = await Promise.all([
+      const [r, c, res, cats] = await Promise.all([
         resourcesApi.list(),
         customersApi.list(),
         reservationsApi.list({ status: 'CONFIRMED' }),
+        categoriesApi.list(),
       ])
       setResources(r)
       setCustomers(toArray(c))
-      setConfirmedReservations(toArray(res))
+      // Backlog E1 (13/08/2026, alcance completo 18/08) — red de seguridad:
+      // el dropdown de check-in solo debería ofrecer reservas de alojamiento
+      // (Reservas ya filtra esto al crear, pero una reserva vieja de un
+      // servicio, creada antes de este cambio, no debería colarse acá).
+      const lodgingCategoryIds = new Set(cats.filter(cat => cat.isLodging).map(cat => cat.id))
+      const lodgingResourceIds = new Set(r.filter(res2 => lodgingCategoryIds.has(res2.categoryId)).map(res2 => res2.id))
+      setConfirmedReservations(toArray(res).filter(rv => lodgingResourceIds.has(rv.resourceId)))
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     }
