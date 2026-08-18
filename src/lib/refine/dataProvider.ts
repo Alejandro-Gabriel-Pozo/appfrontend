@@ -2,6 +2,7 @@ import type { DataProvider, BaseRecord, MetaQuery } from '@refinedev/core'
 import {
   categoriesApi, productsApi, resourcesApi, bookableServicesApi, usersApi,
   customersApi, reservationsApi, staysApi, housekeepingApi, ordersApi,
+  wasteReasonsApi,
 } from '@/lib/api'
 import type { PaginatedResponse } from '@/lib/api'
 import type { Category, CreateProductInput, UpdateProductInput } from '@/lib/types'
@@ -163,6 +164,19 @@ const resources: Record<string, ResourceAdapter> = {
     // con nombre — OrdenesPage las llama directo, no vía Refine.
     update: (id) => notSupported('update', `ordenes/${id}`),
     deleteOne: id => notSupported('deleteOne', `ordenes/${id}`),
+  },
+  'motivos-merma': {
+    list: () => wasteReasonsApi.list(),
+    // Sin GET /api/waste-reasons/:id individual (sí existe list()).
+    getOne: async id => {
+      const all = await wasteReasonsApi.list()
+      const found = all.find(r => r.id === id)
+      if (!found) throw { message: 'Motivo de merma no encontrado', code: 'NOT_FOUND', statusCode: 404, httpStatus: 404 }
+      return found
+    },
+    create: data => wasteReasonsApi.create(data.name as string),
+    update: (id, data) => wasteReasonsApi.update(id, data),
+    deleteOne: id => wasteReasonsApi.remove(id),
   },
 }
 

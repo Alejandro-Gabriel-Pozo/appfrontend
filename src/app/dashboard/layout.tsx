@@ -26,6 +26,7 @@ const REFINE_RESOURCES = [
   { name: 'estadias', list: '/dashboard/estadias' },
   { name: 'housekeeping', list: '/dashboard/housekeeping' },
   { name: 'ordenes', list: '/dashboard/ordenes' },
+  { name: 'motivos-merma', list: '/dashboard/motivos-merma' },
 ]
 
 const NAV = [
@@ -90,6 +91,12 @@ const NAV = [
     moduleKey: 'POS_RESTAURANTE',
   },
   {
+    href: '/dashboard/motivos-merma',
+    label: 'Motivos de Merma',
+    icon: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
+    moduleKey: 'POS_RESTAURANTE',
+  },
+  {
     href: '/dashboard/reportes',
     label: 'Reportes',
     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
@@ -104,6 +111,11 @@ const NAV = [
     href: '/dashboard/mi-negocio',
     label: 'Mi Negocio',
     icon: 'M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01',
+  },
+  {
+    href: '/dashboard/empresa',
+    label: 'Empresa',
+    icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2M5 21H3m4-14h2m-2 4h2m-2 4h2m4-8h2m-2 4h2m-2 4h2',
   },
   {
     href: '/dashboard/admin',
@@ -124,9 +136,11 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/clientes':    'Clientes',
   '/dashboard/cuentas-corrientes': 'Cuentas Corrientes',
   '/dashboard/productos':   'Productos',
+  '/dashboard/motivos-merma': 'Motivos de Merma',
   '/dashboard/reportes':    'Reportes',
   '/dashboard/usuarios':    'Usuarios',
   '/dashboard/mi-negocio':  'Mi Negocio',
+  '/dashboard/empresa':     'Empresa',
   '/dashboard/admin':       'Admin',
 }
 

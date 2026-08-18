@@ -122,11 +122,11 @@ export default function OrdenesPage() {
   }
 
   // ─── Acciones de transición ─────────────────────────────────────────────
-  async function doAction(id: string, action: 'confirm' | 'cancel' | 'complete') {
+  async function doAction(id: string, action: 'confirm' | 'cancel' | 'complete' | 'serve') {
     setActionLoading(`${id}-${action}`)
     try {
       await ordersApi[action](id)
-      const labels = { confirm: 'Orden confirmada', cancel: 'Orden cancelada', complete: 'Orden completada' }
+      const labels = { confirm: 'Orden confirmada', cancel: 'Orden cancelada', complete: 'Orden completada', serve: 'Orden marcada como servida' }
       toast(labels[action], 'success')
       invalidate({ resource: 'ordenes', invalidates: ['list'] })
     } catch (err) {
@@ -292,6 +292,18 @@ export default function OrdenesPage() {
                           >
                             {actionLoading === `${o.id}-confirm` ? '…' : 'Confirmar'}
                           </button>
+                        )}
+                        {o.status === 'CONFIRMED' && !o.servedAt && (
+                          <button
+                            onClick={() => doAction(o.id, 'serve')}
+                            disabled={actionLoading !== null}
+                            className="btn-mini btn-mini-neutral"
+                          >
+                            {actionLoading === `${o.id}-serve` ? '…' : 'Servir'}
+                          </button>
+                        )}
+                        {o.status === 'CONFIRMED' && o.servedAt && (
+                          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>✓ Servida</span>
                         )}
                         {o.status === 'CONFIRMED' && (
                           <button

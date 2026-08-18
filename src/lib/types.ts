@@ -8,6 +8,23 @@ export interface Category {
   active: boolean
 }
 
+export interface WasteReason {
+  id: string
+  businessId: string
+  name: string
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface RecordWasteInput {
+  productId?: string | null
+  productVariantId?: string | null
+  quantity: number
+  wasteReasonId: string
+  notes?: string
+}
+
 export interface CategoryField {
   name: string
   label: string
@@ -325,6 +342,11 @@ export interface AccountsReceivableReportRow {
 
 // ─── Products ────────────────────────────────────────────────────────────────
 
+export type ProductType = 'RAW_MATERIAL' | 'COMPOSITE' | 'RETAIL'
+
+/** Empresas multipropiedad — estado de un override local sobre un campo compartido (precio/receta). */
+export type OverrideStatus = 'INACTIVO' | 'ACTIVO' | 'PENDIENTE_DE_REVISION'
+
 export interface Product {
   id: string
   businessId: string
@@ -337,8 +359,66 @@ export interface Product {
   stockQuantity: number
   stockMinAlert: number
   active: boolean
+  productType: ProductType
+  /** Solo aplica si productType === 'COMPOSITE'. true = receta en vivo, false = necesita stock propio vía Producción. */
+  assembleOnDemand: boolean
+  /** null = producto local, no compartido con otras sucursales de la misma empresa. */
+  companyProductId: string | null
+  priceOverrideStatus: OverrideStatus
+  /** Solo tiene valor mientras priceOverrideStatus === 'PENDIENTE_DE_REVISION'. */
+  pricePendingMasterValue: number | null
+  recipeOverrideStatus: OverrideStatus
+  /** Solo tiene valor mientras recipeOverrideStatus === 'PENDIENTE_DE_REVISION'. */
+  recipePendingMasterSnapshot: Array<{ componentProductId: string; quantityPerUnit: number }> | null
   createdAt: string
   updatedAt: string
+}
+
+export interface Company {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CompanyLink {
+  companyId: string | null
+  companyName: string | null
+}
+
+export interface CompanyProduct {
+  id: string
+  companyId: string
+  name: string
+  basePrice: number
+  sku: string | null
+  updatedAt: string
+}
+
+export interface RecipeItem {
+  id: string
+  parentProductId: string
+  componentProductId: string | null
+  componentVariantId: string | null
+  quantityPerUnit: number
+  costPerUnit: number | null
+  yieldPercentage: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateRecipeItemInput {
+  componentProductId?: string | null
+  componentVariantId?: string | null
+  quantityPerUnit: number
+  costPerUnit?: number | null
+  yieldPercentage?: number | null
+}
+
+export interface RecordProductionInput {
+  productId: string
+  quantity: number
+  notes?: string
 }
 
 export interface ProductVariant {
@@ -364,6 +444,8 @@ export interface CreateProductInput {
   hasVariants?: boolean
   stockQuantity?: number
   stockMinAlert?: number
+  productType?: ProductType
+  assembleOnDemand?: boolean
 }
 
 export interface UpdateProductInput {
@@ -376,6 +458,8 @@ export interface UpdateProductInput {
   stockQuantity?: number
   stockMinAlert?: number
   active?: boolean
+  productType?: ProductType
+  assembleOnDemand?: boolean
 }
 
 export interface CreateVariantInput {
@@ -435,6 +519,7 @@ export interface Order {
   confirmedAt: string | null
   cancelledAt: string | null
   completedAt: string | null
+  servedAt: string | null
   createdAt: string
   updatedAt: string
   /** Transiciones válidas desde `status` — usar esto en vez de hardcodear la máquina de estados (A3). */
