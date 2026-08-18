@@ -1,7 +1,8 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { productsApi, extractErrorMessage } from '@/lib/api'
+import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
+import { extractErrorMessage } from '@/lib/api'
 import type { Product, CreateProductInput, UpdateProductInput } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
 
@@ -29,14 +30,14 @@ type ModalMode = { kind: 'create' } | { kind: 'edit'; product: Product }
 function ProductModal({
   mode,
   onClose,
-  onSaved,
 }: {
   mode: ModalMode
   onClose: () => void
-  onSaved: (p: Product) => void
 }) {
   const { toast } = useToast()
   const isEdit = mode.kind === 'edit'
+  const { mutateAsync: createProduct } = useCreate<Product>()
+  const { mutateAsync: updateProduct } = useUpdate<Product>()
 
   const [form, setForm] = useState<CreateProductInput>(
     isEdit
@@ -72,14 +73,12 @@ function ProductModal({
     e.preventDefault()
     setLoading(true)
     try {
-      let saved: Product
       if (isEdit) {
         const body: UpdateProductInput = { ...form }
-        saved = await productsApi.update(mode.product.id, body)
+        await updateProduct({ resource: 'productos', id: mode.product.id, values: body })
       } else {
-        saved = await productsApi.create(form)
+        await createProduct({ resource: 'productos', values: form })
       }
-      onSaved(saved)
       toast(isEdit ? 'Producto actualizado' : 'Producto creado', 'success')
       onClose()
     } catch (err) {
@@ -195,42 +194,25 @@ function ProductModal({
 
 export default function ProductosPage() {
   const { toast } = useToast()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
+  // Sin paginación server-side todavía (ver lib/refine/dataProvider.ts) —
+  // pagination: { mode: 'off' } trae la lista completa tal cual la devuelve
+  // productsApi.list(), sin que useTable intente paginarla por su cuenta.
+  const { result, tableQuery } = useTable<Product>({ resource: 'productos', pagination: { mode: 'off' } })
+  const products = result.data
+  const loading = tableQuery.isLoading
+  const { mutateAsync: deleteProductMutation } = useDelete<Product>()
+
   const [modal, setModal] = useState<ModalMode | null>(null)
   const [search, setSearch] = useState('')
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await productsApi.list()
-      setProducts(data)
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLoading(false)
-    }
-  }, [toast])
-
-  useEffect(() => { queueMicrotask(load) }, [load])
 
   async function handleDelete(p: Product) {
     if (!confirm(`¿Eliminar "${p.name}"?`)) return
     try {
-      await productsApi.remove(p.id)
+      await deleteProductMutation({ resource: 'productos', id: p.id })
       toast('Producto eliminado', 'success')
-      setProducts(prev => prev.filter(x => x.id !== p.id))
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     }
-  }
-
-  function handleSaved(saved: Product) {
-    setProducts(prev => {
-      const idx = prev.findIndex(x => x.id === saved.id)
-      if (idx >= 0) { const next = [...prev]; next[idx] = saved; return next }
-      return [saved, ...prev]
-    })
   }
 
   const filtered = products.filter(p =>
@@ -370,7 +352,6 @@ export default function ProductosPage() {
         <ProductModal
           mode={modal}
           onClose={() => setModal(null)}
-          onSaved={handleSaved}
         />
       )}
     </div>

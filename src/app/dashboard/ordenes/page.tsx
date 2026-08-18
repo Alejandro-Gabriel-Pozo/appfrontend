@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { ordersApi, customersApi, productsApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
@@ -43,10 +44,18 @@ const EMPTY_FORM = { customerEmail: '', notes: '' }
 
 export default function OrdenesPage() {
   const { toast } = useToast()
-  const [orders, setOrders]     = useState<Order[]>([])
+  // Sin paginación server-side todavía (ver lib/refine/dataProvider.ts) —
+  // filtrado/paginado sigue siendo 100% client-side, igual que antes.
+  const { result, tableQuery } = useTable<Order>({ resource: 'ordenes', pagination: { mode: 'off' } })
+  const orders = result.data
+  const loading = tableQuery.isLoading
+  const { mutateAsync: createOrder } = useCreate<Order>()
+  // confirm/cancel/complete son acciones con nombre (ordersApi[action]) que
+  // no pasan por el data provider — invalidate() fuerza el refetch después.
+  const invalidate = useInvalidate()
+
   const [customers, setCustomers] = useState<Customer[]>([])
   const [products, setProducts]   = useState<Product[]>([])
-  const [loading, setLoading]   = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   // Filtros y paginación
@@ -61,25 +70,18 @@ export default function OrdenesPage() {
   const [newItem, setNewItem]       = useState({ productId: '', quantity: 1, unitPrice: 0 })
   const [submitting, setSubmitting] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [ords, custs, prods] = await Promise.all([
-        ordersApi.list(),
-        customersApi.list() as Promise<Customer[]>,
-        productsApi.list(),
-      ])
-      setOrders(ords)
-      setCustomers(Array.isArray(custs) ? custs : (custs as { data: Customer[] }).data)
-      setProducts(prods)
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLoading(false)
-    }
+  // Clientes/productos no están migrados a esta pantalla — se siguen
+  // trayendo directo, igual que antes.
+  useEffect(() => {
+    queueMicrotask(() => {
+      Promise.all([customersApi.list() as Promise<Customer[]>, productsApi.list()])
+        .then(([custs, prods]) => {
+          setCustomers(Array.isArray(custs) ? custs : (custs as { data: Customer[] }).data)
+          setProducts(prods)
+        })
+        .catch(err => toast(extractErrorMessage(err), 'error'))
+    })
   }, [toast])
-
-  useEffect(() => { queueMicrotask(load) }, [load])
 
   // Filtrado y paginación en cliente
   const filtered = useMemo(() => {
@@ -115,7 +117,7 @@ export default function OrdenesPage() {
       await ordersApi[action](id)
       const labels = { confirm: 'Orden confirmada', cancel: 'Orden cancelada', complete: 'Orden completada' }
       toast(labels[action], 'success')
-      load()
+      invalidate({ resource: 'ordenes', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -165,16 +167,18 @@ export default function OrdenesPage() {
         quantity:  i.quantity,
         unitPrice: i.unitPrice,
       }))
-      await ordersApi.create({
-        customerId: customer.id,
-        notes: form.notes || null,
-        items,
+      await createOrder({
+        resource: 'ordenes',
+        values: {
+          customerId: customer.id,
+          notes: form.notes || null,
+          items,
+        },
       })
       toast('Orden creada en borrador', 'success')
       setModalOpen(false)
       setForm(EMPTY_FORM)
       setDraftItems([])
-      load()
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {

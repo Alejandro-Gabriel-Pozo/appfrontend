@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
-import { usersApi, rolesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { useState, useEffect } from 'react'
+import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
+import { rolesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import Modal from '@/components/Modal'
@@ -32,10 +33,14 @@ const EMPTY: FormState = { email: '', password: '', roleId: '' }
 export default function UsuariosPage() {
   const { toast } = useToast()
   const { user: currentUser } = useAuth()
-  const [members, setMembers] = useState<TeamMember[]>([])
-  const [roles, setRoles] = useState<Role[]>([])
-  const [loading, setLoading] = useState(true)
+  const { result, tableQuery } = useTable<TeamMember>({ resource: 'usuarios', pagination: { mode: 'off' } })
+  const members = result.data
+  const loading = tableQuery.isLoading
+  const { mutateAsync: createMember } = useCreate<TeamMember>()
+  const { mutateAsync: updateMember } = useUpdate<TeamMember>()
+  const { mutateAsync: deleteMemberMutation } = useDelete<TeamMember>()
 
+  const [roles, setRoles] = useState<Role[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<TeamMember | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY)
@@ -53,20 +58,12 @@ export default function UsuariosPage() {
   // de antes (14/08/2026).
   const assignableRoles = roles.filter(r => r.name !== 'OWNER' && r.active)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [membersRes, rolesRes] = await Promise.all([usersApi.list(), rolesApi.list()])
-      setMembers(membersRes)
-      setRoles(rolesRes)
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLoading(false)
-    }
+  // Roles no está migrado a esta pantalla — se sigue trayendo directo.
+  useEffect(() => {
+    queueMicrotask(() => {
+      rolesApi.list().then(setRoles).catch(err => toast(extractErrorMessage(err), 'error'))
+    })
   }, [toast])
-
-  useEffect(() => { queueMicrotask(load) }, [load])
 
   function defaultAssignableRoleId(): string {
     const receptionist = assignableRoles.find(r => r.name === 'RECEPTIONIST')
@@ -100,17 +97,20 @@ export default function UsuariosPage() {
         // El email no se puede editar acá — es de la identity, no de la
         // membership. roleId solo se manda si esta membership no es OWNER
         // (no tiene sentido pisar el rol de quien registró el negocio).
-        await usersApi.update(editing.id, {
-          ...(editing.roleName !== 'OWNER' && { roleId: form.roleId }),
-          ...(form.password && { password: form.password }),
+        await updateMember({
+          resource: 'usuarios',
+          id: editing.id,
+          values: {
+            ...(editing.roleName !== 'OWNER' && { roleId: form.roleId }),
+            ...(form.password && { password: form.password }),
+          },
         })
         toast('Usuario actualizado', 'success')
       } else {
-        await usersApi.create({ email: form.email, password: form.password, roleId: form.roleId })
+        await createMember({ resource: 'usuarios', values: { email: form.email, password: form.password, roleId: form.roleId } })
         toast('Usuario creado', 'success')
       }
       setModalOpen(false)
-      load()
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setFieldErrors(fe)
@@ -124,10 +124,9 @@ export default function UsuariosPage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      await usersApi.remove(deleteTarget.id)
+      await deleteMemberMutation({ resource: 'usuarios', id: deleteTarget.id })
       toast('Usuario desactivado', 'success')
       setDeleteTarget(null)
-      load()
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {

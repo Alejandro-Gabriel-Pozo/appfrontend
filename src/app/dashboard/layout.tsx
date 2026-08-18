@@ -1,11 +1,32 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
+import { Refine } from '@refinedev/core'
+import routerProvider from '@refinedev/nextjs-router/app'
 import { ToastProvider, useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import { businessModulesApi, systemApi, type DeadLetterEvent } from '@/lib/api'
+import { dataProvider } from '@/lib/refine/dataProvider'
+import { createAuthProvider } from '@/lib/refine/authProvider'
+
+// Piloto del data provider (18/08/2026) — solo estos dos recursos tienen
+// adaptador en src/lib/refine/dataProvider.ts por ahora. Sumar acá cuando
+// se migre la pantalla correspondiente, no antes (evita un menú de Refine
+// que promete recursos sin pantalla migrada todavía).
+const REFINE_RESOURCES = [
+  { name: 'categorias', list: '/dashboard/categorias' },
+  { name: 'productos', list: '/dashboard/productos' },
+  { name: 'recursos', list: '/dashboard/recursos' },
+  { name: 'servicios', list: '/dashboard/servicios' },
+  { name: 'usuarios', list: '/dashboard/usuarios' },
+  { name: 'clientes', list: '/dashboard/clientes' },
+  { name: 'reservas', list: '/dashboard/reservas' },
+  { name: 'estadias', list: '/dashboard/estadias' },
+  { name: 'housekeeping', list: '/dashboard/housekeeping' },
+  { name: 'ordenes', list: '/dashboard/ordenes' },
+]
 
 const NAV = [
   {
@@ -235,6 +256,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, isAuthenticated, isLoading, logout: authLogout } = useAuth()
   const isManagement = user?.role === 'OWNER' || user?.role === 'ADMIN'
 
+  // Wrapper sobre AuthContext (ver lib/refine/authProvider.ts) — se
+  // reconstruye solo cuando cambia el estado de sesión real, no en cada
+  // render, para no reiniciar el estado interno de auth de Refine de más.
+  const refineAuthProvider = useMemo(
+    () => createAuthProvider({ isAuthenticated, user, logout: authLogout }),
+    [isAuthenticated, user, authLogout],
+  )
+
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // null mientras carga (o si falla el fetch) — con null no se oculta nada,
   // el gate real ya lo hace el backend (402 MODULE_NOT_ENABLED); esto es
@@ -283,6 +312,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ToastProvider>
+      <Refine
+        dataProvider={dataProvider}
+        authProvider={refineAuthProvider}
+        routerProvider={routerProvider}
+        resources={REFINE_RESOURCES}
+        options={{ syncWithLocation: false, disableTelemetry: true }}
+      >
       <div
         style={{
           display: 'flex',
@@ -599,6 +635,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           a:hover { color: #e2e4ea !important; background: rgba(255,255,255,0.05) !important; }
         `}</style>
       </div>
+      </Refine>
     </ToastProvider>
   )
 }

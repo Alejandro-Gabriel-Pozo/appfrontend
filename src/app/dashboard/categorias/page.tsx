@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
-import { categoriesApi, extractErrorMessage } from '@/lib/api'
+import { useState } from 'react'
+import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
+import { extractErrorMessage } from '@/lib/api'
 import { isPlanLimitError, isPlatformUnavailable, getErrorMessage } from '@/lib/apiErrors'
 import { useToast } from '@/context/ToastContext'
 import UpgradePrompt, { type PlanLimitPayload } from '@/components/UpgradePrompt'
@@ -8,8 +9,17 @@ import type { Category } from '@/lib/types'
 
 export default function CategoriasPage() {
   const { toast } = useToast()
-  const [categories, setCategories]   = useState<Category[]>([])
-  const [loading, setLoading]         = useState(true)
+  // Sin paginación server-side todavía (ver lib/refine/dataProvider.ts) —
+  // pagination: { mode: 'off' } trae la lista completa tal cual la devuelve
+  // categoriesApi.list(), sin que useTable intente paginarla por su cuenta.
+  const { result, tableQuery } = useTable<Category>({ resource: 'categorias', pagination: { mode: 'off' } })
+  const categories = result.data
+  const loading = tableQuery.isLoading
+
+  const { mutateAsync: createCategory } = useCreate<Category>()
+  const { mutateAsync: updateCategory } = useUpdate<Category>()
+  const { mutateAsync: deleteCategoryMutation } = useDelete<Category>()
+
   const [modalOpen, setModalOpen]     = useState(false)
   const [editing, setEditing]         = useState<Category | null>(null)
   const [form, setForm]               = useState({ name: '', description: '' })
@@ -17,19 +27,6 @@ export default function CategoriasPage() {
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
   // Banner 402 — los datos vienen del backend, nunca hardcodeados
   const [limitErr, setLimitErr]       = useState<PlanLimitPayload | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      setCategories(await categoriesApi.list())
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLoading(false)
-    }
-  }, [toast])
-
-  useEffect(() => { queueMicrotask(load) }, [load])
 
   function openCreate() {
     setEditing(null)
@@ -49,16 +46,14 @@ export default function CategoriasPage() {
     try {
       if (editing) {
         // UPDATE: no aplica límite de plan
-        await categoriesApi.update(editing.id, form)
+        await updateCategory({ resource: 'categorias', id: editing.id, values: form })
         toast('Categoría actualizada', 'success')
         setModalOpen(false)
-        load()
       } else {
         // CREATE: puede fallar con 402, 503 o error genérico
-        await categoriesApi.create({ ...form, fields: [] })
+        await createCategory({ resource: 'categorias', values: { ...form, fields: [] } })
         toast('Categoría creada', 'success')
         setModalOpen(false)
-        load()
       }
     } catch (err) {
       if (!editing) {
@@ -82,10 +77,9 @@ export default function CategoriasPage() {
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await categoriesApi.remove(deleteTarget.id)
+      await deleteCategoryMutation({ resource: 'categorias', id: deleteTarget.id })
       toast('Categoría eliminada', 'success')
       setDeleteTarget(null)
-      load()
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     }

@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
-import { resourcesApi, categoriesApi, resourceHoursApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { useState, useEffect } from 'react'
+import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
+import { categoriesApi, resourceHoursApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import type { Resource, Category, OperatingWindow } from '@/lib/types'
 
@@ -10,9 +11,16 @@ const DAY_LABEL = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 export default function RecursosPage() {
   const { toast } = useToast()
-  const [resources, setResources] = useState<Resource[]>([])
+  // Sin paginación server-side todavía (ver lib/refine/dataProvider.ts) —
+  // pagination: { mode: 'off' } trae la lista completa.
+  const { result, tableQuery } = useTable<Resource>({ resource: 'recursos', pagination: { mode: 'off' } })
+  const resources = result.data
+  const loading = tableQuery.isLoading
+  const { mutateAsync: createResource } = useCreate<Resource>()
+  const { mutateAsync: updateResource } = useUpdate<Resource>()
+  const { mutateAsync: deleteResourceMutation } = useDelete<Resource>()
+
   const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Resource | null>(null)
   const [form, setForm] = useState<Omit<Resource, 'id'>>(EMPTY)
@@ -25,20 +33,13 @@ export default function RecursosPage() {
   const [hourForm, setHourForm] = useState({ dayOfWeek: 0, startTime: '09:00', endTime: '18:00' })
   const [addingHour, setAddingHour] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [res, cats] = await Promise.all([resourcesApi.list(), categoriesApi.list()])
-      setResources(res)
-      setCategories(cats)
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLoading(false)
-    }
+  // Categorías no está migrado a esta pantalla (es su propio recurso Refine)
+  // — se sigue trayendo directo para el <select>, igual que antes.
+  useEffect(() => {
+    queueMicrotask(() => {
+      categoriesApi.list().then(setCategories).catch(err => toast(extractErrorMessage(err), 'error'))
+    })
   }, [toast])
-
-  useEffect(() => { queueMicrotask(load) }, [load])
 
   function openCreate() {
     setEditing(null)
@@ -89,14 +90,13 @@ export default function RecursosPage() {
     setFieldErrors({})
     try {
       if (editing) {
-        await resourcesApi.update(editing.id, form)
+        await updateResource({ resource: 'recursos', id: editing.id, values: form })
         toast('Recurso actualizado', 'success')
       } else {
-        await resourcesApi.create(form)
+        await createResource({ resource: 'recursos', values: form })
         toast('Recurso creado', 'success')
       }
       setModalOpen(false)
-      load()
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) {
@@ -112,10 +112,9 @@ export default function RecursosPage() {
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await resourcesApi.remove(deleteTarget.id)
+      await deleteResourceMutation({ resource: 'recursos', id: deleteTarget.id })
       toast('Recurso eliminado', 'success')
       setDeleteTarget(null)
-      load()
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     }

@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useTable, useCreate, useUpdate, useInvalidate } from '@refinedev/core'
 import { customersApi, customerRatesApi, resourcesApi, bookableServicesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
@@ -13,8 +14,15 @@ const KIND_LABEL: Record<'INDIVIDUAL' | 'COMPANY', string> = {
 
 export default function ClientesPage() {
   const { toast } = useToast()
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [loading, setLoading] = useState(true)
+  const { result, tableQuery } = useTable<Customer>({ resource: 'clientes', pagination: { mode: 'off' } })
+  const customers = result.data
+  const loading = tableQuery.isLoading
+  const { mutateAsync: createCustomer } = useCreate<Customer>()
+  const { mutateAsync: updateCustomer } = useUpdate<Customer>()
+  // addTag/removeTag pegan directo a lib/api.ts (sub-recurso, no pasan por
+  // el data provider) — invalidate() fuerza a useTable a refrescar después
+  // igual que create/update lo hacen solos vía Refine.
+  const invalidate = useInvalidate()
   const [search, setSearch] = useState('')
 
   // Crear cliente
@@ -38,25 +46,15 @@ export default function ClientesPage() {
   const [rateToRemove, setRateToRemove] = useState<CustomerRate | null>(null)
   const [removingRate, setRemovingRate] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [res, recs, svcs] = await Promise.all([
-        customersApi.list(),
-        resourcesApi.list(),
-        bookableServicesApi.list(),
-      ])
-      setCustomers(Array.isArray(res) ? res : res.data)
-      setResources(recs)
-      setServices(svcs)
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLoading(false)
-    }
+  // Recursos/servicios no están migrados a esta pantalla (son para el picker
+  // de tarifas especiales) — se siguen trayendo directo, igual que antes.
+  useEffect(() => {
+    queueMicrotask(() => {
+      Promise.all([resourcesApi.list(), bookableServicesApi.list()])
+        .then(([recs, svcs]) => { setResources(recs); setServices(svcs) })
+        .catch(err => toast(extractErrorMessage(err), 'error'))
+    })
   }, [toast])
-
-  useEffect(() => { queueMicrotask(load) }, [load])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return customers
@@ -70,11 +68,10 @@ export default function ClientesPage() {
     e.preventDefault()
     setCreating(true)
     try {
-      await customersApi.create(createForm)
+      await createCustomer({ resource: 'clientes', values: createForm })
       toast('Cliente creado', 'success')
       setCreateOpen(false)
       setCreateForm({ fullName: '', email: '' })
-      load()
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -145,10 +142,9 @@ export default function ClientesPage() {
     if (!editTarget) return
     setSaving(true)
     try {
-      const updated = await customersApi.update(editTarget.id, editForm)
+      const { data: updated } = await updateCustomer({ resource: 'clientes', id: editTarget.id, values: editForm })
       toast('Cliente actualizado', 'success')
       setEditTarget(updated)
-      load()
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) toast(Object.values(fe)[0]!, 'error')
@@ -166,7 +162,7 @@ export default function ClientesPage() {
       const updated = await customersApi.addTag(editTarget.id, newTag.trim())
       setEditTarget(updated)
       setNewTag('')
-      load()
+      invalidate({ resource: 'clientes', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -179,7 +175,7 @@ export default function ClientesPage() {
     try {
       await customersApi.removeTag(editTarget.id, tagId)
       setEditTarget(t => t ? { ...t, tags: (t.tags ?? []).filter(tag => tag.id !== tagId) } : t)
-      load()
+      invalidate({ resource: 'clientes', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     }

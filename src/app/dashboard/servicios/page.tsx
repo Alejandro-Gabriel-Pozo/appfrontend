@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
-import { bookableServicesApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { useState, useEffect } from 'react'
+import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
+import { categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
@@ -28,10 +29,14 @@ const MODE_LABEL: Record<BookingMode, string> = {
 
 export default function ServiciosPage() {
   const { toast } = useToast()
-  const [services, setServices] = useState<BookableService[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
+  const { result, tableQuery } = useTable<BookableService>({ resource: 'servicios', pagination: { mode: 'off' } })
+  const services = result.data
+  const loading = tableQuery.isLoading
+  const { mutateAsync: createService } = useCreate<BookableService>()
+  const { mutateAsync: updateService } = useUpdate<BookableService>()
+  const { mutateAsync: deleteServiceMutation } = useDelete<BookableService>()
 
+  const [categories, setCategories] = useState<Category[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<BookableService | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY)
@@ -43,20 +48,13 @@ export default function ServiciosPage() {
 
   const [lockTarget, setLockTarget] = useState<BookableService | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [svc, cats] = await Promise.all([bookableServicesApi.list(), categoriesApi.list()])
-      setServices(svc)
-      setCategories(cats)
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLoading(false)
-    }
+  // Categorías no está migrado a esta pantalla — se sigue trayendo directo
+  // para el <select>, igual que antes.
+  useEffect(() => {
+    queueMicrotask(() => {
+      categoriesApi.list().then(setCategories).catch(err => toast(extractErrorMessage(err), 'error'))
+    })
   }, [toast])
-
-  useEffect(() => { queueMicrotask(load) }, [load])
 
   function openCreate() {
     setEditing(null)
@@ -93,14 +91,13 @@ export default function ServiciosPage() {
         price: form.price,
       }
       if (editing) {
-        await bookableServicesApi.update(editing.id, body)
+        await updateService({ resource: 'servicios', id: editing.id, values: body })
         toast('Servicio actualizado', 'success')
       } else {
-        await bookableServicesApi.create(body)
+        await createService({ resource: 'servicios', values: body })
         toast('Servicio creado', 'success')
       }
       setModalOpen(false)
-      load()
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setFieldErrors(fe)
@@ -114,10 +111,9 @@ export default function ServiciosPage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      await bookableServicesApi.remove(deleteTarget.id)
+      await deleteServiceMutation({ resource: 'servicios', id: deleteTarget.id })
       toast('Servicio eliminado', 'success')
       setDeleteTarget(null)
-      load()
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { staysApi, resourcesApi, customersApi, reservationsApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import type { PaginatedResponse } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
@@ -24,11 +25,18 @@ export default function EstadiasPage() {
   const { toast } = useToast()
   const { user: currentUser } = useAuth()
   const isManagement = currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN'
-  const [stays, setStays] = useState<Stay[]>([])
+  // Sin paginación server-side todavía (ver lib/refine/dataProvider.ts).
+  const { result, tableQuery } = useTable<Stay>({ resource: 'estadias', pagination: { mode: 'off' } })
+  const stays = result.data
+  const loading = tableQuery.isLoading
+  const { mutateAsync: checkInMutation } = useCreate<Stay>()
+  // checkOut/noShow son acciones con nombre (staysApi.checkOut/noShow) que
+  // no pasan por el data provider — invalidate() fuerza el refetch después.
+  const invalidate = useInvalidate()
+
   const [resources, setResources] = useState<Resource[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [confirmedReservations, setConfirmedReservations] = useState<Reservation[]>([])
-  const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const [checkInOpen, setCheckInOpen] = useState(false)
@@ -50,27 +58,24 @@ export default function EstadiasPage() {
 
   const companies = customers.filter(c => c.kind === 'COMPANY')
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  // Recursos/clientes/reservas confirmadas no están migrados a esta pantalla
+  // — se siguen trayendo directo, igual que antes.
+  const loadCatalog = useCallback(async () => {
     try {
-      const [s, r, c, res] = await Promise.all([
-        staysApi.listActive(),
+      const [r, c, res] = await Promise.all([
         resourcesApi.list(),
         customersApi.list(),
         reservationsApi.list({ status: 'CONFIRMED' }),
       ])
-      setStays(s)
       setResources(r)
       setCustomers(toArray(c))
       setConfirmedReservations(toArray(res))
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLoading(false)
     }
   }, [toast])
 
-  useEffect(() => { queueMicrotask(load) }, [load])
+  useEffect(() => { queueMicrotask(loadCatalog) }, [loadCatalog])
 
   const getResourceName = (id: string) => resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
   const getCustomerName = (id: string) => customers.find(c => c.id === id)?.fullName ?? id.slice(0, 8) + '…'
@@ -91,14 +96,18 @@ export default function EstadiasPage() {
     setSubmitting(true)
     setFieldErrors({})
     try {
-      await staysApi.checkIn({
-        reservationId: checkInForm.reservationId,
-        resourceId: checkInForm.resourceId,
-        ...(checkInForm.notes && { notes: checkInForm.notes }),
+      await checkInMutation({
+        resource: 'estadias',
+        values: {
+          reservationId: checkInForm.reservationId,
+          resourceId: checkInForm.resourceId,
+          ...(checkInForm.notes && { notes: checkInForm.notes }),
+        },
       })
       toast('Check-in realizado', 'success')
       setCheckInOpen(false)
-      load()
+      // El check-in saca la reserva usada de "confirmadas" — recargar el catálogo.
+      loadCatalog()
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setFieldErrors(fe)
@@ -137,7 +146,7 @@ export default function EstadiasPage() {
       })
       toast('Check-out realizado — se planificó la limpieza', 'success')
       setCheckOutTarget(null)
-      load()
+      invalidate({ resource: 'estadias', invalidates: ['list'] })
     } catch (err) {
       // El backend puede rechazar con 409 STAY_BALANCE_OWED aunque el
       // folio mostrado diga $0 (ej. un cargo nuevo llegó justo antes) —
@@ -182,7 +191,7 @@ export default function EstadiasPage() {
       await staysApi.noShow(noShowTarget.id)
       toast('Marcado como no show', 'success')
       setNoShowTarget(null)
-      load()
+      invalidate({ resource: 'estadias', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
