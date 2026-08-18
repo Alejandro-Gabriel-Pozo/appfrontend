@@ -1,12 +1,12 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
-import { housekeepingApi, resourcesApi, usersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { housekeepingApi, resourcesApi, usersApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import Modal from '@/components/Modal'
-import type { HousekeepingTask, HousekeepingStatus, Shift, Resource, TeamMember } from '@/lib/types'
+import type { HousekeepingTask, HousekeepingStatus, Shift, Resource, TeamMember, Category } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Segunda pantalla migrada (18/08/2026) — módulo PMS, acento brass, patrón
@@ -84,6 +84,7 @@ export default function HousekeepingPage() {
 
   const [resources, setResources] = useState<Resource[]>([])
   const [members, setMembers] = useState<TeamMember[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const [createOpen, setCreateOpen] = useState(false)
@@ -102,11 +103,21 @@ export default function HousekeepingPage() {
   // trayendo directo, igual que antes.
   useEffect(() => {
     queueMicrotask(() => {
-      Promise.all([resourcesApi.list(), usersApi.list()])
-        .then(([r, m]) => { setResources(r); setMembers(m) })
+      Promise.all([resourcesApi.list(), usersApi.list(), categoriesApi.list()])
+        .then(([r, m, cats]) => { setResources(r); setMembers(m); setCategories(cats) })
         .catch(err => toast(extractErrorMessage(err), 'error'))
     })
   }, [toast])
+
+  // Backlog E1 (13/08/2026, ampliado 18/08 tras encontrar el mismo bug acá) —
+  // housekeeping es limpieza de habitaciones/unidades, no tiene sentido para
+  // un recurso de servicio (silla de peluquería, mesa). El rack y el
+  // selector de "planificar tarea" solo muestran recursos de categorías
+  // isLodging=true.
+  const lodgingResources = useMemo(() => {
+    const lodgingCategoryIds = new Set(categories.filter(c => c.isLodging).map(c => c.id))
+    return resources.filter(r => lodgingCategoryIds.has(r.categoryId))
+  }, [resources, categories])
 
   const getMemberEmail = (id: string | null) => id ? members.find(m => m.identityId === id || m.id === id)?.email ?? id.slice(0, 8) + '…' : '—'
   const getTaskForResource = (resourceId: string) => tasks.find(t => t.resourceId === resourceId) ?? null
@@ -231,13 +242,17 @@ export default function HousekeepingPage() {
 
       {/* Rack — una ficha por recurso, coloreada por su estado de housekeeping
           en la fecha elegida (o neutra si no tiene tarea planificada). */}
-      {loading || resources.length === 0 ? (
+      {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
           {[...Array(8)].map((_, i) => <div key={i} className="skeleton" style={{ height: 92, borderRadius: 14 }} />)}
         </div>
+      ) : lodgingResources.length === 0 ? (
+        <div className="card empty-state">
+          <p>No hay ninguna categoría marcada como alojamiento todavía — marcá una en Categorías para poder planificar housekeeping.</p>
+        </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
-          {resources.map(r => {
+          {lodgingResources.map(r => {
             const task = getTaskForResource(r.id)
             const tile = task ? STATUS_TILE[task.status] : EMPTY_TILE
             return (
@@ -370,7 +385,7 @@ export default function HousekeepingPage() {
               required
             >
               <option value="">Seleccioná un recurso…</option>
-              {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {lodgingResources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
             {fieldErrors['resourceId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>}
           </div>

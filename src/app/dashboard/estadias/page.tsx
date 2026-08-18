@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { staysApi, resourcesApi, customersApi, reservationsApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
@@ -7,7 +7,7 @@ import type { PaginatedResponse } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import Modal from '@/components/Modal'
-import type { Stay, Resource, Customer, Reservation, Shift, StayFolio } from '@/lib/types'
+import type { Stay, Resource, Customer, Reservation, Shift, StayFolio, Category } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Tercera pantalla migrada (18/08/2026) — módulo PMS, acento brass.
@@ -43,6 +43,7 @@ export default function EstadiasPage() {
   const [resources, setResources] = useState<Resource[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [confirmedReservations, setConfirmedReservations] = useState<Reservation[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const [checkInOpen, setCheckInOpen] = useState(false)
@@ -76,19 +77,36 @@ export default function EstadiasPage() {
       ])
       setResources(r)
       setCustomers(toArray(c))
-      // Backlog E1 (13/08/2026, alcance completo 18/08) — red de seguridad:
-      // el dropdown de check-in solo debería ofrecer reservas de alojamiento
-      // (Reservas ya filtra esto al crear, pero una reserva vieja de un
-      // servicio, creada antes de este cambio, no debería colarse acá).
-      const lodgingCategoryIds = new Set(cats.filter(cat => cat.isLodging).map(cat => cat.id))
-      const lodgingResourceIds = new Set(r.filter(res2 => lodgingCategoryIds.has(res2.categoryId)).map(res2 => res2.id))
-      setConfirmedReservations(toArray(res).filter(rv => lodgingResourceIds.has(rv.resourceId)))
+      setConfirmedReservations(toArray(res))
+      setCategories(cats)
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     }
   }, [toast])
 
   useEffect(() => { queueMicrotask(loadCatalog) }, [loadCatalog])
+
+  // Backlog E1 (13/08/2026, ampliado 18/08) — Estadías es 100% alojamiento:
+  // el dropdown de reserva a check-in y el de habitación asignada solo
+  // deberían ofrecer recursos/reservas de categorías isLodging=true (una
+  // reserva de servicio vieja, creada antes de este cambio, no debería
+  // colarse en ninguno de los dos).
+  const lodgingResources = useMemo(() => {
+    const lodgingCategoryIds = new Set(categories.filter(cat => cat.isLodging).map(cat => cat.id))
+    return resources.filter(r => lodgingCategoryIds.has(r.categoryId))
+  }, [resources, categories])
+  const lodgingResourceIds = useMemo(() => new Set(lodgingResources.map(r => r.id)), [lodgingResources])
+  const lodgingConfirmedReservations = useMemo(
+    () => confirmedReservations.filter(rv => lodgingResourceIds.has(rv.resourceId)),
+    [confirmedReservations, lodgingResourceIds],
+  )
+  // Idem para la tabla principal — un stay ya existente sobre un recurso de
+  // servicio (de antes de este cambio, o creado por error) no debería
+  // listarse acá tampoco.
+  const lodgingStays = useMemo(
+    () => stays.filter(s => lodgingResourceIds.has(s.resourceId)),
+    [stays, lodgingResourceIds],
+  )
 
   const getResourceName = (id: string) => resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
   const getCustomerName = (id: string) => customers.find(c => c.id === id)?.fullName ?? id.slice(0, 8) + '…'
@@ -100,7 +118,7 @@ export default function EstadiasPage() {
   }
 
   function pickReservation(reservationId: string) {
-    const reservation = confirmedReservations.find(r => r.id === reservationId)
+    const reservation = lodgingConfirmedReservations.find(r => r.id === reservationId)
     setCheckInForm(f => ({ ...f, reservationId, resourceId: reservation?.resourceId ?? f.resourceId }))
   }
 
@@ -231,7 +249,7 @@ export default function EstadiasPage() {
         <div className="space-y-2">
           {[...Array(4)].map((_, i) => <div key={i} className="h-14 rounded-lg skeleton" />)}
         </div>
-      ) : stays.length === 0 ? (
+      ) : lodgingStays.length === 0 ? (
         <div className="card empty-state">
           <p>Sin huéspedes en check-in</p>
         </div>
@@ -247,7 +265,7 @@ export default function EstadiasPage() {
               </tr>
             </thead>
             <tbody>
-              {stays.map(s => (
+              {lodgingStays.map(s => (
                 <tr key={s.id}>
                   <td className="table-cell-primary">{getCustomerName(s.customerId)}</td>
                   <td>{getResourceName(s.resourceId)}</td>
@@ -290,13 +308,13 @@ export default function EstadiasPage() {
               required
             >
               <option value="">Seleccioná una reserva…</option>
-              {confirmedReservations.map(r => (
+              {lodgingConfirmedReservations.map(r => (
                 <option key={r.id} value={r.id}>
                   {r.customer.fullName} — {getResourceName(r.resourceId)} — {fmt(r.startTime)}
                 </option>
               ))}
             </select>
-            {confirmedReservations.length === 0 && (
+            {lodgingConfirmedReservations.length === 0 && (
               <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>No hay reservas confirmadas pendientes de check-in.</p>
             )}
             {fieldErrors['reservationId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['reservationId']}</p>}
@@ -311,7 +329,7 @@ export default function EstadiasPage() {
               required
             >
               <option value="">Seleccioná una habitación…</option>
-              {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {lodgingResources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
             <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>Puede ser distinta a la reservada si hubo que reasignar.</p>
             {fieldErrors['resourceId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>}
