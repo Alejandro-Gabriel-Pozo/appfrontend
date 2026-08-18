@@ -1,10 +1,20 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
+import { useTable, useCreate, useUpdate, useInvalidate } from '@refinedev/core'
 import { reservationsApi, resourcesApi, customersApi, bookableServicesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
-import type { PaginatedResponse } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import type { Reservation, Resource, ReservationStatus, BookableService } from '@/lib/types'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Primera pantalla migrada (18/08/2026) — módulo PMS, acento brass. El scope
+// vive en la clase .bastion (globals.css); acá solo se cargan las 3
+// tipografías vía next/font (auto-hosted, sin <link> manual) y se exponen
+// como variables CSS que consume ese scope.
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const PAGE_SIZE = 20
 
@@ -15,11 +25,14 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
   COMPLETED: 'Completada',
 }
 
-const STATUS_CLASS: Record<ReservationStatus, string> = {
-  PENDING: 'bg-yellow-500/10 text-yellow-400',
-  CONFIRMED: 'bg-emerald-500/10 text-emerald-400',
-  CANCELLED: 'bg-red-500/10 text-red-400',
-  COMPLETED: 'bg-blue-500/10 text-blue-400',
+// Semáforo Bastión (sección 5 del doc): pending=brass, confirmed=sage,
+// completed=gris neutro, cancelled=clay — badge-* ya vive en globals.css
+// y toma esa paleta automáticamente dentro del scope .bastion.
+const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
+  PENDING: 'badge-pending',
+  CONFIRMED: 'badge-confirmed',
+  CANCELLED: 'badge-cancelled',
+  COMPLETED: 'badge-completed',
 }
 
 const ALL_STATUSES: ReservationStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']
@@ -30,17 +43,23 @@ function fmt(iso: string) {
 
 const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format
 
-/** Normaliza la respuesta del API que puede venir paginada o como array plano */
-function toArray<T>(res: PaginatedResponse<T> | T[]): T[] {
-  return Array.isArray(res) ? res : res.data
-}
-
 export default function ReservasPage() {
   const { toast } = useToast()
-  const [reservations, setReservations] = useState<Reservation[]>([])
+  // Sin paginación server-side todavía (ver lib/refine/dataProvider.ts) —
+  // pagination: { mode: 'off' } trae la lista completa; el filtrado/paginado
+  // sigue siendo 100% client-side, igual que antes de migrar.
+  const { result, tableQuery } = useTable<Reservation>({ resource: 'reservas', pagination: { mode: 'off' } })
+  const reservations = result.data
+  const loading = tableQuery.isLoading
+  const { mutateAsync: createReservation } = useCreate<Reservation>()
+  const { mutateAsync: updateReservation } = useUpdate<Reservation>()
+  // confirm/cancel/complete son acciones con nombre (reservationsApi[action])
+  // que no pasan por el data provider — invalidate() fuerza el refetch de
+  // la lista después, igual que create/update lo hacen solos vía Refine.
+  const invalidate = useInvalidate()
+
   const [resources, setResources] = useState<Resource[]>([])
   const [services, setServices] = useState<BookableService[]>([])
-  const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   // Filtros y paginación
@@ -66,25 +85,15 @@ export default function ReservasPage() {
   const [detailFieldErrors, setDetailFieldErrors] = useState<Record<string, string>>({})
   const [detailSubmitting, setDetailSubmitting] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [res, recs, svcs] = await Promise.all([
-        reservationsApi.list(),
-        resourcesApi.list(),
-        bookableServicesApi.list(),
-      ])
-      setReservations(toArray(res))
-      setResources(recs)
-      setServices(svcs)
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLoading(false)
-    }
+  // Recursos/servicios no están migrados a esta pantalla — se siguen
+  // trayendo directo, igual que antes.
+  useEffect(() => {
+    queueMicrotask(() => {
+      Promise.all([resourcesApi.list(), bookableServicesApi.list()])
+        .then(([recs, svcs]) => { setResources(recs); setServices(svcs) })
+        .catch(err => toast(extractErrorMessage(err), 'error'))
+    })
   }, [toast])
-
-  useEffect(() => { queueMicrotask(load) }, [load])
 
   // Filtrado y paginación en cliente
   const filtered = useMemo(() => {
@@ -112,7 +121,7 @@ export default function ReservasPage() {
       await reservationsApi[action](id)
       const labels = { confirm: 'Reserva confirmada', cancel: 'Reserva cancelada', complete: 'Reserva completada' }
       toast(labels[action], 'success')
-      load()
+      invalidate({ resource: 'reservas', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -171,17 +180,19 @@ export default function ReservasPage() {
       const startTime = isLodging ? new Date(form.checkIn).toISOString() : new Date(form.startTime).toISOString()
       const endTime = isLodging ? new Date(form.checkOut).toISOString() : new Date(form.endTime).toISOString()
 
-      await reservationsApi.create({
-        resourceId: form.resourceId,
-        customer: { id: customer.id },
-        startTime,
-        endTime,
-        ...(form.serviceId && { serviceId: form.serviceId }),
+      await createReservation({
+        resource: 'reservas',
+        values: {
+          resourceId: form.resourceId,
+          customer: { id: customer.id },
+          startTime,
+          endTime,
+          ...(form.serviceId && { serviceId: form.serviceId }),
+        },
       })
       toast('Reserva creada', 'success')
       setModalOpen(false)
       setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
-      load()
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setFieldErrors(fe)
@@ -225,14 +236,17 @@ export default function ReservasPage() {
     setDetailSubmitting(true)
     setDetailFieldErrors({})
     try {
-      const updated = await reservationsApi.update(detailTarget.id, {
-        startTime: new Date(detailForm.startTime).toISOString(),
-        endTime: new Date(detailForm.endTime).toISOString(),
+      const { data: updated } = await updateReservation({
+        resource: 'reservas',
+        id: detailTarget.id,
+        values: {
+          startTime: new Date(detailForm.startTime).toISOString(),
+          endTime: new Date(detailForm.endTime).toISOString(),
+        },
       })
       toast('Reserva actualizada', 'success')
       setDetailTarget(updated)
       setEditingDetail(false)
-      load()
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setDetailFieldErrors(fe)
@@ -250,7 +264,7 @@ export default function ReservasPage() {
       const updated = await reservationsApi[action](detailTarget.id)
       toast(labels[action], 'success')
       setDetailTarget(updated)
-      load()
+      invalidate({ resource: 'reservas', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -259,12 +273,12 @@ export default function ReservasPage() {
   }
 
   return (
-    <div>
+    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-xl font-semibold text-white">Reservas</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Historial y gestión de reservas</p>
+          <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Reservas</h1>
+          <p className="page-subtitle">Historial y gestión de reservas</p>
         </div>
         <button onClick={openModal} className="btn-primary flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -299,63 +313,55 @@ export default function ReservasPage() {
       {loading ? (
         <div className="space-y-2">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-16 rounded-lg bg-white/[0.04] animate-pulse" />
+            <div key={i} className="h-16 rounded-lg skeleton" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16 text-center">
-          <svg className="w-10 h-10 text-slate-600 mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+        <div className="card empty-state">
+          <svg className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <p className="text-slate-400 font-medium">
-            {search || filterStatus ? 'Sin resultados para ese filtro' : 'Sin reservas'}
-          </p>
-          {!search && !filterStatus && (
-            <p className="text-slate-600 text-sm mt-1">Creá la primera con el botón de arriba</p>
-          )}
+          <h3>{search || filterStatus ? 'Sin resultados para ese filtro' : 'Sin reservas'}</h3>
+          {!search && !filterStatus && <p>Creá la primera con el botón de arriba</p>}
         </div>
       ) : (
         <>
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="card table-wrapper" style={{ overflow: 'hidden' }}>
+            <table className="table">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Cliente</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Recurso</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Inicio</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Fin</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Precio</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-4 py-3" />
+                <tr>
+                  <th>Cliente</th>
+                  <th>Recurso</th>
+                  <th>Inicio</th>
+                  <th>Fin</th>
+                  <th>Precio</th>
+                  <th>Estado</th>
+                  <th />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody>
                 {paginated.map(r => (
-                  <tr
-                    key={r.id}
-                    onClick={() => openDetail(r)}
-                    className="hover:bg-white/[0.02] transition-colors cursor-pointer"
-                  >
-                    <td className="px-4 py-3.5">
-                      <p className="font-medium text-white">{r.customer.fullName}</p>
-                      <p className="text-xs text-slate-500">{r.customer.email}</p>
+                  <tr key={r.id} onClick={() => openDetail(r)} style={{ cursor: 'pointer' }}>
+                    <td>
+                      <p className="table-cell-primary">{r.customer.fullName}</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{r.customer.email}</p>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-300">{getResourceName(r.resourceId)}</td>
-                    <td className="px-4 py-3.5 text-slate-400 text-xs tabular-nums">{fmt(r.startTime)}</td>
-                    <td className="px-4 py-3.5 text-slate-400 text-xs tabular-nums">{fmt(r.endTime)}</td>
-                    <td className="px-4 py-3.5 text-slate-300 text-xs tabular-nums">{fmtMoney(r.totalPrice)}</td>
-                    <td className="px-4 py-3.5">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_CLASS[r.status]}`}>
+                    <td>{getResourceName(r.resourceId)}</td>
+                    <td className="mono" style={{ fontSize: 12 }}>{fmt(r.startTime)}</td>
+                    <td className="mono" style={{ fontSize: 12 }}>{fmt(r.endTime)}</td>
+                    <td className="mono">{fmtMoney(r.totalPrice)}</td>
+                    <td>
+                      <span className={STATUS_BADGE_CLASS[r.status]}>
                         {STATUS_LABEL[r.status]}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
+                    <td onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         {r.allowedTransitions?.includes('CONFIRMED') && (
                           <button
                             onClick={() => doAction(r.id, 'confirm')}
                             disabled={actionLoading !== null}
-                            className="text-xs px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                            className="btn-mini btn-mini-sage"
                           >
                             {actionLoading === `${r.id}-confirm` ? '…' : 'Confirmar'}
                           </button>
@@ -364,7 +370,7 @@ export default function ReservasPage() {
                           <button
                             onClick={() => doAction(r.id, 'cancel')}
                             disabled={actionLoading !== null}
-                            className="text-xs px-2.5 py-1.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                            className="btn-mini btn-mini-clay"
                           >
                             {actionLoading === `${r.id}-cancel` ? '…' : 'Cancelar'}
                           </button>
@@ -373,7 +379,7 @@ export default function ReservasPage() {
                           <button
                             onClick={() => doAction(r.id, 'complete')}
                             disabled={actionLoading !== null}
-                            className="text-xs px-2.5 py-1.5 rounded-md bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                            className="btn-mini btn-mini-neutral"
                           >
                             {actionLoading === `${r.id}-complete` ? '…' : 'Completar'}
                           </button>
@@ -389,21 +395,23 @@ export default function ReservasPage() {
           {/* Paginación */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 text-sm">
-              <span className="text-slate-500">
+              <span style={{ color: 'var(--text-tertiary)' }}>
                 {filtered.length} resultado{filtered.length !== 1 ? 's' : ''} · página {page} de {totalPages}
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1.5 rounded-md bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] disabled:opacity-30 transition-colors"
+                  className="btn-secondary"
+                  style={{ padding: '6px 12px' }}
                 >
                   ← Anterior
                 </button>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-1.5 rounded-md bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] disabled:opacity-30 transition-colors"
+                  className="btn-secondary"
+                  style={{ padding: '6px 12px' }}
                 >
                   Siguiente →
                 </button>
@@ -449,7 +457,7 @@ export default function ReservasPage() {
                 .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
             {fieldErrors['resourceId'] && (
-              <p className="mt-1 text-xs text-red-400">{fieldErrors['resourceId']}</p>
+              <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>
             )}
           </div>
           <div>
@@ -462,7 +470,7 @@ export default function ReservasPage() {
               placeholder="cliente@email.com"
               required
             />
-            <p className="mt-1 text-xs text-slate-500">El cliente debe estar registrado en el sistema.</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>El cliente debe estar registrado en el sistema.</p>
           </div>
           {isLodging ? (
             <div className="grid grid-cols-2 gap-3">
@@ -487,7 +495,7 @@ export default function ReservasPage() {
                 />
               </div>
               {nightsCount != null && (
-                <p className="col-span-2 text-xs text-slate-500">
+                <p className="col-span-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
                   {nightsCount > 0 ? `${nightsCount} noche${nightsCount === 1 ? '' : 's'}` : 'El check-out debe ser posterior al check-in'}
                 </p>
               )}
@@ -506,11 +514,11 @@ export default function ReservasPage() {
                 required
               />
               {!form.resourceId && (
-                <p className="mt-2 text-xs text-slate-500">Elegí un recurso para ver los turnos disponibles.</p>
+                <p className="mt-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>Elegí un recurso para ver los turnos disponibles.</p>
               )}
               {form.resourceId && slotDate && (
                 loadingSlots ? (
-                  <p className="mt-2 text-xs text-slate-500">Buscando turnos…</p>
+                  <p className="mt-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>Buscando turnos…</p>
                 ) : availableSlots && availableSlots.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {availableSlots.map(slot => {
@@ -520,7 +528,14 @@ export default function ReservasPage() {
                           key={slot}
                           type="button"
                           onClick={() => selectSlot(slot)}
-                          className={`text-xs px-3 py-1.5 rounded-md transition-colors ${active ? 'bg-emerald-500 text-white' : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'}`}
+                          className="mono"
+                          style={{
+                            fontSize: 12, padding: '6px 12px', borderRadius: 8,
+                            transition: 'background-color 150ms, color 150ms',
+                            background: active ? 'var(--accent)' : 'var(--surface-4)',
+                            color: active ? '#fff' : 'var(--text-secondary)',
+                            border: 'none',
+                          }}
                         >
                           {new Date(slot).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                         </button>
@@ -529,7 +544,7 @@ export default function ReservasPage() {
                   </div>
                 ) : availableSlots && availableSlots.length === 0 ? (
                   <div className="mt-2 space-y-3">
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                       Sin horario configurado para este recurso — elegí el horario manualmente.
                     </p>
                     <div className="grid grid-cols-2 gap-3">
@@ -612,26 +627,28 @@ export default function ReservasPage() {
                   <label className="label">Inicio</label>
                   <input
                     type="datetime-local"
-                    className={`input ${detailFieldErrors['startTime'] ? 'border-red-500/60' : ''}`}
+                    className="input"
+                    style={detailFieldErrors['startTime'] ? { borderColor: 'var(--danger)' } : undefined}
                     value={detailForm.startTime}
                     onChange={e => setDetailForm(f => ({ ...f, startTime: e.target.value }))}
                     required
                   />
-                  {detailFieldErrors['startTime'] && <p className="mt-1 text-xs text-red-400">{detailFieldErrors['startTime']}</p>}
+                  {detailFieldErrors['startTime'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['startTime']}</p>}
                 </div>
                 <div>
                   <label className="label">Fin</label>
                   <input
                     type="datetime-local"
-                    className={`input ${detailFieldErrors['endTime'] ? 'border-red-500/60' : ''}`}
+                    className="input"
+                    style={detailFieldErrors['endTime'] ? { borderColor: 'var(--danger)' } : undefined}
                     value={detailForm.endTime}
                     onChange={e => setDetailForm(f => ({ ...f, endTime: e.target.value }))}
                     required
                   />
-                  {detailFieldErrors['endTime'] && <p className="mt-1 text-xs text-red-400">{detailFieldErrors['endTime']}</p>}
+                  {detailFieldErrors['endTime'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['endTime']}</p>}
                 </div>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                 Cliente, recurso y servicio no se pueden cambiar acá — cancelá esta reserva y creá una nueva si hace falta.
               </p>
               <div className="flex gap-3 pt-2">
@@ -646,56 +663,56 @@ export default function ReservasPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Cliente</p>
-                  <p className="text-sm text-white font-medium">{detailTarget.customer.fullName}</p>
-                  <p className="text-xs text-slate-500">{detailTarget.customer.email}</p>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Cliente</p>
+                  <p className="table-cell-primary" style={{ fontSize: 14 }}>{detailTarget.customer.fullName}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{detailTarget.customer.email}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Estado</p>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_CLASS[detailTarget.status]}`}>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Estado</p>
+                  <span className={STATUS_BADGE_CLASS[detailTarget.status]}>
                     {STATUS_LABEL[detailTarget.status]}
                   </span>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Recurso</p>
-                  <p className="text-sm text-slate-200">{getResourceName(detailTarget.resourceId)}</p>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Recurso</p>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{getResourceName(detailTarget.resourceId)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Servicio</p>
-                  <p className="text-sm text-slate-200">{getServiceName(detailTarget.serviceId) ?? '—'}</p>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Servicio</p>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{getServiceName(detailTarget.serviceId) ?? '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Inicio</p>
-                  <p className="text-sm text-slate-200 tabular-nums">{fmt(detailTarget.startTime)}</p>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Inicio</p>
+                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmt(detailTarget.startTime)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Fin</p>
-                  <p className="text-sm text-slate-200 tabular-nums">{fmt(detailTarget.endTime)}</p>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Fin</p>
+                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmt(detailTarget.endTime)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Precio</p>
-                  <p className="text-sm text-slate-200 tabular-nums">{fmtMoney(detailTarget.totalPrice)}</p>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Precio</p>
+                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmtMoney(detailTarget.totalPrice)}</p>
                 </div>
                 {detailTarget.partySize != null && detailTarget.partySize > 1 && (
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Personas</p>
-                    <p className="text-sm text-slate-200">{detailTarget.partySize}</p>
+                    <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Personas</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{detailTarget.partySize}</p>
                   </div>
                 )}
               </div>
 
               {detailTarget.notes && (
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Notas</p>
-                  <p className="text-sm text-slate-300 whitespace-pre-wrap">{detailTarget.notes}</p>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Notas</p>
+                  <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{detailTarget.notes}</p>
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-2 pt-3 border-t border-white/[0.06]">
+              <div className="flex flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
                 {detailTarget.status === 'PENDING' && (
                   <button
                     onClick={() => setEditingDetail(true)}
-                    className="text-xs px-3 py-1.5 rounded-md bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] transition-colors"
+                    className="btn-mini btn-mini-neutral"
                   >
                     Editar horario
                   </button>
@@ -704,7 +721,7 @@ export default function ReservasPage() {
                   <button
                     onClick={() => doDetailAction('confirm')}
                     disabled={actionLoading !== null}
-                    className="text-xs px-3 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                    className="btn-mini btn-mini-sage"
                   >
                     Confirmar
                   </button>
@@ -713,7 +730,7 @@ export default function ReservasPage() {
                   <button
                     onClick={() => doDetailAction('cancel')}
                     disabled={actionLoading !== null}
-                    className="text-xs px-3 py-1.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                    className="btn-mini btn-mini-clay"
                   >
                     Cancelar reserva
                   </button>
@@ -722,7 +739,7 @@ export default function ReservasPage() {
                   <button
                     onClick={() => doDetailAction('complete')}
                     disabled={actionLoading !== null}
-                    className="text-xs px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                    className="btn-mini btn-mini-neutral"
                   >
                     Completar
                   </button>

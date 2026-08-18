@@ -569,4 +569,149 @@
     background: var(--success);
     animation: pulse-dot 2s ease-in-out infinite;
   }
+
+  /* ── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ──────────
+     Scope opt-in vía .bastion en el div raíz de una pantalla — no toca el
+     tema oscuro global. El sidebar/topbar del dashboard (dashboard/layout.tsx)
+     usa colores hardcodeados, no estas variables, así que queda intacto aunque
+     una pantalla hija use este scope (18/08/2026 — confirmado con el dueño:
+     Bastión se aplica pantalla por pantalla, el shell no cambia todavía).
+     Reservas es la primera pantalla migrada. Módulo PMS → acento brass. */
+  .bastion {
+    --bastion-ink: #14213D;
+    --bastion-parchment: #FAF7F0;
+    --bastion-card: #FFFFFF;
+    --bastion-brass: #B8935F;
+    --bastion-brass-dark: #9C7A4C;
+    --bastion-brass-soft: #E8D9C3;
+    --bastion-sage: #6B8F71;
+    --bastion-sage-bg: #E7EEE6;
+    --bastion-clay: #C1553D;
+    --bastion-clay-bg: #F5E4DF;
+    --bastion-slate: #5B6478;
+    --bastion-line: #E7E2D8;
+    --bastion-text: #1C2333;
+    --bastion-neutral-bg: #EEF0F5;
+    --bastion-neutral-text: #5B6478;
+
+    /* Reasigna los tokens genéricos que ya consumen .card, .btn-, .input,
+       .table y .badge- (ver sección "Components" más arriba) — cero CSS
+       nueva para esos, solo cambian de paleta dentro de este scope. */
+    --bg: var(--bastion-parchment);
+    --surface-0: var(--bastion-parchment);
+    --surface-1: #F2EEE3;
+    --surface-2: var(--bastion-card);
+    --surface-3: var(--bastion-card);
+    --surface-4: #F2EEE3;
+
+    --border: var(--bastion-line);
+    --border-md: var(--bastion-line);
+    --border-lg: #D9D2C2;
+
+    --text-primary: var(--bastion-text);
+    --text-secondary: var(--bastion-slate);
+    --text-tertiary: #8A93AD;
+
+    --accent: var(--bastion-brass);
+    --accent-dark: var(--bastion-brass-dark);
+    --accent-hover: var(--bastion-brass);
+    --accent-dim: var(--bastion-brass-soft);
+    --accent-border: rgba(184,147,95,0.35);
+
+    /* Semáforo de estado (sección 5 del doc): pending=brass, confirmed=sage,
+       completed=gris neutro, cancelled=clay. Los 4 slots genéricos
+       (warning/info/success/danger) ya alcanzan justo para las 4 — badge-
+       pending/confirmed/completed/cancelled los consumen sin cambiar de clase. */
+    --warning: #7A5F3C;
+    --warning-dim: var(--bastion-brass-soft);
+    --warning-border: rgba(184,147,95,0.35);
+
+    --info: #4F6B54;
+    --info-dim: var(--bastion-sage-bg);
+    --info-border: rgba(107,143,113,0.3);
+
+    --success: var(--bastion-neutral-text);
+    --success-dim: var(--bastion-neutral-bg);
+    --success-border: rgba(91,100,120,0.2);
+
+    --danger: #8B3B28;
+    --danger-dim: var(--bastion-clay-bg);
+    --danger-border: rgba(193,85,61,0.3);
+
+    --r-sm: 8px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --r-xl: 16px;
+
+    background-color: var(--bastion-parchment);
+    color: var(--bastion-text);
+    font-family: var(--font-bastion-sans, 'IBM Plex Sans', system-ui, sans-serif);
+  }
+
+  .bastion h1, .bastion h2, .bastion h3 {
+    font-family: var(--font-bastion-serif, 'Fraunces', serif);
+    color: var(--bastion-ink);
+  }
+
+  .bastion .mono,
+  .bastion .table-cell-mono {
+    font-family: var(--font-bastion-mono, 'IBM Plex Mono', ui-monospace, monospace);
+  }
+
+  .bastion .card, .bastion .card-elevated { border-radius: var(--r-xl); }
+
+  .bastion .btn-primary,
+  .bastion .btn-secondary,
+  .bastion .btn-success,
+  .bastion .btn-danger {
+    border-radius: var(--r-md);
+    padding: 10px 16px;
+  }
+
+  .bastion .badge-pending,
+  .bastion .badge-confirmed,
+  .bastion .badge-completed,
+  .bastion .badge-cancelled {
+    border-radius: 100px;
+    border: none;
+  }
+
+  .bastion .table thead th { background-color: transparent; }
+  .bastion .table tbody tr:hover td { background-color: #FBF9F4; }
+
+  /* Botones mini de acción de fila — mismo semáforo que los badges de estado. */
+  .bastion .btn-mini {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: var(--r-sm);
+    font-size: 11.5px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: filter 150ms;
+  }
+  .bastion .btn-mini:disabled { opacity: 0.5; cursor: not-allowed; }
+  .bastion .btn-mini:hover:not(:disabled) { filter: brightness(0.96); }
+  .bastion .btn-mini-sage    { background: var(--bastion-sage-bg); color: #3E5642; }
+  .bastion .btn-mini-clay    { background: var(--bastion-clay-bg); color: var(--danger); }
+  .bastion .btn-mini-neutral { background: var(--bastion-neutral-bg); color: var(--bastion-neutral-text); }
+
+  /* <Modal> (components/Modal.tsx) es compartido por pantallas sin migrar —
+     no se toca el componente. Se re-tiñe por posición (role="dialog") solo
+     dentro de .bastion, con !important porque Modal.tsx fija esos colores
+     como inline style (mayor especificidad que una regla normal). */
+  .bastion [role="dialog"] > div {
+    background: var(--bastion-card) !important;
+    border-color: var(--bastion-line) !important;
+  }
+  .bastion [role="dialog"] > div > div:first-child {
+    border-color: var(--bastion-line) !important;
+  }
+  .bastion [role="dialog"] h2 {
+    color: var(--bastion-ink) !important;
+    font-family: var(--font-bastion-serif, 'Fraunces', serif) !important;
+    font-weight: 600 !important;
+  }
+  .bastion [role="dialog"] button svg { color: var(--bastion-slate); }
 }

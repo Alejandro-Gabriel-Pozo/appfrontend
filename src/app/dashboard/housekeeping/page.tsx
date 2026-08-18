@@ -1,10 +1,20 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
+import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { housekeepingApi, resourcesApi, usersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import Modal from '@/components/Modal'
 import type { HousekeepingTask, HousekeepingStatus, Shift, Resource, TeamMember } from '@/lib/types'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Segunda pantalla migrada (18/08/2026) — módulo PMS, acento brass, patrón
+// "rack": una ficha de color por recurso en vez de una tabla genérica (es el
+// elemento señal del sistema para housekeeping, sección 4 del doc).
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const STATUS_LABEL: Record<HousekeepingStatus, string> = {
   PENDING: 'Pendiente',
@@ -15,14 +25,30 @@ const STATUS_LABEL: Record<HousekeepingStatus, string> = {
   OUT_OF_SERVICE: 'Fuera de servicio',
 }
 
-const STATUS_CLASS: Record<HousekeepingStatus, string> = {
-  PENDING: 'bg-yellow-500/10 text-yellow-400',
-  ASSIGNED: 'bg-blue-500/10 text-blue-400',
-  IN_PROGRESS: 'bg-purple-500/10 text-purple-400',
-  DONE: 'bg-emerald-500/10 text-emerald-400',
-  INSPECTED: 'bg-emerald-500/20 text-emerald-300',
-  OUT_OF_SERVICE: 'bg-red-500/10 text-red-400',
+// Semáforo Bastión (sección 5 del doc, mismo criterio que Reservas):
+// pending=brass, en curso/asignada=gris neutro, terminada/inspeccionada=sage,
+// fuera de servicio=clay. badge-* ya vive en globals.css con esa paleta.
+const STATUS_BADGE_CLASS: Record<HousekeepingStatus, string> = {
+  PENDING: 'badge-pending',
+  ASSIGNED: 'badge-completed',
+  IN_PROGRESS: 'badge-completed',
+  DONE: 'badge-confirmed',
+  INSPECTED: 'badge-confirmed',
+  OUT_OF_SERVICE: 'badge-cancelled',
 }
+
+// Ficha del rack — fondo/borde/punto por estado, mismo semáforo de arriba
+// pero en versión "bloque de color" en vez de pill (principio 4 del doc:
+// escaneable como bloque desde lejos, clave en operación de mostrador).
+const STATUS_TILE: Record<HousekeepingStatus, { bg: string; border: string; dot: string }> = {
+  PENDING:        { bg: 'var(--bastion-brass-soft)',  border: 'var(--bastion-brass)', dot: 'var(--bastion-brass)' },
+  ASSIGNED:       { bg: 'var(--bastion-neutral-bg)',  border: '#C7CCDA',              dot: 'var(--bastion-neutral-text)' },
+  IN_PROGRESS:    { bg: 'var(--bastion-neutral-bg)',  border: '#C7CCDA',              dot: 'var(--bastion-neutral-text)' },
+  DONE:           { bg: 'var(--bastion-sage-bg)',     border: 'var(--bastion-sage)',  dot: 'var(--bastion-sage)' },
+  INSPECTED:      { bg: 'var(--bastion-sage-bg)',     border: 'var(--bastion-sage)',  dot: 'var(--bastion-sage)' },
+  OUT_OF_SERVICE: { bg: 'var(--bastion-clay-bg)',     border: 'var(--bastion-clay)',  dot: 'var(--bastion-clay)' },
+}
+const EMPTY_TILE = { bg: 'var(--bastion-card)', border: 'var(--bastion-line)', dot: 'var(--bastion-line)' }
 
 const SHIFT_LABEL: Record<Shift, string> = { MORNING: 'Mañana', AFTERNOON: 'Tarde', NIGHT: 'Noche' }
 
@@ -41,11 +67,23 @@ export default function HousekeepingPage() {
   const { user: currentUser } = useAuth()
   const isManagement = currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN'
 
-  const [tasks, setTasks] = useState<HousekeepingTask[]>([])
+  const [date, setDate] = useState(todayStr())
+  // housekeeping filtra por fecha vía meta.date (ver lib/refine/dataProvider.ts
+  // — housekeepingApi.listByDate). Sin paginación server-side todavía.
+  const { result, tableQuery } = useTable<HousekeepingTask>({
+    resource: 'housekeeping',
+    pagination: { mode: 'off' },
+    meta: { date },
+  })
+  const tasks = result.data
+  const loading = tableQuery.isLoading
+  const { mutateAsync: createTask } = useCreate<HousekeepingTask>()
+  // assign/start/complete/inspect/outOfService/reset son acciones con nombre
+  // que no pasan por el data provider — invalidate() fuerza el refetch.
+  const invalidate = useInvalidate()
+
   const [resources, setResources] = useState<Resource[]>([])
   const [members, setMembers] = useState<TeamMember[]>([])
-  const [date, setDate] = useState(todayStr())
-  const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const [createOpen, setCreateOpen] = useState(false)
@@ -56,44 +94,47 @@ export default function HousekeepingPage() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [actionValue, setActionValue] = useState('')
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [t, r, m] = await Promise.all([
-        housekeepingApi.listByDate(date),
-        resourcesApi.list(),
-        usersApi.list(),
-      ])
-      setTasks(t)
-      setResources(r)
-      setMembers(m)
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLoading(false)
-    }
-  }, [date, toast])
+  // Ficha del rack seleccionada — con tarea (detalle + acciones) o sin ella
+  // (atajo directo a "Planificar tarea" para ese recurso).
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
 
-  useEffect(() => { queueMicrotask(load) }, [load])
+  // Recursos/usuarios no están migrados a esta pantalla — se siguen
+  // trayendo directo, igual que antes.
+  useEffect(() => {
+    queueMicrotask(() => {
+      Promise.all([resourcesApi.list(), usersApi.list()])
+        .then(([r, m]) => { setResources(r); setMembers(m) })
+        .catch(err => toast(extractErrorMessage(err), 'error'))
+    })
+  }, [toast])
 
-  const getResourceName = (id: string) => resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
   const getMemberEmail = (id: string | null) => id ? members.find(m => m.identityId === id || m.id === id)?.email ?? id.slice(0, 8) + '…' : '—'
+  const getTaskForResource = (resourceId: string) => tasks.find(t => t.resourceId === resourceId) ?? null
+
+  function openCreateFor(resourceId?: string) {
+    setCreateForm({ resourceId: resourceId ?? '', shift: 'MORNING', notes: '' })
+    setFieldErrors({})
+    setSelectedResource(null)
+    setCreateOpen(true)
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setFieldErrors({})
     try {
-      await housekeepingApi.create({
-        resourceId: createForm.resourceId,
-        shift: createForm.shift,
-        scheduledFor: new Date(date).toISOString(),
-        ...(createForm.notes && { notes: createForm.notes }),
+      await createTask({
+        resource: 'housekeeping',
+        values: {
+          resourceId: createForm.resourceId,
+          shift: createForm.shift,
+          scheduledFor: new Date(date).toISOString(),
+          ...(createForm.notes && { notes: createForm.notes }),
+        },
       })
       toast('Tarea creada', 'success')
       setCreateOpen(false)
       setCreateForm({ resourceId: '', shift: 'MORNING', notes: '' })
-      load()
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setFieldErrors(fe)
@@ -111,7 +152,7 @@ export default function HousekeepingPage() {
       if (action === 'inspect') await housekeepingApi.inspect(task.id)
       if (action === 'reset') await housekeepingApi.reset(task.id)
       toast(labels[action], 'success')
-      load()
+      invalidate({ resource: 'housekeeping', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -122,6 +163,7 @@ export default function HousekeepingPage() {
   function openAction(type: 'assign' | 'complete' | 'outOfService', task: HousekeepingTask) {
     setPendingAction({ type, task } as PendingAction)
     setActionValue('')
+    setSelectedResource(null)
   }
 
   async function submitAction() {
@@ -141,7 +183,7 @@ export default function HousekeepingPage() {
         toast('Recurso marcado fuera de servicio', 'success')
       }
       setPendingAction(null)
-      load()
+      invalidate({ resource: 'housekeeping', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -149,15 +191,17 @@ export default function HousekeepingPage() {
     }
   }
 
+  const selectedTask = selectedResource ? getTaskForResource(selectedResource.id) : null
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+      <div className="page-header">
         <div>
-          <h1 className="text-xl font-semibold text-white">Housekeeping</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Tablero de limpieza por turno</p>
+          <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Housekeeping</h1>
+          <p className="page-subtitle">Tablero de limpieza por turno</p>
         </div>
         {isManagement && (
-          <button onClick={() => setCreateOpen(true)} className="btn-primary flex items-center gap-2">
+          <button onClick={() => openCreateFor()} className="btn-primary flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
@@ -166,93 +210,151 @@ export default function HousekeepingPage() {
         )}
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-2">
         <label className="label mb-0">Fecha</label>
         <input type="date" className="input w-44" value={date} onChange={e => setDate(e.target.value)} />
       </div>
 
-      {loading ? (
-        <div className="space-y-2">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-14 rounded-lg bg-white/[0.04] animate-pulse" />)}
-        </div>
-      ) : tasks.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-slate-400 font-medium">Sin tareas planificadas para esta fecha</p>
+      {/* Leyenda del semáforo — mismos colores que las fichas del rack */}
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 20, fontSize: 12, color: 'var(--text-secondary)' }}>
+        {(['PENDING', 'ASSIGNED', 'DONE', 'OUT_OF_SERVICE'] as HousekeepingStatus[]).map(s => (
+          <span key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_TILE[s].dot, display: 'inline-block' }} />
+            {s === 'ASSIGNED' ? 'Asignada / en curso' : STATUS_LABEL[s]}
+          </span>
+        ))}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', border: '1px solid var(--bastion-line)', display: 'inline-block' }} />
+          Sin tarea
+        </span>
+      </div>
+
+      {/* Rack — una ficha por recurso, coloreada por su estado de housekeeping
+          en la fecha elegida (o neutra si no tiene tarea planificada). */}
+      {loading || resources.length === 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+          {[...Array(8)].map((_, i) => <div key={i} className="skeleton" style={{ height: 92, borderRadius: 14 }} />)}
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Recurso</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Turno</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Asignado a</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.04]">
-              {tasks.map(t => (
-                <tr key={t.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-white">{getResourceName(t.resourceId)}</td>
-                  <td className="px-4 py-3.5 text-slate-300">{SHIFT_LABEL[t.shift]}</td>
-                  <td className="px-4 py-3.5">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_CLASS[t.status]}`}>
-                      {STATUS_LABEL[t.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-slate-400 text-xs">{getMemberEmail(t.assignedTo)}</td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                      {/* "Asignar" se ofrece solo desde PENDING a propósito (asignación
-                          inicial) — el dominio técnicamente permite reasignar desde
-                          ASSIGNED/IN_PROGRESS/DONE también, pero esa es una acción
-                          distinta que esta UI no expone. No usa allowedTransitions
-                          porque acá el chequeo es más angosto que lo que el backend
-                          permite (A3, docs/pendientes-2026-08-13.md). */}
-                      {t.status === 'PENDING' && isManagement && (
-                        <button onClick={() => openAction('assign', t)} className="text-xs px-2.5 py-1.5 rounded-md bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]">Asignar</button>
-                      )}
-                      {t.allowedTransitions?.includes('IN_PROGRESS') && (
-                        <button
-                          onClick={() => doSimpleAction(t, 'start')}
-                          disabled={actionLoading !== null}
-                          className="text-xs px-2.5 py-1.5 rounded-md bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 disabled:opacity-50"
-                        >
-                          {actionLoading === `${t.id}-start` ? '…' : 'Iniciar'}
-                        </button>
-                      )}
-                      {t.allowedTransitions?.includes('DONE') && (
-                        <button onClick={() => openAction('complete', t)} className="text-xs px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20">Completar</button>
-                      )}
-                      {t.allowedTransitions?.includes('INSPECTED') && (
-                        <button
-                          onClick={() => doSimpleAction(t, 'inspect')}
-                          disabled={actionLoading !== null}
-                          className="text-xs px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50"
-                        >
-                          {actionLoading === `${t.id}-inspect` ? '…' : 'Inspeccionar'}
-                        </button>
-                      )}
-                      {isManagement && t.allowedTransitions?.includes('PENDING') && (
-                        <button
-                          onClick={() => doSimpleAction(t, 'reset')}
-                          disabled={actionLoading !== null}
-                          className="text-xs px-2.5 py-1.5 rounded-md bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 disabled:opacity-50"
-                        >
-                          {actionLoading === `${t.id}-reset` ? '…' : 'Reactivar'}
-                        </button>
-                      )}
-                      {isManagement && t.allowedTransitions?.includes('OUT_OF_SERVICE') && (
-                        <button onClick={() => openAction('outOfService', t)} className="text-xs px-2.5 py-1.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20">Fuera de servicio</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+          {resources.map(r => {
+            const task = getTaskForResource(r.id)
+            const tile = task ? STATUS_TILE[task.status] : EMPTY_TILE
+            return (
+              <button
+                key={r.id}
+                onClick={() => setSelectedResource(r)}
+                style={{
+                  position: 'relative',
+                  textAlign: 'left',
+                  padding: '14px 14px 12px',
+                  borderRadius: 14,
+                  background: tile.bg,
+                  border: `1px solid ${tile.border}`,
+                  cursor: 'pointer',
+                  minHeight: 92,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  transition: 'transform 120ms',
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute', top: 10, right: 10,
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: task ? tile.dot : 'transparent',
+                    border: task ? 'none' : '1px solid var(--bastion-line)',
+                  }}
+                />
+                <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--bastion-text)', paddingRight: 14 }}>{r.name}</span>
+                <span style={{ fontSize: 11.5, color: 'var(--bastion-slate)' }}>
+                  {task ? `${STATUS_LABEL[task.status]} · ${SHIFT_LABEL[task.shift]}` : 'Sin tarea'}
+                </span>
+              </button>
+            )
+          })}
         </div>
+      )}
+
+      {/* Modal detalle de ficha — con tarea: estado + acciones; sin tarea: atajo a planificar */}
+      {selectedResource && (
+        <Modal open={selectedResource !== null} onClose={() => setSelectedResource(null)} title={selectedResource.name}>
+          {selectedTask ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className={STATUS_BADGE_CLASS[selectedTask.status]}>{STATUS_LABEL[selectedTask.status]}</span>
+                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{SHIFT_LABEL[selectedTask.shift]}</span>
+              </div>
+              <div>
+                <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Asignado a</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{getMemberEmail(selectedTask.assignedTo)}</p>
+              </div>
+              {selectedTask.notes && (
+                <div>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Notas</p>
+                  <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedTask.notes}</p>
+                </div>
+              )}
+              {/* Mismo criterio que la versión en tabla: "Asignar" solo desde
+                  PENDING a propósito — ver comentario original más abajo. */}
+              <div className="flex flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                {selectedTask.status === 'PENDING' && isManagement && (
+                  <button onClick={() => openAction('assign', selectedTask)} className="btn-mini btn-mini-neutral">Asignar</button>
+                )}
+                {selectedTask.allowedTransitions?.includes('IN_PROGRESS') && (
+                  <button
+                    onClick={() => doSimpleAction(selectedTask, 'start')}
+                    disabled={actionLoading !== null}
+                    className="btn-mini btn-mini-neutral"
+                  >
+                    {actionLoading === `${selectedTask.id}-start` ? '…' : 'Iniciar'}
+                  </button>
+                )}
+                {selectedTask.allowedTransitions?.includes('DONE') && (
+                  <button onClick={() => openAction('complete', selectedTask)} className="btn-mini btn-mini-sage">Completar</button>
+                )}
+                {selectedTask.allowedTransitions?.includes('INSPECTED') && (
+                  <button
+                    onClick={() => doSimpleAction(selectedTask, 'inspect')}
+                    disabled={actionLoading !== null}
+                    className="btn-mini btn-mini-sage"
+                  >
+                    {actionLoading === `${selectedTask.id}-inspect` ? '…' : 'Inspeccionar'}
+                  </button>
+                )}
+                {isManagement && selectedTask.allowedTransitions?.includes('PENDING') && (
+                  <button
+                    onClick={() => doSimpleAction(selectedTask, 'reset')}
+                    disabled={actionLoading !== null}
+                    className="btn-mini btn-mini-neutral"
+                  >
+                    {actionLoading === `${selectedTask.id}-reset` ? '…' : 'Reactivar'}
+                  </button>
+                )}
+                {isManagement && selectedTask.allowedTransitions?.includes('OUT_OF_SERVICE') && (
+                  <button onClick={() => openAction('outOfService', selectedTask)} className="btn-mini btn-mini-clay">Fuera de servicio</button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                Sin tarea planificada para esta fecha.
+              </p>
+              {isManagement ? (
+                <button onClick={() => openCreateFor(selectedResource.id)} className="btn-primary w-full">
+                  Planificar tarea para {selectedResource.name}
+                </button>
+              ) : (
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Solo un gerente/dueño puede planificar tareas.
+                </p>
+              )}
+            </div>
+          )}
+        </Modal>
       )}
 
       {/* Modal planificar tarea */}
@@ -261,7 +363,8 @@ export default function HousekeepingPage() {
           <div>
             <label className="label">Recurso</label>
             <select
-              className={`input ${fieldErrors['resourceId'] ? 'border-red-500/60' : ''}`}
+              className="input"
+              style={fieldErrors['resourceId'] ? { borderColor: 'var(--danger)' } : undefined}
               value={createForm.resourceId}
               onChange={e => setCreateForm(f => ({ ...f, resourceId: e.target.value }))}
               required
@@ -269,7 +372,7 @@ export default function HousekeepingPage() {
               <option value="">Seleccioná un recurso…</option>
               {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
-            {fieldErrors['resourceId'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['resourceId']}</p>}
+            {fieldErrors['resourceId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>}
           </div>
           <div>
             <label className="label">Turno</label>
@@ -281,7 +384,7 @@ export default function HousekeepingPage() {
               {(Object.keys(SHIFT_LABEL) as Shift[]).map(s => <option key={s} value={s}>{SHIFT_LABEL[s]}</option>)}
             </select>
           </div>
-          <p className="text-xs text-slate-500">Se planifica para la fecha seleccionada arriba ({date}).</p>
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Se planifica para la fecha seleccionada arriba ({date}).</p>
           <div>
             <label className="label">Notas (opcional)</label>
             <textarea className="input" rows={2} value={createForm.notes} onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))} />
@@ -317,7 +420,7 @@ export default function HousekeepingPage() {
                   ))}
                 </select>
                 {members.filter(m => m.active && m.roleName === 'HOUSEKEEPING').length === 0 && (
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
                     No hay personal con rol Limpieza todavía — creá uno en Usuarios.
                   </p>
                 )}
