@@ -47,7 +47,12 @@ export default function EstadiasPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const [checkInOpen, setCheckInOpen] = useState(false)
-  const [checkInForm, setCheckInForm] = useState({ reservationId: '', resourceId: '', notes: '' })
+  // adultos/ninos (18/08/2026, spec de mejoras PMS): se heredan de la
+  // reserva elegida (pickReservation) y quedan editables acá para el caso
+  // "cambio de última hora" que pide el anexo -- si difieren de lo que ya
+  // tenía la reserva, handleCheckIn los corrige con un PUT antes de armar
+  // la estadía.
+  const [checkInForm, setCheckInForm] = useState({ reservationId: '', resourceId: '', notes: '', adultos: 1, ninos: 0 })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -112,14 +117,20 @@ export default function EstadiasPage() {
   const getCustomerName = (id: string) => customers.find(c => c.id === id)?.fullName ?? id.slice(0, 8) + '…'
 
   function openCheckIn() {
-    setCheckInForm({ reservationId: '', resourceId: '', notes: '' })
+    setCheckInForm({ reservationId: '', resourceId: '', notes: '', adultos: 1, ninos: 0 })
     setFieldErrors({})
     setCheckInOpen(true)
   }
 
   function pickReservation(reservationId: string) {
     const reservation = lodgingConfirmedReservations.find(r => r.id === reservationId)
-    setCheckInForm(f => ({ ...f, reservationId, resourceId: reservation?.resourceId ?? f.resourceId }))
+    setCheckInForm(f => ({
+      ...f,
+      reservationId,
+      resourceId: reservation?.resourceId ?? f.resourceId,
+      adultos: reservation?.adultos ?? 1,
+      ninos: reservation?.ninos ?? 0,
+    }))
   }
 
   async function handleCheckIn(e: React.FormEvent) {
@@ -127,6 +138,14 @@ export default function EstadiasPage() {
     setSubmitting(true)
     setFieldErrors({})
     try {
+      // Corrige adultos/ninos en la reserva ANTES de armar la estadía, solo
+      // si cambiaron respecto a lo que ya tenía cargado (cambio de última
+      // hora) -- evita un PUT de más en el caso común de "no cambió nada".
+      const original = lodgingConfirmedReservations.find(r => r.id === checkInForm.reservationId)
+      if (original && (checkInForm.adultos !== (original.adultos ?? 1) || checkInForm.ninos !== (original.ninos ?? 0))) {
+        await reservationsApi.update(checkInForm.reservationId, { adultos: checkInForm.adultos, ninos: checkInForm.ninos })
+      }
+
       await checkInMutation({
         resource: 'estadias',
         values: {
@@ -334,6 +353,34 @@ export default function EstadiasPage() {
             <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>Puede ser distinta a la reservada si hubo que reasignar.</p>
             {fieldErrors['resourceId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>}
           </div>
+          {checkInForm.reservationId && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Adultos</label>
+                <input
+                  type="number"
+                  className="input"
+                  min={1}
+                  value={checkInForm.adultos}
+                  onChange={e => setCheckInForm(f => ({ ...f, adultos: e.target.value === '' ? 1 : parseInt(e.target.value, 10) }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Niños</label>
+                <input
+                  type="number"
+                  className="input"
+                  min={0}
+                  value={checkInForm.ninos}
+                  onChange={e => setCheckInForm(f => ({ ...f, ninos: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }))}
+                />
+              </div>
+              <p className="col-span-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                Heredado de la reserva — corregí acá si hubo un cambio de última hora.
+              </p>
+            </div>
+          )}
           <div>
             <label className="label">Notas (opcional)</label>
             <textarea className="input" rows={2} value={checkInForm.notes} onChange={e => setCheckInForm(f => ({ ...f, notes: e.target.value }))} />

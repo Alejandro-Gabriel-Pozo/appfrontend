@@ -237,6 +237,9 @@ export interface Reservation {
   serviceId?: string | null
   partySize?: number
   notes?: string | null
+  /** Desglose de huéspedes (hotelería, 18/08/2026) — null/undefined = no aplica a este tipo de reserva (ej. Turnos). */
+  adultos?: number | null
+  ninos?: number | null
   totalPrice: number
   // El backend no trackea estas fechas a nivel de dominio para reservas
   // todavía (a diferencia de otras entidades) — quedan opcionales a

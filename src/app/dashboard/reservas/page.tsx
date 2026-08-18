@@ -85,7 +85,7 @@ export default function ReservasPage() {
 
   // Modal nueva reserva
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
+  const [form, setForm] = useState({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -97,7 +97,7 @@ export default function ReservasPage() {
   // Modal detalle / edición
   const [detailTarget, setDetailTarget] = useState<Reservation | null>(null)
   const [editingDetail, setEditingDetail] = useState(false)
-  const [detailForm, setDetailForm] = useState({ startTime: '', endTime: '' })
+  const [detailForm, setDetailForm] = useState({ startTime: '', endTime: '', adultos: 1, ninos: 0 })
   const [detailFieldErrors, setDetailFieldErrors] = useState<Record<string, string>>({})
   const [detailSubmitting, setDetailSubmitting] = useState(false)
 
@@ -230,11 +230,13 @@ export default function ReservasPage() {
           startTime,
           endTime,
           ...(form.serviceId && { serviceId: form.serviceId }),
+          adultos: form.adultos,
+          ...(form.ninos > 0 && { ninos: form.ninos }),
         },
       })
       toast('Reserva creada', 'success')
       setModalOpen(false)
-      setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
+      setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setFieldErrors(fe)
@@ -245,7 +247,7 @@ export default function ReservasPage() {
   }
 
   function openModal() {
-    setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
+    setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
     setFieldErrors({})
     setSlotDate('')
     setAvailableSlots(null)
@@ -264,6 +266,7 @@ export default function ReservasPage() {
       resourceId, serviceId: '', customerEmail: '',
       checkIn: dateStr, checkOut: nextDateStr,
       startTime: '', endTime: '',
+      adultos: 1, ninos: 0,
     })
     setFieldErrors({})
     setSlotDate('')
@@ -301,7 +304,10 @@ export default function ReservasPage() {
     setDetailTarget(r)
     setEditingDetail(false)
     // Fechas por día calendario UTC, no datetime-local — ver useDateOnlyFields.
-    setDetailForm({ startTime: toUTCDateInput(r.startTime), endTime: toUTCDateInput(r.endTime) })
+    setDetailForm({
+      startTime: toUTCDateInput(r.startTime), endTime: toUTCDateInput(r.endTime),
+      adultos: r.adultos ?? 1, ninos: r.ninos ?? 0,
+    })
     setDetailFieldErrors({})
   }
 
@@ -317,6 +323,8 @@ export default function ReservasPage() {
         values: {
           startTime: new Date(detailForm.startTime).toISOString(),
           endTime: new Date(detailForm.endTime).toISOString(),
+          adultos: detailForm.adultos,
+          ninos: detailForm.ninos,
         },
       })
       toast('Reserva actualizada', 'success')
@@ -678,6 +686,29 @@ export default function ReservasPage() {
               )}
             </div>
           )}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Adultos</label>
+              <input
+                type="number"
+                className="input"
+                min={1}
+                value={form.adultos}
+                onChange={e => setForm(f => ({ ...f, adultos: e.target.value === '' ? 1 : parseInt(e.target.value, 10) }))}
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Niños</label>
+              <input
+                type="number"
+                className="input"
+                min={0}
+                value={form.ninos}
+                onChange={e => setForm(f => ({ ...f, ninos: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }))}
+              />
+            </div>
+          </div>
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -727,6 +758,31 @@ export default function ReservasPage() {
                     required
                   />
                   {detailFieldErrors['endTime'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['endTime']}</p>}
+                </div>
+                <div>
+                  <label className="label">Adultos</label>
+                  <input
+                    type="number"
+                    className="input"
+                    min={1}
+                    style={detailFieldErrors['adultos'] ? { borderColor: 'var(--danger)' } : undefined}
+                    value={detailForm.adultos}
+                    onChange={e => setDetailForm(f => ({ ...f, adultos: e.target.value === '' ? 1 : parseInt(e.target.value, 10) }))}
+                    required
+                  />
+                  {detailFieldErrors['adultos'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['adultos']}</p>}
+                </div>
+                <div>
+                  <label className="label">Niños</label>
+                  <input
+                    type="number"
+                    className="input"
+                    min={0}
+                    style={detailFieldErrors['ninos'] ? { borderColor: 'var(--danger)' } : undefined}
+                    value={detailForm.ninos}
+                    onChange={e => setDetailForm(f => ({ ...f, ninos: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }))}
+                  />
+                  {detailFieldErrors['ninos'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['ninos']}</p>}
                 </div>
               </div>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
@@ -778,6 +834,14 @@ export default function ReservasPage() {
                   <div>
                     <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Personas</p>
                     <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{detailTarget.partySize}</p>
+                  </div>
+                )}
+                {detailTarget.adultos != null && (
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Huéspedes</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      Adultos: {detailTarget.adultos} · Niños: {detailTarget.ninos ?? 0}
+                    </p>
                   </div>
                 )}
               </div>
