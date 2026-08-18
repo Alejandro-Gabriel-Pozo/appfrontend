@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect, useMemo } from 'react'
-import type { Resource, Reservation, ReservationStatus } from '@/lib/types'
+import { createPortal } from 'react-dom'
+import type { Resource, Reservation, ReservationStatus, BookableService } from '@/lib/types'
 
 // ─── Calendario de PMS (tape chart) — construido a medida, sin librería ─────
 // Filas = habitaciones (recursos de alojamiento), columnas = días, barras =
@@ -52,6 +53,16 @@ function msToDate(ms: number): Date {
   return new Date(ms)
 }
 
+// Tooltip enriquecido (18/08/2026, spec de mejoras PMS, ticket #3 —
+// docs/referencia-mejoras-pms-2026-08-18.md sección 3.2). "Origen de la
+// reserva" queda deliberadamente FUERA: no existe ese dato en el backend
+// hoy (el propio anexo lo marca "A confirmar", no es un campo ya
+// decidido) — inventar un valor acá sería mostrar algo que no es real.
+// "Tarifa/producto" se interpreta con lo que sí existe: totalPrice y el
+// nombre del servicio si la reserva tiene uno.
+const fmtTooltipDate = (iso: string) => new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+const fmtTooltipMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format
+
 function fmtDayHeader(ms: number): { weekday: string; day: string } {
   const d = new Date(ms)
   return {
@@ -80,12 +91,15 @@ interface DragPreview {
 export default function RoomCalendar({
   resources,
   reservations,
+  services = [],
   onReservationClick,
   onEmptySlotClick,
   onUpdated,
 }: {
   resources: Resource[]
   reservations: Reservation[]
+  /** Para resolver el nombre del servicio en el tooltip enriquecido — opcional, sin servicios el tooltip simplemente no muestra esa línea. */
+  services?: BookableService[]
   onReservationClick: (r: Reservation) => void
   onEmptySlotClick: (resourceId: string, date: Date) => void
   onUpdated: (id: string, changes: { startTime?: string; endTime?: string; resourceId?: string }) => void
@@ -307,6 +321,7 @@ export default function RoomCalendar({
                         <ReservationBar
                           key={r.id}
                           reservation={r}
+                          services={services}
                           left={visStart * DAY_WIDTH}
                           width={(visEnd - visStart) * DAY_WIDTH}
                           truncatedStart={startIdx < 0}
@@ -351,9 +366,10 @@ export default function RoomCalendar({
 
 // ─── Barra de reserva individual ────────────────────────────────────────────
 function ReservationBar({
-  reservation, left, width, truncatedStart, truncatedEnd, style, onBeginDrag,
+  reservation, services, left, width, truncatedStart, truncatedEnd, style, onBeginDrag,
 }: {
   reservation: Reservation
+  services: BookableService[]
   left: number
   width: number
   truncatedStart: boolean
@@ -361,15 +377,32 @@ function ReservationBar({
   style: { bg: string; border: string; text: string }
   onBeginDrag: (e: React.PointerEvent, mode: 'move' | 'resize-start' | 'resize-end') => void
 }) {
+  const barRef = useRef<HTMLDivElement>(null)
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null)
+
+  // Portal a document.body (no un div hijo posicionado con top:100%) porque
+  // el contenedor del calendario tiene overflow:hidden/overflow-x:auto en
+  // varios niveles — un tooltip anidado se recortaría en las filas de arriba
+  // o abajo. position:fixed + coordenadas del propio bounding rect evita el
+  // recorte sin importar dónde esté la barra en la grilla.
+  function showTooltip() {
+    const rect = barRef.current?.getBoundingClientRect()
+    if (rect) setTooltipPos({ top: rect.top, left: rect.left + rect.width / 2 })
+  }
+
+  const serviceName = reservation.serviceId ? services.find(s => s.id === reservation.serviceId)?.name : null
+
   return (
     <div
+      ref={barRef}
       onPointerDown={e => {
         const target = e.target as HTMLElement
         if (target.dataset['handle'] === 'start') { onBeginDrag(e, 'resize-start'); return }
         if (target.dataset['handle'] === 'end') { onBeginDrag(e, 'resize-end'); return }
         onBeginDrag(e, 'move')
       }}
-      title={`${reservation.customer.fullName ?? ''} — click para ver detalle, arrastrá para mover`}
+      onPointerEnter={showTooltip}
+      onPointerLeave={() => setTooltipPos(null)}
       style={{
         position: 'absolute', left, top: 4, width, height: ROW_HEIGHT - 8,
         background: style.bg, border: `1px solid ${style.border}`,
@@ -388,6 +421,41 @@ function ReservationBar({
       {!truncatedEnd && (
         <div data-handle="end" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 6, cursor: 'ew-resize' }} />
       )}
+      {tooltipPos && typeof document !== 'undefined' && createPortal(
+        <ReservationTooltip reservation={reservation} serviceName={serviceName} pos={tooltipPos} />,
+        document.body,
+      )}
+    </div>
+  )
+}
+
+// Tooltip enriquecido (18/08/2026, spec de mejoras PMS ticket #3) — todos
+// los campos que pide el anexo y SÍ existen en el modelo hoy (huésped,
+// check-in/out, adultos/niños, notas, precio/servicio). "Origen de la
+// reserva" queda afuera a propósito, ver comentario de fmtTooltipDate.
+function ReservationTooltip({ reservation, serviceName, pos }: { reservation: Reservation; serviceName: string | null | undefined; pos: { top: number; left: number } }) {
+  return (
+    <div
+      style={{
+        position: 'fixed', top: pos.top, left: pos.left, transform: 'translate(-50%, calc(-100% - 8px))',
+        background: 'var(--surface-2, #1a1d27)', border: '1px solid var(--border)', borderRadius: 8,
+        padding: '10px 12px', minWidth: 200, maxWidth: 260,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.25)', zIndex: 1000, pointerEvents: 'none',
+      }}
+    >
+      <p className="text-sm" style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+        {reservation.customer.fullName ?? 'Reserva'}
+      </p>
+      <div className="text-xs" style={{ color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span>Check-in: {fmtTooltipDate(reservation.startTime)}</span>
+        <span>Check-out: {fmtTooltipDate(reservation.endTime)}</span>
+        {reservation.adultos != null && (
+          <span>Adultos: {reservation.adultos} · Niños: {reservation.ninos ?? 0}</span>
+        )}
+        {serviceName && <span>Servicio: {serviceName}</span>}
+        <span>Tarifa: {fmtTooltipMoney(reservation.totalPrice)}</span>
+        {reservation.notes && <span>Notas: {reservation.notes}</span>}
+      </div>
     </div>
   )
 }

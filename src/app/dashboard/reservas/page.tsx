@@ -385,6 +385,7 @@ export default function ReservasPage() {
         <RoomCalendar
           resources={lodgingResources}
           reservations={filtered}
+          services={services}
           onReservationClick={openDetail}
           onEmptySlotClick={openModalForSlot}
           onUpdated={handleCalendarUpdate}
