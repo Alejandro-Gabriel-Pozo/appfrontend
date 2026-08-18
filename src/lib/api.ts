@@ -297,7 +297,7 @@ export const reservationsApi = {
   // El backend registra PUT /api/reservations/:id (no PATCH) — antes esto
   // mandaba PATCH y el backend nunca tuvo ese handler, así que editar una
   // reserva desde el dashboard devolvía 404 en silencio.
-  update: (id: string, body: { startTime?: string; endTime?: string; details?: Record<string, unknown> }) =>
+  update: (id: string, body: { startTime?: string; endTime?: string; details?: Record<string, unknown>; resourceId?: string }) =>
     apiFetch<Reservation>(`/api/reservations/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   confirm:  (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/confirm`,  { method: 'POST' }),
   cancel:   (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/cancel`,   { method: 'POST' }),

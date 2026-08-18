@@ -5,6 +5,7 @@ import { useTable, useCreate, useUpdate, useInvalidate } from '@refinedev/core'
 import { reservationsApi, resourcesApi, customersApi, bookableServicesApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
+import RoomCalendar from '@/components/RoomCalendar'
 import type { Reservation, Resource, ReservationStatus, BookableService, Category } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
@@ -67,6 +68,7 @@ export default function ReservasPage() {
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<ReservationStatus | ''>('')
   const [page, setPage] = useState(1)
+  const [view, setView] = useState<'list' | 'calendar'>('list')
 
   // Modal nueva reserva
   const [modalOpen, setModalOpen] = useState(false)
@@ -104,9 +106,13 @@ export default function ReservasPage() {
     () => new Set(categories.filter(c => c.isLodging).map(c => c.id)),
     [categories],
   )
-  const lodgingResourceIds = useMemo(
-    () => new Set(resources.filter(r => lodgingCategoryIds.has(r.categoryId)).map(r => r.id)),
+  const lodgingResources = useMemo(
+    () => resources.filter(r => lodgingCategoryIds.has(r.categoryId)),
     [resources, lodgingCategoryIds],
+  )
+  const lodgingResourceIds = useMemo(
+    () => new Set(lodgingResources.map(r => r.id)),
+    [lodgingResources],
   )
   const lodgingServices = useMemo(
     () => services.filter(s => lodgingCategoryIds.has(s.categoryId)),
@@ -230,6 +236,41 @@ export default function ReservasPage() {
     setModalOpen(true)
   }
 
+  /** Click en una celda vacía del calendario — abre "Nueva reserva" con
+   * habitación y fecha precargadas. Sin servicio elegido todavía, el form
+   * puede caer en la rama de datetime-local genérico (ver isBlockBooking
+   * más abajo) — se precargan los dos formatos (fecha simple y
+   * datetime-local) para que quede útil sea cual sea la rama que termine
+   * mostrándose. Default: 1 noche. */
+  function openModalForSlot(resourceId: string, date: Date) {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const dateStr = `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`
+    const nextDay = new Date(date.getTime() + 86_400_000)
+    const nextDateStr = `${nextDay.getUTCFullYear()}-${pad(nextDay.getUTCMonth() + 1)}-${pad(nextDay.getUTCDate())}`
+    setForm({
+      resourceId, serviceId: '', customerEmail: '',
+      checkIn: dateStr, checkOut: nextDateStr,
+      startTime: `${dateStr}T00:00`, endTime: `${nextDateStr}T00:00`,
+    })
+    setFieldErrors({})
+    setSlotDate('')
+    setAvailableSlots(null)
+    setModalOpen(true)
+  }
+
+  /** Drag-to-move/resize del calendario — llama al mismo PUT que "Editar
+   * horario" ya usa. Si falla (ej. 409 por conflicto contra el destino), no
+   * hace falta revertir nada a mano: el calendario nunca mutó su propia
+   * lista, solo mostraba un ghost temporal que ya desapareció al soltar. */
+  async function handleCalendarUpdate(id: string, changes: { startTime?: string; endTime?: string; resourceId?: string }) {
+    try {
+      await updateReservation({ resource: 'reservas', id, values: changes })
+      toast('Reserva actualizada', 'success')
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    }
+  }
+
   const getResourceName = (id: string) =>
     resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
 
@@ -308,6 +349,26 @@ export default function ReservasPage() {
         </button>
       </div>
 
+      {/* Tabs de vista */}
+      <div className="flex gap-2 mb-4">
+        <button onClick={() => setView('list')} className={view === 'list' ? 'btn-mini btn-mini-neutral' : 'btn-secondary'} style={{ padding: '7px 14px' }}>
+          Lista
+        </button>
+        <button onClick={() => setView('calendar')} className={view === 'calendar' ? 'btn-mini btn-mini-neutral' : 'btn-secondary'} style={{ padding: '7px 14px' }}>
+          Calendario
+        </button>
+      </div>
+
+      {view === 'calendar' ? (
+        <RoomCalendar
+          resources={lodgingResources}
+          reservations={filtered}
+          onReservationClick={openDetail}
+          onEmptySlotClick={openModalForSlot}
+          onUpdated={handleCalendarUpdate}
+        />
+      ) : (
+        <>
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 mb-4">
         <input
@@ -444,6 +505,8 @@ export default function ReservasPage() {
               </div>
             </div>
           )}
+        </>
+      )}
         </>
       )}
 
