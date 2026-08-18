@@ -38,8 +38,21 @@ const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
 
 const ALL_STATUSES: ReservationStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']
 
+// Reservas es 100% alojamiento (E1, 18/08/2026) — toda reserva acá es por
+// noche/día calendario, nunca por hora exacta. Se muestra y edita en UTC,
+// nunca en hora local: una reserva creada como "check-in 21/8" se guarda
+// como 2026-08-21T00:00:00.000Z (mismo criterio que el form de creación,
+// new Date('YYYY-MM-DD').toISOString()) — formatearla con getters LOCALES
+// la corre un día para atrás en cualquier huso detrás de UTC (Argentina:
+// medianoche UTC del 21 = 21:00 del 20 en hora local). Mismo motivo que el
+// fix del bug de housekeeping.
 function fmt(iso: string) {
-  return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false })
+  return new Date(iso).toLocaleDateString('es-AR', { dateStyle: 'short', timeZone: 'UTC' })
+}
+
+/** input type="date" necesita "YYYY-MM-DD" en UTC, no en hora local. */
+function toUTCDateInput(iso: string) {
+  return iso.slice(0, 10)
 }
 
 const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format
@@ -154,11 +167,14 @@ export default function ReservasPage() {
   }
 
   const selectedService = services.find(s => s.id === form.serviceId)
-  // bookingMode del servicio elegido (forma del form: rango de fechas sin
-  // hora) — NO confundir con category.isLodging (a qué panel pertenece).
-  const isBlockBooking = selectedService?.bookingMode === 'block'
   const isSlotService = selectedService?.bookingMode === 'slot'
-  const nightsCount = isBlockBooking && form.checkIn && form.checkOut
+  // Reservas es 100% alojamiento (E1) — check-in/check-out por día
+  // calendario es el caso por defecto, se elija o no un "servicio"
+  // puntual. El único caso que necesita hora exacta es un servicio con
+  // bookingMode "slot" (turno con horario configurado sobre un recurso de
+  // alojamiento — ej. una actividad guiada), caso raro, gestionado aparte.
+  const useDateOnlyFields = !isSlotService
+  const nightsCount = useDateOnlyFields && form.checkIn && form.checkOut
     ? Math.round((new Date(form.checkOut).getTime() - new Date(form.checkIn).getTime()) / 86_400_000)
     : null
 
@@ -200,11 +216,11 @@ export default function ReservasPage() {
         toast('Cliente no encontrado. Crealo primero en la sección Clientes.', 'error')
         return
       }
-      // Alojamiento (bookingMode "block"): se reserva por fecha, no por hora
-      // — el check-in/check-out se manda como medianoche de esa fecha, que
-      // es como el backend calcula las noches (por día calendario).
-      const startTime = isBlockBooking ? new Date(form.checkIn).toISOString() : new Date(form.startTime).toISOString()
-      const endTime = isBlockBooking ? new Date(form.checkOut).toISOString() : new Date(form.endTime).toISOString()
+      // Alojamiento: se reserva por fecha, no por hora — el check-in/
+      // check-out se manda como medianoche UTC de esa fecha, que es como
+      // el backend calcula las noches (por día calendario).
+      const startTime = useDateOnlyFields ? new Date(form.checkIn).toISOString() : new Date(form.startTime).toISOString()
+      const endTime = useDateOnlyFields ? new Date(form.checkOut).toISOString() : new Date(form.endTime).toISOString()
 
       await createReservation({
         resource: 'reservas',
@@ -237,20 +253,17 @@ export default function ReservasPage() {
   }
 
   /** Click en una celda vacía del calendario — abre "Nueva reserva" con
-   * habitación y fecha precargadas. Sin servicio elegido todavía, el form
-   * puede caer en la rama de datetime-local genérico (ver isBlockBooking
-   * más abajo) — se precargan los dos formatos (fecha simple y
-   * datetime-local) para que quede útil sea cual sea la rama que termine
-   * mostrándose. Default: 1 noche. */
+   * habitación y fecha precargadas (check-in = el día clickeado, check-out
+   * = al día siguiente, 1 noche por defecto). Sin servicio elegido, el
+   * form muestra la rama de check-in/check-out por fecha (el default de
+   * esta pantalla, ver useDateOnlyFields más abajo). */
   function openModalForSlot(resourceId: string, date: Date) {
-    const pad = (n: number) => String(n).padStart(2, '0')
-    const dateStr = `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`
-    const nextDay = new Date(date.getTime() + 86_400_000)
-    const nextDateStr = `${nextDay.getUTCFullYear()}-${pad(nextDay.getUTCMonth() + 1)}-${pad(nextDay.getUTCDate())}`
+    const dateStr = toUTCDateInput(date.toISOString())
+    const nextDateStr = toUTCDateInput(new Date(date.getTime() + 86_400_000).toISOString())
     setForm({
       resourceId, serviceId: '', customerEmail: '',
       checkIn: dateStr, checkOut: nextDateStr,
-      startTime: `${dateStr}T00:00`, endTime: `${nextDateStr}T00:00`,
+      startTime: '', endTime: '',
     })
     setFieldErrors({})
     setSlotDate('')
@@ -287,7 +300,8 @@ export default function ReservasPage() {
   function openDetail(r: Reservation) {
     setDetailTarget(r)
     setEditingDetail(false)
-    setDetailForm({ startTime: toLocalInput(r.startTime), endTime: toLocalInput(r.endTime) })
+    // Fechas por día calendario UTC, no datetime-local — ver useDateOnlyFields.
+    setDetailForm({ startTime: toUTCDateInput(r.startTime), endTime: toUTCDateInput(r.endTime) })
     setDetailFieldErrors({})
   }
 
@@ -419,8 +433,8 @@ export default function ReservasPage() {
                 <tr>
                   <th>Cliente</th>
                   <th>Recurso</th>
-                  <th>Inicio</th>
-                  <th>Fin</th>
+                  <th>Check-in</th>
+                  <th>Check-out</th>
                   <th>Precio</th>
                   <th>Estado</th>
                   <th />
@@ -562,35 +576,7 @@ export default function ReservasPage() {
             />
             <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>El cliente debe estar registrado en el sistema.</p>
           </div>
-          {isBlockBooking ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Check-in</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={form.checkIn}
-                  onChange={e => setForm(f => ({ ...f, checkIn: e.target.value }))}
-                  required
-                />
-              </div>
-              <div>
-                <label className="label">Check-out</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={form.checkOut}
-                  onChange={e => setForm(f => ({ ...f, checkOut: e.target.value }))}
-                  required
-                />
-              </div>
-              {nightsCount != null && (
-                <p className="col-span-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  {nightsCount > 0 ? `${nightsCount} noche${nightsCount === 1 ? '' : 's'}` : 'El check-out debe ser posterior al check-in'}
-                </p>
-              )}
-            </div>
-          ) : isSlotService ? (
+          {isSlotService ? (
             <div>
               <label className="label">Fecha</label>
               <input
@@ -666,25 +652,30 @@ export default function ReservasPage() {
           ) : (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Inicio</label>
+                <label className="label">Check-in</label>
                 <input
-                  type="datetime-local"
+                  type="date"
                   className="input"
-                  value={form.startTime}
-                  onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
+                  value={form.checkIn}
+                  onChange={e => setForm(f => ({ ...f, checkIn: e.target.value }))}
                   required
                 />
               </div>
               <div>
-                <label className="label">Fin</label>
+                <label className="label">Check-out</label>
                 <input
-                  type="datetime-local"
+                  type="date"
                   className="input"
-                  value={form.endTime}
-                  onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
+                  value={form.checkOut}
+                  onChange={e => setForm(f => ({ ...f, checkOut: e.target.value }))}
                   required
                 />
               </div>
+              {nightsCount != null && (
+                <p className="col-span-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  {nightsCount > 0 ? `${nightsCount} noche${nightsCount === 1 ? '' : 's'}` : 'El check-out debe ser posterior al check-in'}
+                </p>
+              )}
             </div>
           )}
           <div className="flex gap-3 pt-2">
@@ -714,9 +705,9 @@ export default function ReservasPage() {
             <form onSubmit={handleUpdateDetail} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label">Inicio</label>
+                  <label className="label">Check-in</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     className="input"
                     style={detailFieldErrors['startTime'] ? { borderColor: 'var(--danger)' } : undefined}
                     value={detailForm.startTime}
@@ -726,9 +717,9 @@ export default function ReservasPage() {
                   {detailFieldErrors['startTime'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['startTime']}</p>}
                 </div>
                 <div>
-                  <label className="label">Fin</label>
+                  <label className="label">Check-out</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     className="input"
                     style={detailFieldErrors['endTime'] ? { borderColor: 'var(--danger)' } : undefined}
                     value={detailForm.endTime}
@@ -772,11 +763,11 @@ export default function ReservasPage() {
                   <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{getServiceName(detailTarget.serviceId) ?? '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Inicio</p>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Check-in</p>
                   <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmt(detailTarget.startTime)}</p>
                 </div>
                 <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Fin</p>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Check-out</p>
                   <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmt(detailTarget.endTime)}</p>
                 </div>
                 <div>
