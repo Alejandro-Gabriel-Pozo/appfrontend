@@ -153,5 +153,9 @@ cada vez que una pantalla nueva se sume.
 - [x] **Reservas** (18/08/2026) — acento brass, tabla + 2 modales.
 - [x] **Housekeeping** (18/08/2026) — acento brass, patrón "rack" (grid de
       fichas por recurso en vez de tabla) + modal de detalle/acciones.
-- [ ] Órdenes, Estadías, Recursos, Servicios, Categorías, Productos,
-      Clientes, Usuarios, Cuentas Corrientes, Reportes, Mi Negocio, Admin
+- [x] **Estadías** (18/08/2026) — acento brass, tabla + 3 modales (check-in,
+      check-out con folio, transferir a cuenta por cobrar). El modal de "no
+      show" se reescribió local en vez de usar `<ConfirmDialog>` (compartido
+      por pantallas sin migrar, con colores hardcodeados fuera de Bastión).
+- [ ] Órdenes, Recursos, Servicios, Categorías, Productos, Clientes,
+      Usuarios, Cuentas Corrientes, Reportes, Mi Negocio, Admin

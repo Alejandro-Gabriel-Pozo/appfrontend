@@ -1,13 +1,19 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { staysApi, resourcesApi, customersApi, reservationsApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import type { PaginatedResponse } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import Modal from '@/components/Modal'
-import ConfirmDialog from '@/components/ConfirmDialog'
 import type { Stay, Resource, Customer, Reservation, Shift, StayFolio } from '@/lib/types'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Tercera pantalla migrada (18/08/2026) — módulo PMS, acento brass.
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const SHIFT_LABEL: Record<Shift, string> = { MORNING: 'Mañana', AFTERNOON: 'Tarde', NIGHT: 'Noche' }
 
@@ -200,11 +206,11 @@ export default function EstadiasPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+      <div className="page-header">
         <div>
-          <h1 className="text-xl font-semibold text-white">Estadías</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Check-in y check-out de huéspedes</p>
+          <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Estadías</h1>
+          <p className="page-subtitle">Check-in y check-out de huéspedes</p>
         </div>
         <button onClick={openCheckIn} className="btn-primary flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -216,42 +222,42 @@ export default function EstadiasPage() {
 
       {loading ? (
         <div className="space-y-2">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-14 rounded-lg bg-white/[0.04] animate-pulse" />)}
+          {[...Array(4)].map((_, i) => <div key={i} className="h-14 rounded-lg skeleton" />)}
         </div>
       ) : stays.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-slate-400 font-medium">Sin huéspedes en check-in</p>
+        <div className="card empty-state">
+          <p>Sin huéspedes en check-in</p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="card table-wrapper" style={{ overflow: 'hidden' }}>
+          <table className="table">
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Cliente</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Habitación</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Check-in</th>
-                <th className="px-4 py-3" />
+              <tr>
+                <th>Cliente</th>
+                <th>Habitación</th>
+                <th>Check-in</th>
+                <th />
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <tbody>
               {stays.map(s => (
-                <tr key={s.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-white">{getCustomerName(s.customerId)}</td>
-                  <td className="px-4 py-3.5 text-slate-300">{getResourceName(s.resourceId)}</td>
-                  <td className="px-4 py-3.5 text-slate-400 text-xs tabular-nums">{fmt(s.checkedInAt)}</td>
-                  <td className="px-4 py-3.5">
+                <tr key={s.id}>
+                  <td className="table-cell-primary">{getCustomerName(s.customerId)}</td>
+                  <td>{getResourceName(s.resourceId)}</td>
+                  <td className="mono" style={{ fontSize: 12 }}>{fmt(s.checkedInAt)}</td>
+                  <td>
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         onClick={() => openCheckOut(s)}
                         disabled={actionLoading !== null}
-                        className="text-xs px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50"
+                        className="btn-mini btn-mini-sage"
                       >
                         Check-out
                       </button>
                       <button
                         onClick={() => setNoShowTarget(s)}
                         disabled={actionLoading !== null}
-                        className="text-xs px-2.5 py-1.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+                        className="btn-mini btn-mini-clay"
                       >
                         No show
                       </button>
@@ -270,7 +276,8 @@ export default function EstadiasPage() {
           <div>
             <label className="label">Reserva confirmada</label>
             <select
-              className={`input ${fieldErrors['reservationId'] ? 'border-red-500/60' : ''}`}
+              className="input"
+              style={fieldErrors['reservationId'] ? { borderColor: 'var(--danger)' } : undefined}
               value={checkInForm.reservationId}
               onChange={e => pickReservation(e.target.value)}
               required
@@ -283,14 +290,15 @@ export default function EstadiasPage() {
               ))}
             </select>
             {confirmedReservations.length === 0 && (
-              <p className="mt-1 text-xs text-slate-500">No hay reservas confirmadas pendientes de check-in.</p>
+              <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>No hay reservas confirmadas pendientes de check-in.</p>
             )}
-            {fieldErrors['reservationId'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['reservationId']}</p>}
+            {fieldErrors['reservationId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['reservationId']}</p>}
           </div>
           <div>
             <label className="label">Habitación asignada</label>
             <select
-              className={`input ${fieldErrors['resourceId'] ? 'border-red-500/60' : ''}`}
+              className="input"
+              style={fieldErrors['resourceId'] ? { borderColor: 'var(--danger)' } : undefined}
               value={checkInForm.resourceId}
               onChange={e => setCheckInForm(f => ({ ...f, resourceId: e.target.value }))}
               required
@@ -298,8 +306,8 @@ export default function EstadiasPage() {
               <option value="">Seleccioná una habitación…</option>
               {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
-            <p className="mt-1 text-xs text-slate-500">Puede ser distinta a la reservada si hubo que reasignar.</p>
-            {fieldErrors['resourceId'] && <p className="mt-1 text-xs text-red-400">{fieldErrors['resourceId']}</p>}
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>Puede ser distinta a la reservada si hubo que reasignar.</p>
+            {fieldErrors['resourceId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>}
           </div>
           <div>
             <label className="label">Notas (opcional)</label>
@@ -319,41 +327,37 @@ export default function EstadiasPage() {
       {checkOutTarget && (
         <Modal open={checkOutTarget !== null} onClose={() => setCheckOutTarget(null)} title="Check-out">
           <div className="space-y-4">
-            <p className="text-sm text-slate-300">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               {getCustomerName(checkOutTarget.customerId)} — {getResourceName(checkOutTarget.resourceId)}
             </p>
 
             {/* Folio — saldo pendiente de la estadía (A1, paso 6) */}
             {loadingFolio ? (
-              <div className="h-16 rounded-lg bg-white/[0.04] animate-pulse" />
+              <div className="h-16 rounded-lg skeleton" />
             ) : folio && (
               <div className="card p-4">
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Saldo de la estadía</p>
-                <p className={`text-xl font-semibold ${folio.balance > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-tertiary)' }}>Saldo de la estadía</p>
+                <p className="text-xl font-semibold" style={{ color: folio.balance > 0 ? 'var(--danger)' : 'var(--bastion-sage)' }}>
                   {fmtMoney(folio.balance)}
                 </p>
                 {folio.balance > 0 ? (
                   <>
-                    <p className="text-xs text-red-400/80 mt-1">
+                    <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>
                       Hay que saldar este monto antes de hacer check-out.
                     </p>
                     {isManagement && (
-                      <button
-                        type="button"
-                        onClick={openTransfer}
-                        className="mt-3 text-xs px-2.5 py-1.5 rounded-md bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
-                      >
+                      <button type="button" onClick={openTransfer} className="btn-mini btn-mini-neutral mt-3">
                         Transferir a cuenta por cobrar de una empresa
                       </button>
                     )}
                     {!isManagement && (
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
                         Solo un gerente/dueño puede transferir el saldo a cuenta por cobrar.
                       </p>
                     )}
                   </>
                 ) : (
-                  <p className="text-xs text-slate-500 mt-1">Sin saldo pendiente.</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Sin saldo pendiente.</p>
                 )}
               </div>
             )}
@@ -373,7 +377,7 @@ export default function EstadiasPage() {
               <label className="label">Notas (opcional)</label>
               <textarea className="input" rows={2} value={checkOutForm.notes} onChange={e => setCheckOutForm(f => ({ ...f, notes: e.target.value }))} />
             </div>
-            <p className="text-xs text-slate-500">Al confirmar se crea automáticamente la tarea de limpieza post-checkout.</p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Al confirmar se crea automáticamente la tarea de limpieza post-checkout.</p>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setCheckOutTarget(null)} className="btn-secondary flex-1">Cancelar</button>
               <button
@@ -394,7 +398,7 @@ export default function EstadiasPage() {
       {/* Modal transferir a cuenta por cobrar */}
       <Modal open={transferOpen} onClose={() => setTransferOpen(false)} title="Transferir a cuenta por cobrar">
         <form onSubmit={handleTransfer} className="space-y-4">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Salda el folio de la estadía y registra la deuda contra una empresa con pago diferido.
           </p>
           <div>
@@ -409,7 +413,7 @@ export default function EstadiasPage() {
               {companies.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
             </select>
             {companies.length === 0 && (
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
                 No hay clientes marcados como empresa (kind = COMPANY) — creá o editá un cliente para marcarlo.
               </p>
             )}
@@ -433,16 +437,22 @@ export default function EstadiasPage() {
         </form>
       </Modal>
 
-      <ConfirmDialog
-        open={noShowTarget !== null}
-        onClose={() => setNoShowTarget(null)}
-        onConfirm={handleNoShow}
-        title="¿Marcar como no show?"
-        description={`${noShowTarget ? getCustomerName(noShowTarget.customerId) : ''} no se presentó. La estadía se cierra sin check-out.`}
-        confirmLabel="Marcar no show"
-        variant="danger"
-        loading={actionLoading !== null}
-      />
+      {/* Confirmar no show — modal propio (no ConfirmDialog: es compartido
+          por pantallas sin migrar, con colores hardcodeados fuera de Bastión). */}
+      {noShowTarget && (
+        <Modal open={noShowTarget !== null} onClose={() => setNoShowTarget(null)} title="¿Marcar como no show?" size="max-w-sm">
+          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            {getCustomerName(noShowTarget.customerId)} no se presentó. La estadía se cierra sin check-out.
+          </p>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => setNoShowTarget(null)} disabled={actionLoading !== null} className="btn-secondary flex-1">Cancelar</button>
+            <button type="button" onClick={handleNoShow} disabled={actionLoading !== null} className="btn-danger flex-1">
+              {actionLoading !== null ? <span className="spinner" /> : null}
+              Marcar no show
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
