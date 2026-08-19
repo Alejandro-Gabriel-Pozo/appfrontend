@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { GoogleSignInButton } from '@/components/GoogleSignInButton'
 
@@ -301,6 +302,11 @@ export default function LoginPage() {
               </form>
 
               <GoogleLoginSection onCredential={handleGoogleCredential} />
+
+              <p className="text-center text-xs mt-5" style={{ color: 'var(--text-tertiary)' }}>
+                ¿Todavía no tenés negocio?{' '}
+                <Link href="/registro" style={{ color: 'var(--accent)' }}>Registrate</Link>
+              </p>
             </>
           )}
         </div>

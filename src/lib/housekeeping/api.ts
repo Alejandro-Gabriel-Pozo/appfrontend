@@ -1,6 +1,6 @@
 'use client'
 import { apiFetch } from '../http'
-import type { HousekeepingTask, CreateHousekeepingTaskInput, LateCheckout } from './types'
+import type { HousekeepingTask, CreateHousekeepingTaskInput, LateCheckout, HousekeepingStatus } from './types'
 
 // ─── Housekeeping ───────────────────────────────────────────────────────────────
 export const housekeepingApi = {
@@ -23,4 +23,9 @@ export const housekeepingApi = {
    */
   lateCheckouts: (date?: string) =>
     apiFetch<LateCheckout[]>(`/api/housekeeping/late-checkouts${date ? `?date=${date}` : ''}`),
+  /** Mis tareas — el housekeeper logueado, sin filtro de fecha (19/08/2026, E7a). */
+  me: () => apiFetch<HousekeepingTask[]>('/api/housekeeping/me'),
+  /** Tablero filtrado por estado, todas las fechas/asignados (19/08/2026, E7a). */
+  byStatus: (status: HousekeepingStatus) =>
+    apiFetch<HousekeepingTask[]>(`/api/housekeeping/status/${status}`),
 }

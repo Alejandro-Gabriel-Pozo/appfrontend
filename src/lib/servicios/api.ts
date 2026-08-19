@@ -3,6 +3,7 @@ import { apiFetch } from '../http'
 import type {
   BookableService, CreateBookableServiceInput, UpdateBookableServiceInput,
   ResourceLock, RatePlan, CreateRatePlanInput, UpdateRatePlanInput,
+  ServiceSchedule, CreateServiceScheduleInput, UpdateServiceScheduleInput,
 } from './types'
 
 // ─── Bookable Services / Resource Locks ────────────────────────────────────────
@@ -14,6 +15,17 @@ export const bookableServicesApi = {
   remove: (id: string)                      => apiFetch<void>(`/api/bookable-services/${id}`, { method: 'DELETE' }),
   getAvailableSlots: (serviceId: string, resourceId: string, date: string) =>
     apiFetch<{ slots: string[] }>(`/api/bookable-services/${serviceId}/available-slots?resourceId=${encodeURIComponent(resourceId)}&date=${date}`),
+}
+
+// ─── Horarios de servicio "slot" (19/08/2026, E7a) ──────────────────────────
+export const serviceSchedulesApi = {
+  list:   (serviceId: string)                        => apiFetch<ServiceSchedule[]>(`/api/bookable-services/${serviceId}/schedules`),
+  create: (serviceId: string, body: CreateServiceScheduleInput) =>
+    apiFetch<ServiceSchedule>(`/api/bookable-services/${serviceId}/schedules`, { method: 'POST', body: JSON.stringify(body) }),
+  update: (serviceId: string, scheduleId: string, body: UpdateServiceScheduleInput) =>
+    apiFetch<ServiceSchedule>(`/api/bookable-services/${serviceId}/schedules/${scheduleId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  remove: (serviceId: string, scheduleId: string) =>
+    apiFetch<void>(`/api/bookable-services/${serviceId}/schedules/${scheduleId}`, { method: 'DELETE' }),
 }
 
 export const resourceLocksApi = {

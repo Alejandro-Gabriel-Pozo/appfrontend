@@ -7,6 +7,7 @@ import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import ResourceLockPicker from '@/components/ResourceLockPicker'
 import RatePlanManager from '@/components/RatePlanManager'
+import ScheduleManager from '@/components/ScheduleManager'
 import type { BookableService, Category, BookingMode } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
@@ -57,6 +58,7 @@ export default function ServiciosPage() {
 
   const [lockTarget, setLockTarget] = useState<BookableService | null>(null)
   const [ratePlanTarget, setRatePlanTarget] = useState<BookableService | null>(null)
+  const [scheduleTarget, setScheduleTarget] = useState<BookableService | null>(null)
 
   // Categorías no está migrado a esta pantalla — se sigue trayendo directo
   // para el <select>, igual que antes.
@@ -186,6 +188,9 @@ export default function ServiciosPage() {
                   <td>
                     <div className="flex items-center justify-end gap-1.5">
                       <button onClick={() => setLockTarget(s)} className="btn-mini btn-mini-neutral">Recursos</button>
+                      {s.bookingMode === 'slot' && (
+                        <button onClick={() => setScheduleTarget(s)} className="btn-mini btn-mini-neutral">Horarios</button>
+                      )}
                       <button onClick={() => setRatePlanTarget(s)} className="btn-mini btn-mini-neutral">Tarifas</button>
                       <button onClick={() => openEdit(s)} className="btn-mini btn-mini-neutral">Editar</button>
                       <button onClick={() => setDeleteTarget(s)} className="btn-mini btn-mini-clay">Eliminar</button>
@@ -323,6 +328,15 @@ export default function ServiciosPage() {
           open={ratePlanTarget !== null}
           onClose={() => setRatePlanTarget(null)}
           service={ratePlanTarget}
+        />
+      )}
+
+      {/* Modal de horarios (19/08/2026, E7a) */}
+      {scheduleTarget && (
+        <ScheduleManager
+          open={scheduleTarget !== null}
+          onClose={() => setScheduleTarget(null)}
+          service={scheduleTarget}
         />
       )}
     </div>

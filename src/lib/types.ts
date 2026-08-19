@@ -20,6 +20,7 @@ export type { Role, TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput } f
 export type {
   BookingMode, BookableService, CreateBookableServiceInput, UpdateBookableServiceInput,
   ResourceLock, RatePlan, CreateRatePlanInput, UpdateRatePlanInput,
+  ServiceSchedule, CreateServiceScheduleInput, UpdateServiceScheduleInput,
 } from './servicios/types'
 export type { ReservationStatus, Reservation } from './reservas/types'
 export type { HousekeepingStatus, Shift, HousekeepingTask, LateCheckout, CreateHousekeepingTaskInput } from './housekeeping/types'

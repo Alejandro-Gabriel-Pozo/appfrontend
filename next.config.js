@@ -25,6 +25,13 @@ const nextConfig = {
       // pero igual conviene same-origin: evita configurar CORS aparte para
       // esta única sección.
       { source: '/platform/:path*', destination: `${backend}/platform/:path*` },
+      // POST /register (19/08/2026, E7a — alta pública de negocio nuevo,
+      // dashboard/../app/registro/page.tsx) -- el backend lo monta SIN
+      // prefijo /api tampoco (app.ts: app.use('/register', ...)), mismo
+      // motivo que /platform de arriba. A diferencia de /platform, esta
+      // ruta SÍ setea la cookie httpOnly de sesión (auth.middleware.ts) --
+      // same-origin es obligatorio acá, no solo prolijo.
+      { source: '/register', destination: `${backend}/register` },
     ]
   },
 }

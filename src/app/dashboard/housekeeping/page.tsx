@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { housekeepingApi, resourcesApi, usersApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
@@ -58,9 +58,24 @@ type PendingAction =
   | { type: 'outOfService'; task: HousekeepingTask }
   | null
 
+// Vistas nuevas (19/08/2026, E7a) — backend ya existía (GET /housekeeping/me,
+// GET /housekeeping/status/:status), sin pantalla hasta ahora. "Mis tareas"
+// es la lista del housekeeper logueado, sin filtro de fecha (a diferencia
+// del tablero de arriba, que sí es por fecha) — con un filtro de estado
+// opcional que, cuando se activa, pasa a traer el tablero COMPLETO filtrado
+// por ese estado (todas las fechas/asignados, no solo las propias) vía
+// GET /housekeeping/status/:status — útil para management ("mostrame todo
+// lo que está EN CURSO ahora mismo"), no solo para un housekeeper individual.
+type ViewMode = 'tablero' | 'mis-tareas'
+
 export default function HousekeepingPage() {
   const { toast } = useToast()
   const isManagement = useIsManagement()
+
+  const [viewMode, setViewMode] = useState<ViewMode>('tablero')
+  const [myTasks, setMyTasks] = useState<HousekeepingTask[]>([])
+  const [myTasksLoading, setMyTasksLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<HousekeepingStatus | 'ALL'>('ALL')
 
   const [date, setDate] = useState(todayStr())
   // housekeeping filtra por fecha vía meta.date (ver lib/refine/dataProvider.ts
@@ -117,6 +132,25 @@ export default function HousekeepingPage() {
 
   const getLateCheckout = (resourceId: string) => lateCheckouts.find(l => l.resourceId === resourceId) ?? null
 
+  // "Mis tareas" (19/08/2026, E7a) — recarga al cambiar de vista o de filtro
+  // de estado. ALL = /housekeeping/me (propias, sin filtro); cualquier otro
+  // valor = /housekeeping/status/:status (tablero completo filtrado).
+  const loadMyTasks = useCallback(() => {
+    setMyTasksLoading(true)
+    const request = statusFilter === 'ALL' ? housekeepingApi.me() : housekeepingApi.byStatus(statusFilter)
+    request
+      .then(setMyTasks)
+      .catch(err => toast(extractErrorMessage(err), 'error'))
+      .finally(() => setMyTasksLoading(false))
+  }, [statusFilter, toast])
+
+  useEffect(() => {
+    if (viewMode !== 'mis-tareas') return
+    queueMicrotask(loadMyTasks)
+  }, [viewMode, loadMyTasks])
+
+  const getResourceName = (resourceId: string) => resources.find(r => r.id === resourceId)?.name ?? resourceId.slice(0, 8) + '…'
+
   // Backlog E1 (13/08/2026, ampliado 18/08 tras encontrar el mismo bug acá) —
   // housekeeping es limpieza de habitaciones/unidades, no tiene sentido para
   // un recurso de servicio (silla de peluquería, mesa). El rack y el
@@ -172,6 +206,7 @@ export default function HousekeepingPage() {
       if (action === 'reset') await housekeepingApi.reset(task.id)
       toast(labels[action], 'success')
       invalidate({ resource: 'housekeeping', invalidates: ['list'] })
+      if (viewMode === 'mis-tareas') loadMyTasks()
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -203,6 +238,7 @@ export default function HousekeepingPage() {
       }
       setPendingAction(null)
       invalidate({ resource: 'housekeeping', invalidates: ['list'] })
+      if (viewMode === 'mis-tareas') loadMyTasks()
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -229,6 +265,27 @@ export default function HousekeepingPage() {
         )}
       </div>
 
+      {/* Vistas (19/08/2026, E7a) — Tablero (por fecha, rack) vs. Mis tareas
+          (lista propia, sin fecha, con filtro de estado opcional). */}
+      <div className="flex items-center gap-1.5 mb-4">
+        <button
+          onClick={() => setViewMode('tablero')}
+          className={viewMode === 'tablero' ? 'btn-mini btn-mini-neutral' : 'btn-mini'}
+          style={viewMode === 'tablero' ? undefined : { color: 'var(--text-tertiary)' }}
+        >
+          Tablero
+        </button>
+        <button
+          onClick={() => setViewMode('mis-tareas')}
+          className={viewMode === 'mis-tareas' ? 'btn-mini btn-mini-neutral' : 'btn-mini'}
+          style={viewMode === 'mis-tareas' ? undefined : { color: 'var(--text-tertiary)' }}
+        >
+          Mis tareas
+        </button>
+      </div>
+
+      {viewMode === 'tablero' ? (
+        <>
       <div className="flex items-center gap-3 mb-2">
         <label className="label mb-0">Fecha</label>
         <input type="date" className="input w-44" value={date} onChange={e => setDate(e.target.value)} />
@@ -314,6 +371,82 @@ export default function HousekeepingPage() {
             )
           })}
         </div>
+      )}
+        </>
+      ) : (
+        <>
+      {/* "Mis tareas" (19/08/2026, E7a) — lista, sin fecha. El filtro de
+          estado, cuando no es "Todas", trae el tablero completo filtrado
+          (todas las fechas/asignados), no solo la lista propia. */}
+      <div className="flex items-center gap-3 mb-4">
+        <label className="label mb-0">Estado</label>
+        <select
+          className="input w-52"
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value as HousekeepingStatus | 'ALL')}
+        >
+          <option value="ALL">Mis tareas (todas)</option>
+          {(Object.keys(STATUS_LABEL) as HousekeepingStatus[]).map(s => (
+            <option key={s} value={s}>{STATUS_LABEL[s]} — todo el tablero</option>
+          ))}
+        </select>
+      </div>
+
+      {myTasksLoading ? (
+        <div className="space-y-2">
+          {[...Array(4)].map((_, i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 12 }} />)}
+        </div>
+      ) : myTasks.length === 0 ? (
+        <div className="card empty-state">
+          <p>{statusFilter === 'ALL' ? 'No tenés tareas asignadas.' : `Nada en estado "${STATUS_LABEL[statusFilter]}" en este momento.`}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {myTasks.map(task => (
+            <div
+              key={task.id}
+              className="card p-4 flex items-center justify-between gap-3"
+              style={{ borderLeft: `3px solid ${STATUS_TILE[task.status].dot}` }}
+            >
+              <div>
+                <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>{getResourceName(task.resourceId)}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                  {STATUS_LABEL[task.status]} · {SHIFT_LABEL[task.shift]}
+                  {statusFilter !== 'ALL' && ` · ${getMemberEmail(task.assignedTo)}`}
+                </p>
+                {task.notes && <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{task.notes}</p>}
+              </div>
+              <div className="flex flex-wrap gap-1.5 justify-end">
+                {task.status === 'PENDING' && isManagement && (
+                  <button onClick={() => openAction('assign', task)} className="btn-mini btn-mini-neutral">Asignar</button>
+                )}
+                {task.allowedTransitions?.includes('IN_PROGRESS') && (
+                  <button
+                    onClick={() => doSimpleAction(task, 'start')}
+                    disabled={actionLoading !== null}
+                    className="btn-mini btn-mini-neutral"
+                  >
+                    {actionLoading === `${task.id}-start` ? '…' : 'Iniciar'}
+                  </button>
+                )}
+                {task.allowedTransitions?.includes('DONE') && (
+                  <button onClick={() => openAction('complete', task)} className="btn-mini btn-mini-sage">Completar</button>
+                )}
+                {task.allowedTransitions?.includes('INSPECTED') && (
+                  <button
+                    onClick={() => doSimpleAction(task, 'inspect')}
+                    disabled={actionLoading !== null}
+                    className="btn-mini btn-mini-sage"
+                  >
+                    {actionLoading === `${task.id}-inspect` ? '…' : 'Inspeccionar'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+        </>
       )}
 
       {/* Modal detalle de ficha — con tarea: estado + acciones; sin tarea: atajo a planificar */}

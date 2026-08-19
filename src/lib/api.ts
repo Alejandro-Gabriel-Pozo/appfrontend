@@ -15,7 +15,7 @@ export { handleApiResponse, apiFetch, extractErrorMessage, extractFieldErrors } 
 export type { ApiError, ApiErrorWithStatus, ZodFlatErrors, PaginatedResponse } from './http'
 
 export { resourcesApi, resourceHoursApi } from './recursos/api'
-export { bookableServicesApi, resourceLocksApi, ratePlansApi } from './servicios/api'
+export { bookableServicesApi, resourceLocksApi, ratePlansApi, serviceSchedulesApi } from './servicios/api'
 export { reservationsApi } from './reservas/api'
 export type { ReservationFilters } from './reservas/api'
 export { usersApi, rolesApi } from './usuarios/api'

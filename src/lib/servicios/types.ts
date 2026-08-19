@@ -65,6 +65,38 @@ export interface RatePlan {
   updatedAt: string
 }
 
+/**
+ * Horario semanal de un servicio "slot" (19/08/2026, E7a — gap de producto
+ * con backend listo desde antes, sin pantalla hasta ahora). Define A QUÉ
+ * HORA puede arrancar un turno cada día de la semana y cuántos en simultáneo
+ * (`maxCapacity`) — la duración de cada turno la pone `service.durationMinutes`,
+ * no el horario. Solo aplica a `bookingMode='slot'`; los servicios "block"/
+ * "event" no usan schedules (horario libre / horario único respectivamente).
+ */
+export interface ServiceSchedule {
+  id: string
+  serviceId: string
+  /** 0 = lunes ... 6 = domingo */
+  dayOfWeek: number
+  /** HH:MM:SS */
+  startTime: string
+  maxCapacity: number
+  active: boolean
+}
+
+export interface CreateServiceScheduleInput {
+  dayOfWeek: number
+  startTime: string
+  maxCapacity: number
+}
+
+export interface UpdateServiceScheduleInput {
+  dayOfWeek?: number
+  startTime?: string
+  maxCapacity?: number
+  active?: boolean
+}
+
 export interface CreateRatePlanInput {
   name: string
   price: number
