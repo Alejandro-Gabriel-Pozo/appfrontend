@@ -1,18 +1,16 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
-import { useTable, useCreate, useUpdate, useInvalidate } from '@refinedev/core'
-import { reservationsApi, resourcesApi, customersApi, bookableServicesApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { useState } from 'react'
+import { reservationsApi, customersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
-import type { Reservation, Resource, ReservationStatus, BookableService, Category } from '@/lib/types'
+import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
+import type { Reservation, ReservationStatus } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Backlog E1 (13/08/2026, alcance completo 18/08) — separa el panel de
 // servicios puntuales (Turnos) del de alojamiento (Reservas + Estadías).
 // Es un clon deliberado de dashboard/reservas/page.tsx con el filtro de
 // categoría invertido — mismo módulo core, sin gate, acento brass.
-
-const PAGE_SIZE = 20
 
 const STATUS_LABEL: Record<ReservationStatus, string> = {
   PENDING: 'Pendiente',
@@ -38,26 +36,24 @@ const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: '
 
 export default function TurnosPage() {
   const { toast } = useToast()
-  // Mismo recurso Refine 'reservas' que la pantalla de alojamiento — la
-  // separación es 100% de filtrado client-side por categoría, no un
-  // recurso de backend distinto (no existe tal cosa: es la misma entidad
-  // Reservation para ambos paneles).
-  const { result, tableQuery } = useTable<Reservation>({ resource: 'reservas', pagination: { mode: 'off' } })
-  const reservations = result.data
-  const loading = tableQuery.isLoading
-  const { mutateAsync: createReservation } = useCreate<Reservation>()
-  const { mutateAsync: updateReservation } = useUpdate<Reservation>()
-  const invalidate = useInvalidate()
-
-  const [resources, setResources] = useState<Resource[]>([])
-  const [services, setServices] = useState<BookableService[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
-
-  // Filtros y paginación
-  const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState<ReservationStatus | ''>('')
-  const [page, setPage] = useState(1)
+  // Motor compartido con Reservas (Fase 4, auditoria-modularidad.md F4) —
+  // trae recursos/servicios/categorías, filtra por isLodging (acá
+  // invertido: false), lista/busca/pagina reservas, y las acciones de
+  // confirmar/cancelar/completar. Mismo recurso Refine 'reservas' que la
+  // pantalla de alojamiento — la separación es 100% de filtrado
+  // client-side por categoría, no un recurso de backend distinto (no
+  // existe tal cosa: es la misma entidad Reservation para ambos paneles).
+  const {
+    loading,
+    createReservation, updateReservation, invalidate,
+    resources, services,
+    screenResourceIds: serviceResourceIds,
+    screenServices: serviceServices,
+    search, setSearch, filterStatus, setFilterStatus,
+    page, setPage, totalPages, paginated, filtered,
+    actionLoading, setActionLoading, doAction: doScreenAction,
+    getResourceName, getServiceName,
+  } = useReservationsScreen(false)
 
   // Modal nuevo turno
   const [modalOpen, setModalOpen] = useState(false)
@@ -67,8 +63,6 @@ export default function TurnosPage() {
 
   // Turnos disponibles (servicios "slot" con horario configurado — Mi Negocio / recurso)
   const [slotDate, setSlotDate] = useState('')
-  const [availableSlots, setAvailableSlots] = useState<string[] | null>(null)
-  const [loadingSlots, setLoadingSlots] = useState(false)
 
   // Modal detalle / edición
   const [detailTarget, setDetailTarget] = useState<Reservation | null>(null)
@@ -76,61 +70,6 @@ export default function TurnosPage() {
   const [detailForm, setDetailForm] = useState({ startTime: '', endTime: '' })
   const [detailFieldErrors, setDetailFieldErrors] = useState<Record<string, string>>({})
   const [detailSubmitting, setDetailSubmitting] = useState(false)
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      Promise.all([resourcesApi.list(), bookableServicesApi.list(), categoriesApi.list()])
-        .then(([recs, svcs, cats]) => { setResources(recs); setServices(svcs); setCategories(cats) })
-        .catch(err => toast(extractErrorMessage(err), 'error'))
-    })
-  }, [toast])
-
-  // Inverso de dashboard/reservas: acá va todo lo que NO es alojamiento.
-  const serviceCategoryIds = useMemo(
-    () => new Set(categories.filter(c => !c.isLodging).map(c => c.id)),
-    [categories],
-  )
-  const serviceResourceIds = useMemo(
-    () => new Set(resources.filter(r => serviceCategoryIds.has(r.categoryId)).map(r => r.id)),
-    [resources, serviceCategoryIds],
-  )
-  const serviceServices = useMemo(
-    () => services.filter(s => serviceCategoryIds.has(s.categoryId)),
-    [services, serviceCategoryIds],
-  )
-
-  // Filtrado y paginación en cliente
-  const filtered = useMemo(() => {
-    let list = reservations.filter(r => serviceResourceIds.has(r.resourceId))
-    if (filterStatus) list = list.filter(r => r.status === filterStatus)
-    if (search.trim()) {
-      const q = search.trim().toLowerCase()
-      list = list.filter(r =>
-        r.customer.fullName?.toLowerCase().includes(q) ||
-        r.customer.email?.toLowerCase().includes(q)
-      )
-    }
-    return list
-  }, [reservations, serviceResourceIds, filterStatus, search])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-
-  useEffect(() => { queueMicrotask(() => setPage(1)) }, [search, filterStatus])
-
-  async function doAction(id: string, action: 'confirm' | 'cancel' | 'complete') {
-    setActionLoading(`${id}-${action}`)
-    try {
-      await reservationsApi[action](id)
-      const labels = { confirm: 'Turno confirmado', cancel: 'Turno cancelado', complete: 'Turno completado' }
-      toast(labels[action], 'success')
-      invalidate({ resource: 'reservas', invalidates: ['list'] })
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setActionLoading(null)
-    }
-  }
 
   const selectedService = services.find(s => s.id === form.serviceId)
   // bookingMode del servicio elegido — un servicio no-alojamiento también
@@ -148,19 +87,7 @@ export default function TurnosPage() {
     ? Math.round((new Date(form.checkOut).getTime() - new Date(form.checkIn).getTime()) / 86_400_000)
     : null
 
-  useEffect(() => {
-    queueMicrotask(() => {
-      if (!isSlotService || !form.resourceId || !slotDate) {
-        setAvailableSlots(null)
-        return
-      }
-      setLoadingSlots(true)
-      bookableServicesApi.getAvailableSlots(form.serviceId, form.resourceId, slotDate)
-        .then(res => setAvailableSlots(res.slots))
-        .catch(() => setAvailableSlots([]))
-        .finally(() => setLoadingSlots(false))
-    })
-  }, [isSlotService, form.serviceId, form.resourceId, slotDate])
+  const { availableSlots, setAvailableSlots, loadingSlots } = useAvailableSlots(isSlotService, form.serviceId, form.resourceId, slotDate)
 
   function selectSlot(startIso: string) {
     if (!selectedService?.durationMinutes) return
@@ -213,18 +140,6 @@ export default function TurnosPage() {
     setSlotDate('')
     setAvailableSlots(null)
     setModalOpen(true)
-  }
-
-  const getResourceName = (id: string) =>
-    resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
-
-  const getServiceName = (id?: string | null) =>
-    id ? services.find(s => s.id === id)?.name ?? id.slice(0, 8) + '…' : null
-
-  function toLocalInput(iso: string) {
-    const d = new Date(iso)
-    const pad = (n: number) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
 
   function openDetail(r: Reservation) {
@@ -363,7 +278,7 @@ export default function TurnosPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         {r.allowedTransitions?.includes('CONFIRMED') && (
                           <button
-                            onClick={() => doAction(r.id, 'confirm')}
+                            onClick={() => doScreenAction(r.id, 'confirm', 'Turno')}
                             disabled={actionLoading !== null}
                             className="btn-mini btn-mini-sage"
                           >
@@ -372,7 +287,7 @@ export default function TurnosPage() {
                         )}
                         {r.allowedTransitions?.includes('CANCELLED') && (
                           <button
-                            onClick={() => doAction(r.id, 'cancel')}
+                            onClick={() => doScreenAction(r.id, 'cancel', 'Turno')}
                             disabled={actionLoading !== null}
                             className="btn-mini btn-mini-clay"
                           >
@@ -381,7 +296,7 @@ export default function TurnosPage() {
                         )}
                         {r.allowedTransitions?.includes('COMPLETED') && (
                           <button
-                            onClick={() => doAction(r.id, 'complete')}
+                            onClick={() => doScreenAction(r.id, 'complete', 'Turno')}
                             disabled={actionLoading !== null}
                             className="btn-mini btn-mini-neutral"
                           >
