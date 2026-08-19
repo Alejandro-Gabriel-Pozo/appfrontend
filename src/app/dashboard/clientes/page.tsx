@@ -1,11 +1,11 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import { useTable, useCreate, useUpdate, useInvalidate } from '@refinedev/core'
-import { customersApi, customerRatesApi, resourcesApi, bookableServicesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { customersApi, customerRatesApi, resourcesApi, bookableServicesApi, customerTaxProfileApi, padronApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
-import type { Customer, CustomerRate, Resource, BookableService } from '@/lib/types'
+import type { Customer, CustomerRate, Resource, BookableService, CustomerTaxProfile } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Sin módulo propio — acento brass por defecto (sección 6 del doc).
@@ -39,6 +39,17 @@ export default function ClientesPage() {
   const [saving, setSaving] = useState(false)
   const [newTag, setNewTag] = useState('')
   const [addingTag, setAddingTag] = useState(false)
+
+  // Datos fiscales (19/08/2026, auditoría de producto — padrón de ARCA)
+  const [taxProfileEnabled, setTaxProfileEnabled] = useState(true)
+  const [taxForm, setTaxForm] = useState({
+    legalName: '', taxId: '', taxIdType: 'CUIT', taxCondition: '',
+    addressLine1: '', addressCity: '', addressState: '', addressPostalCode: '', addressCountry: 'AR',
+  })
+  const [savingTaxProfile, setSavingTaxProfile] = useState(false)
+  const [dniInput, setDniInput] = useState('')
+  const [lookingUpByCuit, setLookingUpByCuit] = useState(false)
+  const [lookingUpByDni, setLookingUpByDni] = useState(false)
 
   // Tarifas especiales
   const [resources, setResources] = useState<Resource[]>([])
@@ -82,6 +93,21 @@ export default function ClientesPage() {
     }
   }
 
+  function resetTaxForm(profile: CustomerTaxProfile | null) {
+    setTaxForm({
+      legalName: profile?.legalName ?? '',
+      taxId: profile?.taxId ?? '',
+      taxIdType: profile?.taxIdType ?? 'CUIT',
+      taxCondition: profile?.taxCondition ?? '',
+      addressLine1: profile?.address?.line1 ?? '',
+      addressCity: profile?.address?.city ?? '',
+      addressState: profile?.address?.state ?? '',
+      addressPostalCode: profile?.address?.postalCode ?? '',
+      addressCountry: profile?.address?.country ?? 'AR',
+    })
+    setDniInput('')
+  }
+
   async function openEdit(c: Customer) {
     // GET /:id trae los tags — la lista no los incluye para no hacer N+1.
     try {
@@ -97,9 +123,120 @@ export default function ClientesPage() {
       })
       setRates(customerRates)
       setRateForm({ targetType: 'resource', targetId: '', price: '', notes: '' })
+
+      // Datos fiscales — módulo aparte (Facturación). Un 402
+      // MODULE_NOT_ENABLED es esperable si el negocio no lo tiene
+      // habilitado, no un error real: se oculta la sección entera.
+      try {
+        const profile = await customerTaxProfileApi.get(full.id)
+        setTaxProfileEnabled(true)
+        resetTaxForm(profile)
+      } catch (err) {
+        if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'MODULE_NOT_ENABLED') {
+          setTaxProfileEnabled(false)
+        } else {
+          setTaxProfileEnabled(true)
+          resetTaxForm(null)
+          toast(extractErrorMessage(err), 'error')
+        }
+      }
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     }
+  }
+
+  async function handleSaveTaxProfile(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editTarget) return
+    setSavingTaxProfile(true)
+    try {
+      const profile = await customerTaxProfileApi.upsert(editTarget.id, {
+        legalName: taxForm.legalName,
+        taxId: taxForm.taxId,
+        taxIdType: taxForm.taxIdType,
+        taxCondition: taxForm.taxCondition || null,
+        address: taxForm.addressLine1
+          ? {
+              line1: taxForm.addressLine1,
+              line2: null,
+              city: taxForm.addressCity || null,
+              state: taxForm.addressState || null,
+              postalCode: taxForm.addressPostalCode || null,
+              country: taxForm.addressCountry || 'AR',
+            }
+          : null,
+      })
+      resetTaxForm(profile)
+      toast('Datos fiscales guardados', 'success')
+    } catch (err) {
+      const fe = extractFieldErrors(err)
+      if (Object.keys(fe).length > 0) toast(Object.values(fe)[0]!, 'error')
+      else toast(extractErrorMessage(err), 'error')
+    } finally {
+      setSavingTaxProfile(false)
+    }
+  }
+
+  /** Un solo click: DNI → CUIT → datos completos del padrón, todo en una acción. */
+  async function handleLookupByDni() {
+    if (!dniInput.trim()) return
+    setLookingUpByDni(true)
+    try {
+      const { cuit } = await padronApi.lookupByDni(dniInput.trim())
+      if (!cuit) {
+        toast('Ese DNI no tiene ningún CUIT/CUIL asociado en el padrón de ARCA', 'error')
+        return
+      }
+      const taxpayer = await padronApi.lookupByCuit(cuit)
+      if (!taxpayer) {
+        // Raro (el DNI sí resolvió a un CUIT) pero posible -- se completa
+        // al menos el CUIT encontrado, el resto queda para completar a mano.
+        setTaxForm(f => ({ ...f, taxId: cuit, taxIdType: 'CUIT' }))
+        toast('Se encontró el CUIT pero no hay más datos en el padrón — completá el resto a mano', 'error')
+        return
+      }
+      applyTaxpayerLookup(taxpayer, cuit)
+      toast('Datos completados desde el padrón de ARCA', 'success')
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setLookingUpByDni(false)
+    }
+  }
+
+  async function handleLookupByCuit() {
+    if (!taxForm.taxId.trim()) return
+    setLookingUpByCuit(true)
+    try {
+      const taxpayer = await padronApi.lookupByCuit(taxForm.taxId.trim())
+      if (!taxpayer) {
+        toast('Ese CUIT no existe en el padrón de ARCA', 'error')
+        return
+      }
+      applyTaxpayerLookup(taxpayer, taxpayer.cuit)
+      toast('Datos completados desde el padrón de ARCA', 'success')
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setLookingUpByCuit(false)
+    }
+  }
+
+  function applyTaxpayerLookup(taxpayer: { legalName: string | null; taxCondition: 'MONOTRIBUTO' | 'REGIMEN_GENERAL' | null; address: { line1: string | null; city: string | null; state: string | null; postalCode: string | null; country: string } | null }, cuit: string) {
+    setTaxForm(f => ({
+      ...f,
+      taxId: cuit,
+      taxIdType: 'CUIT',
+      ...(taxpayer.legalName && { legalName: taxpayer.legalName }),
+      ...(taxpayer.taxCondition && { taxCondition: taxpayer.taxCondition === 'MONOTRIBUTO' ? 'Monotributo' : 'Responsable Inscripto' }),
+      ...(taxpayer.address?.line1 && {
+        addressLine1: taxpayer.address.line1,
+        addressCity: taxpayer.address.city ?? f.addressCity,
+        addressState: taxpayer.address.state ?? f.addressState,
+        addressPostalCode: taxpayer.address.postalCode ?? f.addressPostalCode,
+        addressCountry: taxpayer.address.country || 'AR',
+      }),
+    }))
   }
 
   async function handleAddRate(e: React.FormEvent) {
@@ -349,6 +486,104 @@ export default function ClientesPage() {
                 </button>
               </form>
             </div>
+
+            {taxProfileEnabled && (
+              <div>
+                <label className="label">Datos fiscales</label>
+                <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)' }}>
+                  CUIT, razón social y domicilio fiscal — necesarios para facturar a este cliente.
+                </p>
+
+                <div className="flex gap-2 mb-3">
+                  <input
+                    className="input flex-1"
+                    placeholder="Autocompletar por DNI (7-8 dígitos)…"
+                    value={dniInput}
+                    onChange={e => setDniInput(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleLookupByDni}
+                    disabled={lookingUpByDni || !dniInput.trim()}
+                    className="btn-secondary shrink-0"
+                  >
+                    {lookingUpByDni ? <span className="spinner" /> : 'Buscar por DNI'}
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveTaxProfile} className="space-y-2">
+                  <div className="flex gap-2">
+                    <select
+                      className="input w-28 shrink-0"
+                      value={taxForm.taxIdType}
+                      onChange={e => setTaxForm(f => ({ ...f, taxIdType: e.target.value }))}
+                    >
+                      <option value="CUIT">CUIT</option>
+                      <option value="CUIL">CUIL</option>
+                      <option value="DNI">DNI</option>
+                      <option value="OTRO">Otro</option>
+                    </select>
+                    <input
+                      className="input flex-1"
+                      placeholder="Número"
+                      value={taxForm.taxId}
+                      onChange={e => setTaxForm(f => ({ ...f, taxId: e.target.value }))}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleLookupByCuit}
+                      disabled={lookingUpByCuit || !taxForm.taxId.trim() || !['CUIT', 'CUIL'].includes(taxForm.taxIdType)}
+                      className="btn-secondary shrink-0"
+                      title={!['CUIT', 'CUIL'].includes(taxForm.taxIdType) ? 'Solo para CUIT/CUIL' : undefined}
+                    >
+                      {lookingUpByCuit ? <span className="spinner" /> : 'Buscar'}
+                    </button>
+                  </div>
+                  <input
+                    className="input w-full"
+                    placeholder="Razón social / nombre completo"
+                    value={taxForm.legalName}
+                    onChange={e => setTaxForm(f => ({ ...f, legalName: e.target.value }))}
+                  />
+                  <input
+                    className="input w-full"
+                    placeholder="Condición frente al IVA (ej. Responsable Inscripto, Monotributo)"
+                    value={taxForm.taxCondition}
+                    onChange={e => setTaxForm(f => ({ ...f, taxCondition: e.target.value }))}
+                  />
+                  <input
+                    className="input w-full"
+                    placeholder="Domicilio fiscal"
+                    value={taxForm.addressLine1}
+                    onChange={e => setTaxForm(f => ({ ...f, addressLine1: e.target.value }))}
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      className="input flex-1"
+                      placeholder="Localidad"
+                      value={taxForm.addressCity}
+                      onChange={e => setTaxForm(f => ({ ...f, addressCity: e.target.value }))}
+                    />
+                    <input
+                      className="input flex-1"
+                      placeholder="Provincia"
+                      value={taxForm.addressState}
+                      onChange={e => setTaxForm(f => ({ ...f, addressState: e.target.value }))}
+                    />
+                    <input
+                      className="input w-28 shrink-0"
+                      placeholder="CP"
+                      value={taxForm.addressPostalCode}
+                      onChange={e => setTaxForm(f => ({ ...f, addressPostalCode: e.target.value }))}
+                    />
+                  </div>
+                  <button type="submit" disabled={savingTaxProfile || !taxForm.legalName.trim() || !taxForm.taxId.trim()} className="btn-primary w-full">
+                    {savingTaxProfile ? <span className="spinner" /> : null}
+                    Guardar datos fiscales
+                  </button>
+                </form>
+              </div>
+            )}
 
             <div>
               <label className="label">Tarifas especiales</label>

@@ -11,6 +11,7 @@
 export type { Category, CategoryField, WasteReason, RecordWasteInput } from './catalogo/types'
 export type { OperatingWindow, BusinessProfile } from './negocio/types'
 export type { CustomerTag, CustomerRate, Customer, CustomerStatement, CustomerListFilters } from './clientes/types'
+export type { CustomerTaxProfile, CustomerTaxProfileAddress, UpsertCustomerTaxProfileInput, TaxpayerLookupResult } from './clientes/types'
 export type {
   TransactionType, TransactionStatus, FinancialTransaction,
   AccountsReceivableStatus, AccountReceivable, AccountsReceivableReportRow,

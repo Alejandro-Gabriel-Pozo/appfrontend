@@ -2,7 +2,10 @@
 import { apiFetch } from '../http'
 import type { PaginatedResponse } from '../http'
 import type { FinancialTransaction } from '../finanzas/types'
-import type { Customer, CustomerRate, CustomerStatement, CustomerListFilters } from './types'
+import type {
+  Customer, CustomerRate, CustomerStatement, CustomerListFilters,
+  CustomerTaxProfile, UpsertCustomerTaxProfileInput, TaxpayerLookupResult,
+} from './types'
 
 // ─── Customers ────────────────────────────────────────────────────────────────
 export const customersApi = {
@@ -44,4 +47,22 @@ export const customerAccountApi = {
   getStatement: (customerId: string) => apiFetch<CustomerStatement>(`/api/customers/${customerId}/account`),
   recordPayment: (customerId: string, body: { amount: number; idempotencyKey?: string; notes?: string }) =>
     apiFetch<FinancialTransaction>(`/api/customers/${customerId}/payments`, { method: 'POST', body: JSON.stringify(body) }),
+}
+
+// ─── Perfil fiscal (19/08/2026) ─────────────────────────────────────────────
+// Gateado por el módulo Facturación del lado del backend -- un 402
+// MODULE_NOT_ENABLED es esperable si el negocio no lo tiene habilitado,
+// no un error real (mismo criterio que FacturarButton.tsx).
+export const customerTaxProfileApi = {
+  get: (customerId: string) => apiFetch<CustomerTaxProfile | null>(`/api/customers/${customerId}/tax-profile`),
+  upsert: (customerId: string, body: UpsertCustomerTaxProfileInput) =>
+    apiFetch<CustomerTaxProfile>(`/api/customers/${customerId}/tax-profile`, { method: 'PUT', body: JSON.stringify(body) }),
+}
+
+// ─── Padrón de ARCA — autocompletar datos fiscales ─────────────────────────
+export const padronApi = {
+  lookupByCuit: (cuit: string) =>
+    apiFetch<TaxpayerLookupResult | null>('/api/customers/padron/lookup-by-cuit', { method: 'POST', body: JSON.stringify({ cuit }) }),
+  lookupByDni: (dni: string) =>
+    apiFetch<{ cuit: string | null }>('/api/customers/padron/lookup-by-dni', { method: 'POST', body: JSON.stringify({ dni }) }),
 }
