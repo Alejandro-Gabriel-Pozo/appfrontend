@@ -1,8 +1,8 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { businessHoursApi, businessProfileApi, extractErrorMessage } from '@/lib/api'
+import { businessHoursApi, businessProfileApi, afipCredentialsApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
-import type { OperatingWindow } from '@/lib/types'
+import type { OperatingWindow, AfipCredentialsStatus } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Sin módulo propio — acento brass por defecto (sección 6 del doc).
@@ -130,6 +130,8 @@ function FiscalProfileSection() {
   const [addressPostalCode, setAddressPostalCode] = useState('')
   const [addressCountry, setAddressCountry] = useState('')
   const [salesPoint, setSalesPoint] = useState<number | ''>('')
+  const [ivaRate, setIvaRate] = useState<number | ''>(21)
+  const [pricesIncludeIva, setPricesIncludeIva] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -147,6 +149,8 @@ function FiscalProfileSection() {
         setAddressPostalCode(profile.fiscalAddressPostalCode ?? '')
         setAddressCountry(profile.fiscalAddressCountry ?? '')
         setSalesPoint(profile.afipSalesPoint ?? '')
+        setIvaRate(profile.defaultIvaRate)
+        setPricesIncludeIva(profile.pricesIncludeIva)
       } catch (err) {
         toast(extractErrorMessage(err), 'error')
       } finally {
@@ -170,6 +174,8 @@ function FiscalProfileSection() {
         fiscalAddressPostalCode: addressPostalCode.trim() || null,
         fiscalAddressCountry: addressCountry.trim() || null,
         afipSalesPoint: salesPoint === '' ? null : salesPoint,
+        defaultIvaRate: ivaRate === '' ? 0 : ivaRate,
+        pricesIncludeIva,
       })
       toast('Datos fiscales guardados', 'success')
     } catch (err) {
@@ -265,9 +271,153 @@ function FiscalProfileSection() {
             style={{ maxWidth: '8rem' }}
           />
         </div>
+        <div className="flex gap-3 items-end pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+          <div>
+            <label className="label">IVA general (%)</label>
+            <input
+              type="number" className="input" min={0} max={100} step="0.01" value={ivaRate}
+              onChange={e => setIvaRate(e.target.value === '' ? '' : Number(e.target.value))}
+              style={{ maxWidth: '8rem' }}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-xs pb-2" style={{ color: 'var(--text-secondary)' }}>
+            <input type="checkbox" checked={pricesIncludeIva} onChange={e => setPricesIncludeIva(e.target.checked)} />
+            Los precios ya incluyen IVA
+          </label>
+        </div>
         <button type="submit" disabled={saving} className="btn-primary">
           {saving ? <span className="spinner" /> : 'Guardar'}
         </button>
+      </form>
+    </div>
+  )
+}
+
+// Certificado AFIP (19/08/2026, Fase 2 -- conexión real WSAA/WSFEv1). El
+// cert/clave nunca vuelven del backend una vez guardados (repositorio
+// cifrado, endpoint de status solo expone configured/environment) -- por
+// eso acá no hay "cargar valores existentes" en los textareas, solo un
+// indicador de estado y la posibilidad de reemplazar o borrar.
+function AfipCertificateSection() {
+  const { toast } = useToast()
+  const [status, setStatus] = useState<AfipCredentialsStatus | null>(null)
+  const [notEnabled, setNotEnabled] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [cert, setCert] = useState('')
+  const [key, setKey] = useState('')
+  const [environment, setEnvironment] = useState<'homologacion' | 'produccion'>('homologacion')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      setStatus(await afipCredentialsApi.status())
+      setNotEnabled(false)
+    } catch (err) {
+      if (err && typeof err === 'object' && 'code' in err && err.code === 'MODULE_NOT_ENABLED') {
+        setNotEnabled(true)
+      } else {
+        toast(extractErrorMessage(err), 'error')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => { queueMicrotask(load) }, [load])
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const result = await afipCredentialsApi.save({ cert, key, environment })
+      setStatus(result)
+      setCert('')
+      setKey('')
+      toast('Certificado AFIP guardado', 'success')
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleClear() {
+    if (!confirm('¿Borrar el certificado AFIP cargado? No vas a poder emitir comprobantes hasta cargar uno nuevo.')) return
+    try {
+      await afipCredentialsApi.clear()
+      setStatus({ configured: false, environment: null })
+      toast('Certificado AFIP borrado', 'success')
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    }
+  }
+
+  if (loading) return <div className="card p-4 h-32 skeleton" />
+
+  if (notEnabled) {
+    return (
+      <div className="card p-4">
+        <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Certificado AFIP</p>
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          El módulo de Facturación Electrónica no está habilitado para este negocio.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card p-4">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Certificado AFIP</p>
+        {status?.configured && (
+          <span className="badge-confirmed">
+            Configurado ({status.environment === 'produccion' ? 'producción' : 'homologación'})
+          </span>
+        )}
+      </div>
+      <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)' }}>
+        Certificado (.crt) y clave privada (.key) del par que generaste junto al CSR y
+        presentaste en AFIP. Se guardan cifrados — una vez cargados no se pueden volver
+        a ver, solo reemplazar o borrar.
+      </p>
+      <form onSubmit={handleSave} className="space-y-3">
+        <div>
+          <label className="label">Ambiente</label>
+          <select
+            className="input" value={environment}
+            onChange={e => setEnvironment(e.target.value as 'homologacion' | 'produccion')}
+          >
+            <option value="homologacion">Homologación (pruebas)</option>
+            <option value="produccion">Producción</option>
+          </select>
+        </div>
+        <div>
+          <label className="label">Certificado (.crt)</label>
+          <textarea
+            className="input" rows={4} value={cert}
+            onChange={e => setCert(e.target.value)}
+            placeholder="-----BEGIN CERTIFICATE-----"
+            style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 12 }}
+          />
+        </div>
+        <div>
+          <label className="label">Clave privada (.key)</label>
+          <textarea
+            className="input" rows={4} value={key}
+            onChange={e => setKey(e.target.value)}
+            placeholder="-----BEGIN PRIVATE KEY-----"
+            style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 12 }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <button type="submit" disabled={saving || !cert.trim() || !key.trim()} className="btn-primary">
+            {saving ? <span className="spinner" /> : status?.configured ? 'Reemplazar' : 'Guardar'}
+          </button>
+          {status?.configured && (
+            <button type="button" onClick={handleClear} className="btn-ghost">Borrar certificado</button>
+          )}
+        </div>
       </form>
     </div>
   )
@@ -370,6 +520,10 @@ export default function MiNegocioPage() {
 
       <div className="mb-6">
         <FiscalProfileSection />
+      </div>
+
+      <div className="mb-6">
+        <AfipCertificateSection />
       </div>
 
       {loading ? (

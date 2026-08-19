@@ -45,4 +45,11 @@ export interface BusinessProfile {
   fiscalAddressPostalCode: string | null
   fiscalAddressCountry: string | null
   afipSalesPoint: number | null
+  // IVA por defecto (19/08/2026, Fase 2 -- "VAMOS POR CONEXIÓN REAL"): tasa
+  // general que se aplica a un cobro sin categoría propia, y si el precio
+  // cargado ya trae el IVA adentro o hay que sumarlo aparte. Decisión del
+  // dueño: 21% general, precios con IVA incluido (más común de cara al
+  // cliente) -- ver pendientes-2026-08-18.md.
+  defaultIvaRate: number
+  pricesIncludeIva: boolean
 }

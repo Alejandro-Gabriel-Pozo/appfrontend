@@ -19,6 +19,8 @@ export const businessProfileApi = {
     fiscalAddressPostalCode?: string | null
     fiscalAddressCountry?: string | null
     afipSalesPoint?: number | null
+    defaultIvaRate?: number
+    pricesIncludeIva?: boolean
   }) => apiFetch<BusinessProfile>('/api/business-profile', { method: 'PUT', body: JSON.stringify(body) }),
 }
 
