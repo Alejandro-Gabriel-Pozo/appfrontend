@@ -138,6 +138,12 @@ export default function TurnosPage() {
   // se mantiene la rama completa acá, no solo slot/libre.
   const isBlockBooking = selectedService?.bookingMode === 'block'
   const isSlotService = selectedService?.bookingMode === 'slot'
+  // "Sin servicio" y bookingMode 'event' (ej. salón/mesa reservada en
+  // exclusiva para un evento) caen acá, en el formulario de fecha/hora a
+  // mano de más abajo (el último `else` del JSX) — es una decisión
+  // explícita (confirmada con el dueño, 18/08/2026, docs/
+  // auditoria-modularidad.md Fase 4): un evento no elige de una grilla de
+  // turnos sugeridos, el organizador carga inicio/fin exactos.
   const nightsCount = isBlockBooking && form.checkIn && form.checkOut
     ? Math.round((new Date(form.checkOut).getTime() - new Date(form.checkIn).getTime()) / 86_400_000)
     : null
@@ -571,6 +577,11 @@ export default function TurnosPage() {
               )}
             </div>
           ) : (
+            // Sin servicio, o bookingMode 'event' — fecha/hora exactas a
+            // mano (ver comentario junto a isBlockBooking/isSlotService
+            // más arriba). Inicio y Fin quedan los dos obligatorios a
+            // propósito: le da al motor de disponibilidad una duración
+            // real para chequear solapamiento, no un instante sin fin.
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Inicio</label>
