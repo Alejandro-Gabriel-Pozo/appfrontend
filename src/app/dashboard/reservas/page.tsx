@@ -5,6 +5,7 @@ import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import RoomCalendar from '@/components/RoomCalendar'
 import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
+import { useIsManagement } from '@/hooks/useAuthRole'
 import type { Reservation, ReservationStatus, RatePlan } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
@@ -66,6 +67,7 @@ const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: '
 
 export default function ReservasPage() {
   const { toast } = useToast()
+  const isManagement = useIsManagement()
   // Motor compartido con Turnos (Fase 4, auditoria-modularidad.md F4) —
   // trae recursos/servicios/categorías, filtra por isLodging, lista/busca/
   // pagina reservas, y las acciones de confirmar/cancelar/completar.
@@ -105,6 +107,12 @@ export default function ReservasPage() {
   const [detailForm, setDetailForm] = useState({ startTime: '', endTime: '', adultos: 1, ninos: 0 })
   const [detailFieldErrors, setDetailFieldErrors] = useState<Record<string, string>>({})
   const [detailSubmitting, setDetailSubmitting] = useState(false)
+
+  // Ajuste de precio de una reserva CONFIRMED (19/08/2026, pendientes-2026-
+  // 08-18.md punto I) — preview de solo lectura, se pide cada vez que se
+  // abre el detalle de una reserva CONFIRMED o después de editarla.
+  const [priceAdjustment, setPriceAdjustment] = useState<{ currentTotalPrice: number; recalculatedTotalPrice: number; difference: number } | null>(null)
+  const [confirmingAdjustment, setConfirmingAdjustment] = useState(false)
 
   // Horario especial (early check-in / late check-out) — pendientes-2026-08-18.md punto N.
   const [scheduleRequestOpen, setScheduleRequestOpen] = useState(false)
@@ -232,8 +240,11 @@ export default function ReservasPage() {
    * lista, solo mostraba un ghost temporal que ya desapareció al soltar. */
   async function handleCalendarUpdate(id: string, changes: { startTime?: string; endTime?: string; resourceId?: string }) {
     try {
-      await updateReservation({ resource: 'reservas', id, values: changes })
+      const { data: updated } = await updateReservation({ resource: 'reservas', id, values: changes })
       toast('Reserva actualizada', 'success')
+      // Si el detalle de ESTA reserva está abierto, refrescar el preview de
+      // ajuste de precio acá también — el drag no pasa por handleUpdateDetail.
+      if (detailTarget?.id === id) refreshPriceAdjustment(updated)
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     }
@@ -255,6 +266,36 @@ export default function ReservasPage() {
       requestedCheckOutTime: r.requestedCheckOutTime?.slice(0, 5) ?? '',
     })
     setScheduleChargeAmount('')
+    refreshPriceAdjustment(r)
+  }
+
+  // Se pide siempre que se abre/actualiza el detalle de una reserva
+  // CONFIRMED — cubre tanto la edición desde este modal como un drag del
+  // calendario hecho antes de abrir el detalle (handleCalendarUpdate no
+  // tiene el modal abierto, así que no puede refrescar esto solo).
+  async function refreshPriceAdjustment(r: Reservation) {
+    if (r.status !== 'CONFIRMED') { setPriceAdjustment(null); return }
+    try {
+      setPriceAdjustment(await reservationsApi.previewPriceAdjustment(r.id))
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    }
+  }
+
+  async function handleConfirmPriceAdjustment() {
+    if (!detailTarget) return
+    setConfirmingAdjustment(true)
+    try {
+      const updated = await reservationsApi.confirmPriceAdjustment(detailTarget.id)
+      toast('Ajuste de precio confirmado', 'success')
+      setDetailTarget(updated)
+      setPriceAdjustment(null)
+      invalidate({ resource: 'reservas', invalidates: ['list'] })
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setConfirmingAdjustment(false)
+    }
   }
 
   async function handleUpdateDetail(e: React.FormEvent) {
@@ -276,6 +317,7 @@ export default function ReservasPage() {
       toast('Reserva actualizada', 'success')
       setDetailTarget(updated)
       setEditingDetail(false)
+      refreshPriceAdjustment(updated)
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setDetailFieldErrors(fe)
@@ -293,6 +335,7 @@ export default function ReservasPage() {
       const updated = await reservationsApi[action](detailTarget.id)
       toast(labels[action], 'success')
       setDetailTarget(updated)
+      refreshPriceAdjustment(updated)
       invalidate({ resource: 'reservas', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
@@ -810,6 +853,12 @@ export default function ReservasPage() {
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                 Cliente, recurso y servicio no se pueden cambiar acá — cancelá esta reserva y creá una nueva si hace falta.
               </p>
+              {detailTarget.status === 'CONFIRMED' && (
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Esta reserva ya tiene un cobro emitido — el precio no se actualiza solo. Después de guardar
+                  vas a ver cuánto cambiaría y vas a tener que confirmarlo aparte.
+                </p>
+              )}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditingDetail(false)} className="btn-secondary flex-1">Cancelar</button>
                 <button type="submit" disabled={detailSubmitting} className="btn-primary flex-1">
@@ -897,8 +946,56 @@ export default function ReservasPage() {
                 </div>
               )}
 
+              {/* Ajuste de precio (19/08/2026, pendientes-2026-08-18.md punto I) —
+                  solo aparece si hay una diferencia real entre el precio congelado
+                  y lo que costaría hoy con las fechas/recurso actuales. Nunca se
+                  aplica solo: el empleado confirma a mano. */}
+              {priceAdjustment && (
+                <div
+                  className="pt-3"
+                  style={{ borderTop: '1px solid var(--border)' }}
+                >
+                  <div
+                    className="rounded-lg p-3"
+                    style={{ background: 'var(--bastion-brass-soft, rgba(180,140,60,0.08))', border: '1px solid var(--bastion-brass, var(--border-md))' }}
+                  >
+                    <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                      Ajuste de precio pendiente
+                    </p>
+                    <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
+                      Con las fechas/recurso actuales, el precio sería{' '}
+                      <span className="mono">{fmtMoney(priceAdjustment.recalculatedTotalPrice)}</span>
+                      {' '}(cobrado: <span className="mono">{fmtMoney(priceAdjustment.currentTotalPrice)}</span>) —{' '}
+                      {priceAdjustment.difference > 0
+                        ? <>cargo extra de <span className="mono">{fmtMoney(priceAdjustment.difference)}</span></>
+                        : <>nota de crédito de <span className="mono">{fmtMoney(Math.abs(priceAdjustment.difference))}</span></>}
+                      .
+                    </p>
+                    {/* Roles.MANAGEMENT en el backend, no FRONT_DESK como el
+                        resto de esta pantalla a propósito — quien edita las
+                        fechas no debería ser también quien autoriza el
+                        cargo/nota de crédito resultante con un segundo click.
+                        Acá solo se evita mostrar un botón que el backend
+                        igual va a rechazar. */}
+                    {isManagement ? (
+                      <button
+                        onClick={handleConfirmPriceAdjustment}
+                        disabled={confirmingAdjustment}
+                        className="btn-mini btn-mini-sage"
+                      >
+                        {confirmingAdjustment ? '…' : 'Confirmar ajuste'}
+                      </button>
+                    ) : (
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                        Solo un gerente/dueño puede confirmar este ajuste.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                {detailTarget.status === 'PENDING' && (
+                {(detailTarget.status === 'PENDING' || detailTarget.status === 'CONFIRMED') && (
                   <button
                     onClick={() => setEditingDetail(true)}
                     className="btn-mini btn-mini-neutral"

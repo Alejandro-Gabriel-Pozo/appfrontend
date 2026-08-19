@@ -49,4 +49,18 @@ export const reservationsApi = {
     apiFetch<Reservation>(`/api/reservations/${id}/schedule-request/approve`, { method: 'POST', body: JSON.stringify(body) }),
   rejectScheduleChange: (id: string) =>
     apiFetch<Reservation>(`/api/reservations/${id}/schedule-request/reject`, { method: 'POST' }),
+  /**
+   * Ajuste de precio de una reserva CONFIRMED (19/08/2026, pendientes-
+   * 2026-08-18.md punto I). `previewPriceAdjustment` es de solo lectura —
+   * compara el totalPrice congelado contra lo que costaría hoy con las
+   * fechas/recurso actuales de la reserva; `null` si no aplica o no hay
+   * diferencia. `confirmPriceAdjustment` recién ahí aplica el cambio y
+   * genera el cargo/nota de crédito correspondiente — nunca automático.
+   */
+  previewPriceAdjustment: (id: string) =>
+    apiFetch<{ currentTotalPrice: number; recalculatedTotalPrice: number; difference: number } | null>(
+      `/api/reservations/${id}/price-preview`,
+    ),
+  confirmPriceAdjustment: (id: string) =>
+    apiFetch<Reservation>(`/api/reservations/${id}/confirm-price-adjustment`, { method: 'POST' }),
 }
