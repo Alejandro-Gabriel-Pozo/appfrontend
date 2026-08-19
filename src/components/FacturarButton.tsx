@@ -69,19 +69,24 @@ export default function FacturarButton({ financialTransactionId }: { financialTr
 
   if (invoice?.status === 'ISSUED') {
     return (
-      <div className="flex items-center gap-2">
-        <span className="text-xs mono" style={{ color: 'var(--bastion-sage)' }}>
-          CAE {invoice.cae} · Cbte {invoice.cbteNro}
-        </span>
-        <button
-          type="button"
-          onClick={handleDownloadPdf}
-          disabled={downloadingPdf}
-          className="btn-mini btn-mini-neutral"
-        >
-          {downloadingPdf ? <span className="spinner" /> : null}
-          PDF
-        </button>
+      <div className="flex flex-col items-start gap-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs mono" style={{ color: 'var(--bastion-sage)' }}>
+            CAE {invoice.cae} · Cbte {invoice.cbteNro}
+          </span>
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={downloadingPdf}
+            className="btn-mini btn-mini-neutral"
+          >
+            {downloadingPdf ? <span className="spinner" /> : null}
+            PDF
+          </button>
+        </div>
+        {errorMessage && (
+          <span className="text-xs" style={{ color: 'var(--danger)' }}>{errorMessage}</span>
+        )}
       </div>
     )
   }
