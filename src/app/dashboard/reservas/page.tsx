@@ -1,19 +1,17 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
-import { useTable, useCreate, useUpdate, useInvalidate } from '@refinedev/core'
-import { reservationsApi, resourcesApi, customersApi, bookableServicesApi, categoriesApi, ratePlansApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { useState, useEffect } from 'react'
+import { reservationsApi, customersApi, ratePlansApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import RoomCalendar from '@/components/RoomCalendar'
-import type { Reservation, Resource, ReservationStatus, BookableService, Category, RatePlan } from '@/lib/types'
+import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
+import type { Reservation, ReservationStatus, RatePlan } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Primera pantalla migrada (18/08/2026) — módulo PMS, acento brass. El scope
 // vive en la clase .bastion (globals.css); acá solo se cargan las 3
 // tipografías vía next/font (auto-hosted, sin <link> manual) y se exponen
 // como variables CSS que consume ese scope.
-
-const PAGE_SIZE = 20
 
 const STATUS_LABEL: Record<ReservationStatus, string> = {
   PENDING: 'Pendiente',
@@ -68,28 +66,23 @@ const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: '
 
 export default function ReservasPage() {
   const { toast } = useToast()
-  // Sin paginación server-side todavía (ver lib/refine/dataProvider.ts) —
-  // pagination: { mode: 'off' } trae la lista completa; el filtrado/paginado
-  // sigue siendo 100% client-side, igual que antes de migrar.
-  const { result, tableQuery } = useTable<Reservation>({ resource: 'reservas', pagination: { mode: 'off' } })
-  const reservations = result.data
-  const loading = tableQuery.isLoading
-  const { mutateAsync: createReservation } = useCreate<Reservation>()
-  const { mutateAsync: updateReservation } = useUpdate<Reservation>()
-  // confirm/cancel/complete son acciones con nombre (reservationsApi[action])
-  // que no pasan por el data provider — invalidate() fuerza el refetch de
-  // la lista después, igual que create/update lo hacen solos vía Refine.
-  const invalidate = useInvalidate()
+  // Motor compartido con Turnos (Fase 4, auditoria-modularidad.md F4) —
+  // trae recursos/servicios/categorías, filtra por isLodging, lista/busca/
+  // pagina reservas, y las acciones de confirmar/cancelar/completar.
+  const {
+    loading,
+    createReservation, updateReservation, invalidate,
+    resources, services,
+    screenCategoryIds: lodgingCategoryIds,
+    screenResources: lodgingResources,
+    screenResourceIds: lodgingResourceIds,
+    screenServices: lodgingServices,
+    search, setSearch, filterStatus, setFilterStatus,
+    page, setPage, totalPages, paginated, filtered,
+    actionLoading, setActionLoading, doAction: doScreenAction,
+    getResourceName, getServiceName,
+  } = useReservationsScreen(true)
 
-  const [resources, setResources] = useState<Resource[]>([])
-  const [services, setServices] = useState<BookableService[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
-
-  // Filtros y paginación
-  const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState<ReservationStatus | ''>('')
-  const [page, setPage] = useState(1)
   const [view, setView] = useState<'list' | 'calendar'>('list')
 
   // Modal nueva reserva
@@ -105,8 +98,6 @@ export default function ReservasPage() {
 
   // Turnos disponibles (servicios "slot" con horario configurado — Mi Negocio / recurso)
   const [slotDate, setSlotDate] = useState('')
-  const [availableSlots, setAvailableSlots] = useState<string[] | null>(null)
-  const [loadingSlots, setLoadingSlots] = useState(false)
 
   // Modal detalle / edición
   const [detailTarget, setDetailTarget] = useState<Reservation | null>(null)
@@ -121,71 +112,6 @@ export default function ReservasPage() {
   const [scheduleSubmitting, setScheduleSubmitting] = useState(false)
   const [scheduleApproveOpen, setScheduleApproveOpen] = useState(false)
   const [scheduleChargeAmount, setScheduleChargeAmount] = useState('')
-
-  // Recursos/servicios no están migrados a esta pantalla — se siguen
-  // trayendo directo, igual que antes.
-  useEffect(() => {
-    queueMicrotask(() => {
-      Promise.all([resourcesApi.list(), bookableServicesApi.list(), categoriesApi.list()])
-        .then(([recs, svcs, cats]) => { setResources(recs); setServices(svcs); setCategories(cats) })
-        .catch(err => toast(extractErrorMessage(err), 'error'))
-    })
-  }, [toast])
-
-  // Backlog E1 (13/08/2026, alcance completo 18/08) — Reservas queda
-  // acotada a alojamiento (categorías con isLodging=true), Turnos maneja
-  // todo lo demás. lodgingResourceIds resuelve recurso → categoría →
-  // isLodging una sola vez por render, no en cada .filter().
-  const lodgingCategoryIds = useMemo(
-    () => new Set(categories.filter(c => c.isLodging).map(c => c.id)),
-    [categories],
-  )
-  const lodgingResources = useMemo(
-    () => resources.filter(r => lodgingCategoryIds.has(r.categoryId)),
-    [resources, lodgingCategoryIds],
-  )
-  const lodgingResourceIds = useMemo(
-    () => new Set(lodgingResources.map(r => r.id)),
-    [lodgingResources],
-  )
-  const lodgingServices = useMemo(
-    () => services.filter(s => lodgingCategoryIds.has(s.categoryId)),
-    [services, lodgingCategoryIds],
-  )
-
-  // Filtrado y paginación en cliente
-  const filtered = useMemo(() => {
-    let list = reservations.filter(r => lodgingResourceIds.has(r.resourceId))
-    if (filterStatus) list = list.filter(r => r.status === filterStatus)
-    if (search.trim()) {
-      const q = search.trim().toLowerCase()
-      list = list.filter(r =>
-        r.customer.fullName?.toLowerCase().includes(q) ||
-        r.customer.email?.toLowerCase().includes(q)
-      )
-    }
-    return list
-  }, [reservations, lodgingResourceIds, filterStatus, search])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-
-  // Resetear página al cambiar filtros
-  useEffect(() => { queueMicrotask(() => setPage(1)) }, [search, filterStatus])
-
-  async function doAction(id: string, action: 'confirm' | 'cancel' | 'complete') {
-    setActionLoading(`${id}-${action}`)
-    try {
-      await reservationsApi[action](id)
-      const labels = { confirm: 'Reserva confirmada', cancel: 'Reserva cancelada', complete: 'Reserva completada' }
-      toast(labels[action], 'success')
-      invalidate({ resource: 'reservas', invalidates: ['list'] })
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setActionLoading(null)
-    }
-  }
 
   const selectedService = services.find(s => s.id === form.serviceId)
   const isSlotService = selectedService?.bookingMode === 'slot'
@@ -219,19 +145,7 @@ export default function ReservasPage() {
   // elegidos. Si no hay horario configurado (ni del recurso ni del negocio),
   // el endpoint devuelve [] y se cae al datetime-local libre (ver JSX abajo)
   // — el staff siempre puede overridear si hace falta.
-  useEffect(() => {
-    queueMicrotask(() => {
-      if (!isSlotService || !form.resourceId || !slotDate) {
-        setAvailableSlots(null)
-        return
-      }
-      setLoadingSlots(true)
-      bookableServicesApi.getAvailableSlots(form.serviceId, form.resourceId, slotDate)
-        .then(res => setAvailableSlots(res.slots))
-        .catch(() => setAvailableSlots([]))
-        .finally(() => setLoadingSlots(false))
-    })
-  }, [isSlotService, form.serviceId, form.resourceId, slotDate])
+  const { availableSlots, setAvailableSlots, loadingSlots } = useAvailableSlots(isSlotService, form.serviceId, form.resourceId, slotDate)
 
   function selectSlot(startIso: string) {
     if (!selectedService?.durationMinutes) return
@@ -323,19 +237,6 @@ export default function ReservasPage() {
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     }
-  }
-
-  const getResourceName = (id: string) =>
-    resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
-
-  const getServiceName = (id?: string | null) =>
-    id ? services.find(s => s.id === id)?.name ?? id.slice(0, 8) + '…' : null
-
-  /** input datetime-local necesita "YYYY-MM-DDTHH:mm", sin segundos ni Z */
-  function toLocalInput(iso: string) {
-    const d = new Date(iso)
-    const pad = (n: number) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
 
   function openDetail(r: Reservation) {
@@ -574,7 +475,7 @@ export default function ReservasPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         {r.allowedTransitions?.includes('CONFIRMED') && (
                           <button
-                            onClick={() => doAction(r.id, 'confirm')}
+                            onClick={() => doScreenAction(r.id, 'confirm', 'Reserva')}
                             disabled={actionLoading !== null}
                             className="btn-mini btn-mini-sage"
                           >
@@ -583,7 +484,7 @@ export default function ReservasPage() {
                         )}
                         {r.allowedTransitions?.includes('CANCELLED') && (
                           <button
-                            onClick={() => doAction(r.id, 'cancel')}
+                            onClick={() => doScreenAction(r.id, 'cancel', 'Reserva')}
                             disabled={actionLoading !== null}
                             className="btn-mini btn-mini-clay"
                           >
@@ -592,7 +493,7 @@ export default function ReservasPage() {
                         )}
                         {r.allowedTransitions?.includes('COMPLETED') && (
                           <button
-                            onClick={() => doAction(r.id, 'complete')}
+                            onClick={() => doScreenAction(r.id, 'complete', 'Reserva')}
                             disabled={actionLoading !== null}
                             className="btn-mini btn-mini-neutral"
                           >
