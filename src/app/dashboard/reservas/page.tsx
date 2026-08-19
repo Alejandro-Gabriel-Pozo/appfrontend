@@ -1,9 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { reservationsApi, customersApi, ratePlansApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { reservationsApi, customersApi, ratePlansApi, customerAccountApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import RoomCalendar from '@/components/RoomCalendar'
+import FacturarButton from '@/components/FacturarButton'
 import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
 import { useIsManagement } from '@/hooks/useAuthRole'
 import type { Reservation, ReservationStatus, RatePlan } from '@/lib/types'
@@ -113,6 +114,13 @@ export default function ReservasPage() {
   // abre el detalle de una reserva CONFIRMED o después de editarla.
   const [priceAdjustment, setPriceAdjustment] = useState<{ currentTotalPrice: number; recalculatedTotalPrice: number; difference: number } | null>(null)
   const [confirmingAdjustment, setConfirmingAdjustment] = useState(false)
+
+  // Cargo (CHARGE) de esta reserva, para el botón "Facturar" (pendientes-
+  // 2026-08-18.md punto T, "qué sigue") — mismo componente que Cuentas
+  // Corrientes, apuntando al mismo financialTransactionId. El CHARGE se
+  // crea de forma async (outbox, A10) al confirmar, así que puede no
+  // existir todavía la primera vez que se abre el detalle recién confirmado.
+  const [chargeTransactionId, setChargeTransactionId] = useState<string | null>(null)
 
   // Horario especial (early check-in / late check-out) — pendientes-2026-08-18.md punto N.
   const [scheduleRequestOpen, setScheduleRequestOpen] = useState(false)
@@ -244,7 +252,7 @@ export default function ReservasPage() {
       toast('Reserva actualizada', 'success')
       // Si el detalle de ESTA reserva está abierto, refrescar el preview de
       // ajuste de precio acá también — el drag no pasa por handleUpdateDetail.
-      if (detailTarget?.id === id) refreshPriceAdjustment(updated)
+      if (detailTarget?.id === id) { refreshPriceAdjustment(updated); refreshChargeTransaction(updated) }
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     }
@@ -267,6 +275,7 @@ export default function ReservasPage() {
     })
     setScheduleChargeAmount('')
     refreshPriceAdjustment(r)
+    refreshChargeTransaction(r)
   }
 
   // Se pide siempre que se abre/actualiza el detalle de una reserva
@@ -279,6 +288,20 @@ export default function ReservasPage() {
       setPriceAdjustment(await reservationsApi.previewPriceAdjustment(r.id))
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
+    }
+  }
+
+  // No hay endpoint "financial-transactions?reservationId=" propio -- se
+  // reusa el estado de cuenta del cliente (ya trae reservationId por
+  // movimiento) en vez de sumar una ruta nueva solo para este botón.
+  async function refreshChargeTransaction(r: Reservation) {
+    if (r.status !== 'CONFIRMED' && r.status !== 'COMPLETED') { setChargeTransactionId(null); return }
+    try {
+      const statement = await customerAccountApi.getStatement(r.customer.id)
+      const charge = statement.transactions.find(tx => tx.type === 'CHARGE' && tx.reservationId === r.id && tx.status === 'SETTLED')
+      setChargeTransactionId(charge?.id ?? null)
+    } catch {
+      setChargeTransactionId(null)
     }
   }
 
@@ -318,6 +341,7 @@ export default function ReservasPage() {
       setDetailTarget(updated)
       setEditingDetail(false)
       refreshPriceAdjustment(updated)
+      refreshChargeTransaction(updated)
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setDetailFieldErrors(fe)
@@ -336,6 +360,7 @@ export default function ReservasPage() {
       toast(labels[action], 'success')
       setDetailTarget(updated)
       refreshPriceAdjustment(updated)
+      refreshChargeTransaction(updated)
       invalidate({ resource: 'reservas', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
@@ -943,6 +968,18 @@ export default function ReservasPage() {
                       Cargo aplicado: {fmtMoney(detailTarget.scheduleChargeAmount)}
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Facturar (pendientes-2026-08-18.md punto T, "qué sigue") —
+                  solo aparece si ya existe un CHARGE confirmado para esta
+                  reserva (se resuelve en refreshChargeTransaction, vía el
+                  estado de cuenta del cliente). Mismo componente que usa
+                  Cuentas Corrientes. */}
+              {chargeTransactionId && (
+                <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Comprobante AFIP</p>
+                  <FacturarButton financialTransactionId={chargeTransactionId} />
                 </div>
               )}
 

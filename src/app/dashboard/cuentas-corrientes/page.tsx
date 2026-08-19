@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { customersApi, customerAccountApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
+import FacturarButton from '@/components/FacturarButton'
 import type { Customer, CustomerStatement, TransactionType, TransactionStatus } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
@@ -196,6 +197,7 @@ export default function CuentasCorrientesPage() {
                       <th>Monto</th>
                       <th>Estado</th>
                       <th>Notas</th>
+                      <th>Comprobante</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -206,6 +208,14 @@ export default function CuentasCorrientesPage() {
                         <td className="mono">{fmtMoney(tx.amount)}</td>
                         <td><span className={STATUS_BADGE_CLASS[tx.status]}>{STATUS_LABEL[tx.status]}</span></td>
                         <td className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{tx.notes ?? '—'}</td>
+                        <td>
+                          {/* Solo tiene sentido facturar un cargo confirmado — un
+                              pago/reembolso/ajuste no es lo que AFIP pide como
+                              comprobante acá (pendientes-2026-08-18.md punto T). */}
+                          {tx.type === 'CHARGE' && tx.status === 'SETTLED' && (
+                            <FacturarButton financialTransactionId={tx.id} />
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
