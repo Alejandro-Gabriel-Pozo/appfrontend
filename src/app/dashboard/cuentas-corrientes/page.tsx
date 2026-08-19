@@ -209,10 +209,13 @@ export default function CuentasCorrientesPage() {
                         <td><span className={STATUS_BADGE_CLASS[tx.status]}>{STATUS_LABEL[tx.status]}</span></td>
                         <td className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{tx.notes ?? '—'}</td>
                         <td>
-                          {/* Solo tiene sentido facturar un cargo confirmado — un
-                              pago/reembolso/ajuste no es lo que AFIP pide como
-                              comprobante acá (pendientes-2026-08-18.md punto T). */}
-                          {tx.type === 'CHARGE' && tx.status === 'SETTLED' && (
+                          {/* Facturar es independiente de haber cobrado (PENDING
+                              es válido -- el checkout recién pasa el CHARGE a
+                              SETTLED, ver outbox.handlers.ts). Un pago/reembolso/
+                              ajuste no es lo que AFIP pide como comprobante acá
+                              (pendientes-2026-08-18.md punto T), y un cargo
+                              VOIDED/FAILED tampoco corresponde facturarlo. */}
+                          {tx.type === 'CHARGE' && tx.status !== 'VOIDED' && tx.status !== 'FAILED' && (
                             <FacturarButton financialTransactionId={tx.id} />
                           )}
                         </td>

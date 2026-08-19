@@ -294,11 +294,15 @@ export default function ReservasPage() {
   // No hay endpoint "financial-transactions?reservationId=" propio -- se
   // reusa el estado de cuenta del cliente (ya trae reservationId por
   // movimiento) en vez de sumar una ruta nueva solo para este botón.
+  // El CHARGE queda PENDING hasta el checkout (outbox.handlers.ts) -- eso
+  // no impide facturarlo, factura y cobro son cosas distintas acá.
   async function refreshChargeTransaction(r: Reservation) {
     if (r.status !== 'CONFIRMED' && r.status !== 'COMPLETED') { setChargeTransactionId(null); return }
     try {
       const statement = await customerAccountApi.getStatement(r.customer.id)
-      const charge = statement.transactions.find(tx => tx.type === 'CHARGE' && tx.reservationId === r.id && tx.status === 'SETTLED')
+      const charge = statement.transactions.find(
+        tx => tx.type === 'CHARGE' && tx.reservationId === r.id && tx.status !== 'VOIDED' && tx.status !== 'FAILED',
+      )
       setChargeTransactionId(charge?.id ?? null)
     } catch {
       setChargeTransactionId(null)
