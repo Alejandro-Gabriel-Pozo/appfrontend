@@ -308,10 +308,22 @@ function AfipCertificateSection() {
   const [key, setKey] = useState('')
   const [environment, setEnvironment] = useState<'homologacion' | 'produccion'>('homologacion')
 
+  // CUIT de autenticación AFIP (schema v25) -- distinto de taxId ("Datos
+  // fiscales") cuando AFIP exige un CUIT de testing ficticio para probar en
+  // homologación. A diferencia del cert/clave, esto SÍ se puede releer
+  // (no es un secreto), así que el input arranca con el valor ya cargado.
+  const [afipCuit, setAfipCuit] = useState('')
+  const [savingCuit, setSavingCuit] = useState(false)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setStatus(await afipCredentialsApi.status())
+      const [credStatus, profile] = await Promise.all([
+        afipCredentialsApi.status(),
+        businessProfileApi.get(),
+      ])
+      setStatus(credStatus)
+      setAfipCuit(profile.afipCuit ?? '')
       setNotEnabled(false)
     } catch (err) {
       if (err && typeof err === 'object' && 'code' in err && err.code === 'MODULE_NOT_ENABLED') {
@@ -325,6 +337,19 @@ function AfipCertificateSection() {
   }, [toast])
 
   useEffect(() => { queueMicrotask(load) }, [load])
+
+  async function handleSaveCuit(e: React.FormEvent) {
+    e.preventDefault()
+    setSavingCuit(true)
+    try {
+      await businessProfileApi.update({ afipCuit: afipCuit.trim() || null })
+      toast(afipCuit.trim() ? 'CUIT de autenticación AFIP guardado' : 'CUIT de autenticación AFIP borrado -- se vuelve a usar el CUIT legal', 'success')
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setSavingCuit(false)
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -418,6 +443,29 @@ function AfipCertificateSection() {
             <button type="button" onClick={handleClear} className="btn-ghost">Borrar certificado</button>
           )}
         </div>
+      </form>
+
+      {/* CUIT de autenticación AFIP (schema v25) -- form aparte porque pega
+          contra businessProfileApi, no afipCredentialsApi: no es un
+          secreto, se puede releer y editar sin volver a cargar el cert. */}
+      <form onSubmit={handleSaveCuit} className="space-y-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+        <div>
+          <label className="label">CUIT de autenticación (opcional)</label>
+          <input
+            className="input" value={afipCuit}
+            onChange={e => setAfipCuit(e.target.value)}
+            placeholder="Vacío = usar el CUIT legal de Datos fiscales"
+          />
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+            Solo si necesitás autenticarte contra AFIP con un CUIT distinto
+            al legal — ej. un CUIT de testing en homologación. No cambia
+            &quot;Datos fiscales&quot;.
+          </p>
+        </div>
+        <button type="submit" disabled={savingCuit} className="btn-secondary">
+          {savingCuit ? <span className="spinner" /> : null}
+          Guardar CUIT de autenticación
+        </button>
       </form>
     </div>
   )

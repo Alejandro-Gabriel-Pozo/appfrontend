@@ -45,6 +45,13 @@ export interface BusinessProfile {
   fiscalAddressPostalCode: string | null
   fiscalAddressCountry: string | null
   afipSalesPoint: number | null
+  // CUIT de autenticación AFIP (19/08/2026, Fase 2, hallazgo real durante la
+  // conexión a homologación) -- distinto de taxId cuando AFIP exige un CUIT
+  // de testing ficticio para probar en homologación. null = se autentica
+  // con taxId (caso normal). Vive junto al certificado en la UI porque es
+  // config de AUTENTICACIÓN, no de identidad fiscal legal (eso sigue siendo
+  // taxId, en "Datos fiscales").
+  afipCuit: string | null
   // IVA por defecto (19/08/2026, Fase 2 -- "VAMOS POR CONEXIÓN REAL"): tasa
   // general que se aplica a un cobro sin categoría propia, y si el precio
   // cargado ya trae el IVA adentro o hay que sumarlo aparte. Decisión del
