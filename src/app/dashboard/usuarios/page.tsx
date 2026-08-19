@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
 import { rolesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
-import { useAuth } from '@/context/AuthContext'
+import { useIsOwner } from '@/hooks/useAuthRole'
 import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import type { TeamMember, Role } from '@/lib/types'
@@ -35,7 +35,7 @@ const EMPTY: FormState = { email: '', password: '', roleId: '' }
 
 export default function UsuariosPage() {
   const { toast } = useToast()
-  const { user: currentUser } = useAuth()
+  const isOwner = useIsOwner()
   const { result, tableQuery } = useTable<TeamMember>({ resource: 'usuarios', pagination: { mode: 'off' } })
   const members = result.data
   const loading = tableQuery.isLoading
@@ -52,8 +52,6 @@ export default function UsuariosPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<TeamMember | null>(null)
   const [deleting, setDeleting] = useState(false)
-
-  const isOwner = currentUser?.role === 'OWNER'
 
   // OWNER nunca se asigna desde acá (se asigna solo al registrar el
   // negocio) — mismo guard que ya aplica el backend en POST/PUT /api/users.

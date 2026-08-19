@@ -4,7 +4,7 @@ import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { staysApi, resourcesApi, customersApi, reservationsApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import type { PaginatedResponse } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
-import { useAuth } from '@/context/AuthContext'
+import { useIsManagement } from '@/hooks/useAuthRole'
 import Modal from '@/components/Modal'
 import type { Stay, Resource, Customer, Reservation, Shift, StayFolio, Category } from '@/lib/types'
 
@@ -25,8 +25,7 @@ function toArray<T>(res: PaginatedResponse<T> | T[]): T[] {
 
 export default function EstadiasPage() {
   const { toast } = useToast()
-  const { user: currentUser } = useAuth()
-  const isManagement = currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN'
+  const isManagement = useIsManagement()
   // Sin paginación server-side todavía (ver lib/refine/dataProvider.ts).
   const { result, tableQuery } = useTable<Stay>({ resource: 'estadias', pagination: { mode: 'off' } })
   const stays = result.data

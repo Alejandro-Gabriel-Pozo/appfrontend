@@ -1,13 +1,15 @@
 'use client'
-import type { ApiErrorWithStatus } from './api'
+import { handleApiResponse } from './api'
 import { getPlatformSessionImperative } from '@/context/PlatformAuthContext'
 
 // ─── Cliente propio para /platform/*, no reutiliza apiFetch() de api.ts ───
-// apiFetch() manda credentials:'include' (cookie httpOnly de staff) y su
-// interceptor de 401 redirige hardcodeado a /login -- ninguna de las dos
-// cosas sirve acá: la sesión de plataforma viaja como Authorization: Bearer
-// (no hay cookie, ver PlatformAuthContext.tsx) y un 401 acá tiene que
-// mandar a /superadmin/login, no a la de staff.
+// apiFetch() manda credentials:'include' (cookie httpOnly de staff) -- eso
+// no sirve acá: la sesión de plataforma viaja como Authorization: Bearer
+// (no hay cookie, ver PlatformAuthContext.tsx). El parseo de la respuesta y
+// el interceptor de sesión vencida SÍ son el mismo código en los dos
+// clientes -- eso vive en handleApiResponse() (lib/api.ts, Fase 3,
+// docs/auditoria-modularidad.md hallazgo F3), acá solo se le pasa a dónde
+// redirigir un 401/TOKEN_EXPIRED (/superadmin/login, no /login).
 const BASE = ''
 
 async function platformFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -22,26 +24,7 @@ async function platformFetch<T>(path: string, options?: RequestInit): Promise<T>
     },
   })
 
-  if (res.status === 204) return undefined as T
-
-  const body = await res.json().catch(() => ({}))
-
-  if (!res.ok) {
-    const err: ApiErrorWithStatus = {
-      code:       body?.code    ?? 'INTERNAL_ERROR',
-      message:    body?.message ?? 'Error inesperado',
-      httpStatus: res.status,
-      ...body,
-    }
-
-    if ((err.code === 'TOKEN_EXPIRED' || err.code === 'UNAUTHORIZED') && typeof window !== 'undefined') {
-      window.location.href = `/superadmin/login?reason=${err.code.toLowerCase()}`
-    }
-
-    throw err
-  }
-
-  return body as T
+  return handleApiResponse<T>(res, '/superadmin/login')
 }
 
 // ─── Types ──────────────────────────────────────────────────────────────

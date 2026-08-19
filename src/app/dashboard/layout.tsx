@@ -8,6 +8,7 @@ import { Refine } from '@refinedev/core'
 import routerProvider from '@refinedev/nextjs-router/app'
 import { ToastProvider, useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
+import { useIsManagement } from '@/hooks/useAuthRole'
 import { businessModulesApi, systemApi, type DeadLetterEvent } from '@/lib/api'
 import { dataProvider } from '@/lib/refine/dataProvider'
 import { createAuthProvider } from '@/lib/refine/authProvider'
@@ -287,7 +288,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const rawPathname = usePathname()
   const pathname    = rawPathname ?? ''
   const { user, isAuthenticated, isLoading, logout: authLogout } = useAuth()
-  const isManagement = user?.role === 'OWNER' || user?.role === 'ADMIN'
+  const isManagement = useIsManagement()
 
   // Wrapper sobre AuthContext (ver lib/refine/authProvider.ts) — se
   // reconstruye solo cuando cambia el estado de sesión real, no en cada

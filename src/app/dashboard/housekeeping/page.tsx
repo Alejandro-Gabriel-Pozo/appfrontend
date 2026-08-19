@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { housekeepingApi, resourcesApi, usersApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
-import { useAuth } from '@/context/AuthContext'
+import { useIsManagement } from '@/hooks/useAuthRole'
 import Modal from '@/components/Modal'
 import type { HousekeepingTask, HousekeepingStatus, Shift, Resource, TeamMember, Category, LateCheckout } from '@/lib/types'
 
@@ -60,8 +60,7 @@ type PendingAction =
 
 export default function HousekeepingPage() {
   const { toast } = useToast()
-  const { user: currentUser } = useAuth()
-  const isManagement = currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN'
+  const isManagement = useIsManagement()
 
   const [date, setDate] = useState(todayStr())
   // housekeeping filtra por fecha vía meta.date (ver lib/refine/dataProvider.ts

@@ -34,6 +34,43 @@ async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+/**
+ * Parseo de respuesta + interceptor de sesión vencida, compartido entre
+ * `apiFetch()` (acá abajo, cookie httpOnly de staff) y `platformFetch()`
+ * (lib/platformApi.ts, Authorization Bearer de superadmin) — Fase 3,
+ * docs/auditoria-modularidad.md, hallazgo F3. Lo único que de verdad
+ * distingue a los dos clientes es CÓMO arman el `fetch()` (credenciales,
+ * reintento con backoff) y A DÓNDE redirige un 401/TOKEN_EXPIRED — eso
+ * sigue siendo responsabilidad de cada uno, se le pasa acá como parámetro.
+ */
+export async function handleApiResponse<T>(res: Response, loginPath: string): Promise<T> {
+  // 204 No Content — éxito sin cuerpo
+  if (res.status === 204) return undefined as T
+
+  const body = await res.json().catch(() => ({}))
+
+  if (!res.ok) {
+    const err: ApiErrorWithStatus = {
+      code:       body?.code    ?? 'INTERNAL_ERROR',
+      message:    body?.message ?? 'Error inesperado',
+      httpStatus: res.status,
+      ...body,
+    }
+
+    // Interceptor global: token expirado o sin autenticación
+    if (
+      (err.code === 'TOKEN_EXPIRED' || err.code === 'UNAUTHORIZED') &&
+      typeof window !== 'undefined'
+    ) {
+      window.location.href = `${loginPath}?reason=${err.code.toLowerCase()}`
+    }
+
+    throw err
+  }
+
+  return body as T
+}
+
 // ─── Función central de llamadas ─────────────────────────────────────────────
 export async function apiFetch<T>(
   path: string,
@@ -78,31 +115,7 @@ export async function apiFetch<T>(
       continue
     }
 
-    // 204 No Content — éxito sin cuerpo
-    if (res.status === 204) return undefined as T
-
-    const body = await res.json().catch(() => ({}))
-
-    if (!res.ok) {
-      const err: ApiErrorWithStatus = {
-        code:       body?.code    ?? 'INTERNAL_ERROR',
-        message:    body?.message ?? 'Error inesperado',
-        httpStatus: res.status,
-        ...body,
-      }
-
-      // Interceptor global: token expirado o sin autenticación
-      if (
-        (err.code === 'TOKEN_EXPIRED' || err.code === 'UNAUTHORIZED') &&
-        typeof window !== 'undefined'
-      ) {
-        window.location.href = `/login?reason=${err.code.toLowerCase()}`
-      }
-
-      throw err
-    }
-
-    return body as T
+    return handleApiResponse<T>(res, '/login')
   }
 }
 
