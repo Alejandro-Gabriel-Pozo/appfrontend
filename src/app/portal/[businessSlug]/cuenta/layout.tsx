@@ -9,19 +9,19 @@ export default function CuentaLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname() ?? ''
   const params = useParams()
   const slug = params?.businessSlug as string
-  const { session, isLoading, clearSession } = useCustomerAuth()
+  const { customer, isLoading, logout: doLogout } = useCustomerAuth()
 
   useEffect(() => {
     if (isLoading) return
-    if (!session || session.businessSlug !== slug) router.push(`/portal/${slug}/login`)
-  }, [isLoading, session, slug, router])
+    if (!customer) router.push(`/portal/${slug}/login`)
+  }, [isLoading, customer, slug, router])
 
   function logout() {
-    clearSession()
+    void doLogout()
     router.push(`/portal/${slug}/login`)
   }
 
-  if (isLoading || !session || session.businessSlug !== slug) {
+  if (isLoading || !customer) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <span className="spinner" style={{ width: 24, height: 24 }} />
@@ -53,7 +53,7 @@ export default function CuentaLayout({ children }: { children: React.ReactNode }
           ))}
         </nav>
         <div className="flex items-center gap-3">
-          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{session.customer.fullName}</span>
+          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{customer.fullName}</span>
           <button onClick={logout} className="btn-ghost">Salir</button>
         </div>
       </header>

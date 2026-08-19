@@ -1,19 +1,21 @@
 'use client'
 import { useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { getCustomerSessionImperative } from '@/context/CustomerAuthContext'
+import { useCustomerAuth } from '@/context/CustomerAuthContext'
 
 export default function PortalRootPage() {
   const router = useRouter()
   const params = useParams()
   const slug = params?.businessSlug as string
+  // El chequeo de sesión (cookie httpOnly + GET /api/customer/me) ya lo
+  // dispara CustomerAuthProvider al montar (layout.tsx) -- acá solo se
+  // espera a que resuelva.
+  const { customer, isLoading } = useCustomerAuth()
 
   useEffect(() => {
-    const session = getCustomerSessionImperative()
-    // Una sesión de OTRO negocio (slug distinto) no cuenta como válida acá.
-    const hasValidSession = session?.businessSlug === slug
-    router.replace(hasValidSession ? `/portal/${slug}/cuenta/reservas` : `/portal/${slug}/disponibilidad`)
-  }, [router, slug])
+    if (isLoading) return
+    router.replace(customer ? `/portal/${slug}/cuenta/reservas` : `/portal/${slug}/disponibilidad`)
+  }, [isLoading, customer, slug, router])
 
   return (
     <div className="min-h-screen flex items-center justify-center">

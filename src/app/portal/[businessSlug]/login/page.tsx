@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useCustomerAuth } from '@/context/CustomerAuthContext'
-import { customerAuthApi, toCustomerSession, extractErrorMessage } from '@/lib/customerApi'
+import { customerAuthApi, extractErrorMessage } from '@/lib/customerApi'
 import { readPendingBooking } from '@/lib/pendingBooking'
 import { GoogleSignInButton } from '@/components/GoogleSignInButton'
 
@@ -11,7 +11,7 @@ export default function CustomerLoginPage() {
   const router = useRouter()
   const params = useParams()
   const slug = params?.businessSlug as string
-  const { setSession } = useCustomerAuth()
+  const { refreshCustomer } = useCustomerAuth()
 
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -28,8 +28,8 @@ export default function CustomerLoginPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await customerAuthApi.login(slug, { email, password })
-      setSession(toCustomerSession(res, slug))
+      await customerAuthApi.login(slug, { email, password })
+      await refreshCustomer(slug)
       goToAccount()
     } catch (err: unknown) {
       setError(extractErrorMessage(err))
@@ -42,8 +42,8 @@ export default function CustomerLoginPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await customerAuthApi.loginWithGoogle(slug, idToken)
-      setSession(toCustomerSession(res, slug))
+      await customerAuthApi.loginWithGoogle(slug, idToken)
+      await refreshCustomer(slug)
       goToAccount()
     } catch (err: unknown) {
       setError(extractErrorMessage(err))

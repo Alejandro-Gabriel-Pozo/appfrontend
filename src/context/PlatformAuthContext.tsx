@@ -80,7 +80,13 @@ export function usePlatformAuth(): PlatformAuthContextValue {
   return ctx
 }
 
-/** Lectura imperativa para platformApi.ts (fuera de React) -- mismo patrón que getCustomerSessionImperative(). */
+/**
+ * Lectura imperativa para platformApi.ts (fuera de React). El portal de
+ * clientes migró a cookie httpOnly el 19/08/2026 (ver CustomerAuthContext.tsx)
+ * -- este login de plataforma/superadmin sigue en localStorage a propósito
+ * (decisión "no tocado" registrada en app-main/docs/pendientes-2026-08-18.md,
+ * la migración de esa sesión fue solo para el portal de clientes).
+ */
 export function getPlatformSessionImperative(): PlatformSession | null {
   return readSession()
 }

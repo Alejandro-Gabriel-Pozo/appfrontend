@@ -1,11 +1,9 @@
 'use client'
-import { getCustomerSessionImperative } from '@/context/CustomerAuthContext'
 import { extractErrorMessage, extractFieldErrors, type ApiErrorWithStatus } from './api'
 import type {
   Category,
   BookableService,
   Reservation,
-  CustomerSession,
   AvailabilitySearchResult,
 } from './types'
 
@@ -42,17 +40,27 @@ function buildApiError(body: unknown, status: number): ApiErrorWithStatus {
   } as ApiErrorWithStatus
 }
 
+/** Extrae el slug del negocio de la URL actual (`/portal/{slug}/...`) — reemplaza a `session.businessSlug`. */
+function slugFromLocation(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  return window.location.pathname.match(/^\/portal\/([^/]+)/)?.[1]
+}
+
 // ─── Fetch autenticado del dominio de clientes ────────────────────────────────
 // Se usa tanto para /api/customer/me* como para los endpoints generales que
 // el rol CUSTOMER puede leer (Roles.BOOKING incluye CUSTOMER):
 // /api/categories y /api/bookable-services*.
+//
+// Cookie httpOnly (19/08/2026) — ya no arma el header Authorization a mano
+// (no hay token legible del lado del cliente): `credentials: 'include'`
+// manda la cookie `rh_customer_token` sola, como ya hacía apiFetch (lib/api.ts)
+// para el panel de staff.
 export async function customerApiFetch<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
   const method = (options?.method ?? 'GET').toUpperCase()
   const canRetry = RETRYABLE_METHODS.has(method)
-  const session = getCustomerSessionImperative()
 
   let attempt = 0
 
@@ -61,9 +69,9 @@ export async function customerApiFetch<T>(
     try {
       res = await fetch(`${BASE}${path}`, {
         ...options,
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.token ?? ''}`,
           ...options?.headers,
         },
       })
@@ -94,13 +102,13 @@ export async function customerApiFetch<T>(
       const err = buildApiError(body, res.status)
 
       // Interceptor: token de cliente vencido o ausente. Redirige al login
-      // DE ESTE portal (con el slug guardado en la sesión), nunca al /login
-      // de staff — son dominios de auth separados.
+      // DE ESTE portal (slug tomado de la URL actual, ya no de una sesión
+      // guardada), nunca al /login de staff — son dominios de auth separados.
       if (
         (err.code === 'TOKEN_EXPIRED' || err.code === 'UNAUTHORIZED') &&
         typeof window !== 'undefined'
       ) {
-        const slug = session?.businessSlug
+        const slug = slugFromLocation()
         window.location.href = slug
           ? `/portal/${slug}/login?reason=${err.code.toLowerCase()}`
           : '/portal'
@@ -120,9 +128,13 @@ interface CustomerAuthResponse {
   customer: { id: string; fullName: string; email: string }
 }
 
+// credentials: 'include' acá también — register/login/login-google setean
+// la cookie httpOnly en su response (Set-Cookie), el browser solo la guarda
+// si el fetch pide credenciales.
 async function publicFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...options,
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   })
   const body = await parseJson(res)
@@ -151,10 +163,6 @@ export const customerAuthApi = {
     }),
 }
 
-/** Convierte una respuesta de auth + slug en la sesión persistible en CustomerAuthContext. */
-export function toCustomerSession(res: CustomerAuthResponse, businessSlug: string): CustomerSession {
-  return { token: res.token, customer: res.customer, businessSlug }
-}
 
 // ─── Disponibilidad (pública) ──────────────────────────────────────────────────
 export const availabilityApi = {

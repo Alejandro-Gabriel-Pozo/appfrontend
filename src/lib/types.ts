@@ -31,5 +31,5 @@ export type {
 } from './productos/types'
 export type { Company, CompanyLink, CompanyProduct } from './empresa/types'
 export type { OrderStatus, OrderItemType, OrderItem, Order, CreateOrderItemInput, CreateOrderInput, ListOrdersFilters } from './ordenes/types'
-export type { CustomerSession, AvailabilityResource, AvailabilitySearchResult } from './portal/types'
+export type { AvailabilityResource, AvailabilitySearchResult } from './portal/types'
 export type { DeadLetterEvent } from './sistema/types'

@@ -23,7 +23,7 @@ export default function DisponibilidadPage() {
   const router = useRouter()
   const params = useParams()
   const slug = params?.businessSlug as string
-  const { session } = useCustomerAuth()
+  const { customer } = useCustomerAuth()
 
   const [startTime, setStartTime] = useState(defaultStart())
   const [endTime, setEndTime]     = useState(defaultEnd())
@@ -37,9 +37,9 @@ export default function DisponibilidadPage() {
   // El filtro de categoría solo está disponible logueado: GET /api/categories
   // requiere autenticación aunque no exija un rol específico.
   useEffect(() => {
-    if (!session) return
+    if (!customer) return
     customerCategoriesApi.list().then(setCategories).catch(() => { /* no bloquea la búsqueda */ })
-  }, [session])
+  }, [customer])
 
   const search = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -69,7 +69,7 @@ export default function DisponibilidadPage() {
       startTime: new Date(startTime).toISOString(),
       endTime: new Date(endTime).toISOString(),
     })
-    if (session) {
+    if (customer) {
       router.push(`/portal/${slug}/cuenta/reservas?prefill=1`)
     } else {
       router.push(`/portal/${slug}/register`)
@@ -84,7 +84,7 @@ export default function DisponibilidadPage() {
           <p className="page-subtitle">Buscá y reservá sin necesidad de llamar</p>
         </div>
         <div className="flex gap-2">
-          {session ? (
+          {customer ? (
             <Link href={`/portal/${slug}/cuenta/reservas`} className="btn-secondary">Mis reservas</Link>
           ) : (
             <>
@@ -116,7 +116,7 @@ export default function DisponibilidadPage() {
             className="input"
           />
         </div>
-        {session && categories.length > 0 && (
+        {customer && categories.length > 0 && (
           <div>
             <label className="label">Categoría</label>
             <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="input">

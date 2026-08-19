@@ -3,14 +3,14 @@ import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useCustomerAuth } from '@/context/CustomerAuthContext'
-import { customerAuthApi, toCustomerSession, extractErrorMessage, extractFieldErrors } from '@/lib/customerApi'
+import { customerAuthApi, extractErrorMessage, extractFieldErrors } from '@/lib/customerApi'
 import { readPendingBooking } from '@/lib/pendingBooking'
 
 export default function CustomerRegisterPage() {
   const router = useRouter()
   const params = useParams()
   const slug = params?.businessSlug as string
-  const { setSession } = useCustomerAuth()
+  const { refreshCustomer } = useCustomerAuth()
 
   const [fullName, setFullName] = useState('')
   const [email, setEmail]       = useState('')
@@ -25,8 +25,8 @@ export default function CustomerRegisterPage() {
     setError('')
     setFieldErrors({})
     try {
-      const res = await customerAuthApi.register(slug, { fullName, email, password })
-      setSession(toCustomerSession(res, slug))
+      await customerAuthApi.register(slug, { fullName, email, password })
+      await refreshCustomer(slug)
       const pending = readPendingBooking()
       router.replace(pending ? `/portal/${slug}/cuenta/reservas?prefill=1` : `/portal/${slug}/cuenta/reservas`)
     } catch (err: unknown) {

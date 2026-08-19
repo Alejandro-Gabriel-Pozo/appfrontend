@@ -9,7 +9,7 @@ export default function MiCuentaPage() {
   const router = useRouter()
   const params = useParams()
   const slug = params?.businessSlug as string
-  const { clearSession } = useCustomerAuth()
+  const { logout } = useCustomerAuth()
 
   const [account, setAccount] = useState<{ id: string; fullName: string; email: string } | null>(null)
   const [error, setError] = useState('')
@@ -27,13 +27,13 @@ export default function MiCuentaPage() {
     setDeleting(true)
     try {
       await customerAccountApi.deleteAccount()
-      finishDeletion()
+      await finishDeletion()
     } catch (err: unknown) {
       const e = err as ApiErrorWithStatus
       // La cuenta ya estaba eliminada u ya no existe — desde la perspectiva
       // del usuario, el resultado deseado (quedar deslogueado) es el mismo.
       if (e.code === 'ALREADY_DELETED' || e.code === 'NOT_FOUND') {
-        finishDeletion()
+        await finishDeletion()
       } else {
         setError(extractErrorMessage(err))
         setConfirmOpen(false)
@@ -42,8 +42,8 @@ export default function MiCuentaPage() {
     }
   }
 
-  function finishDeletion() {
-    clearSession()
+  async function finishDeletion() {
+    await logout()
     router.replace(`/portal/${slug}/login`)
   }
 
