@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import type { Resource, Reservation, ReservationStatus, BookableService } from '@/lib/types'
+import { housekeepingApi } from '@/lib/api'
 
 // ─── Calendario de PMS (tape chart) — construido a medida, sin librería ─────
 // Filas = habitaciones (recursos de alojamiento), columnas = días, barras =
@@ -106,6 +107,23 @@ export default function RoomCalendar({
 }) {
   const [weekStartMs, setWeekStartMs] = useState(todayUTCMidnightMs)
   const [isDragging, setIsDragging] = useState(false)
+
+  // Habitaciones fuera de servicio (Housekeeping) — el backend ya bloquea
+  // reservar sobre estas (reservation-availability.service.ts::
+  // isOutOfService()), pero el calendario las mostraba como libres, sin
+  // ninguna pista de por qué un intento de reservar iba a fallar
+  // (auditoría de producto, 19/08/2026). `isOutOfService()` no depende de
+  // fecha -- es un estado del recurso, no de un día puntual -- así que
+  // alcanza con traerlo una vez al montar, no por semana visible.
+  const [outOfServiceIds, setOutOfServiceIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    let cancelled = false
+    housekeepingApi.byStatus('OUT_OF_SERVICE')
+      .then(tasks => { if (!cancelled) setOutOfServiceIds(new Set(tasks.map(t => t.resourceId))) })
+      .catch(() => { /* no bloquear el calendario si esto falla -- es una ayuda visual, no la fuente de verdad */ })
+    return () => { cancelled = true }
+  }, [])
+
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null)
   const dragSessionRef = useRef<DragSession | null>(null)
   // Espejo de dragPreview vía ref -- handleUp necesita el valor MÁS
@@ -281,30 +299,41 @@ export default function RoomCalendar({
                 if (dragPreview?.reservationId === r.id) return false
                 return r.resourceId === resource.id
               })
+              const outOfService = outOfServiceIds.has(resource.id)
 
               return (
                 <div key={resource.id} className="flex" style={{ borderBottom: '1px solid var(--border)', position: 'relative' }}>
                   <div
                     style={{
                       width: RESOURCE_COL_WIDTH, flexShrink: 0, padding: '0 12px',
-                      display: 'flex', alignItems: 'center',
+                      display: 'flex', flexDirection: 'column', justifyContent: 'center',
                       fontSize: 13, color: 'var(--text-primary)', fontWeight: 500,
                       background: 'var(--surface-4)', position: 'sticky', left: 0, zIndex: 2,
                     }}
                   >
                     {resource.name}
+                    {outOfService && (
+                      <span className="text-xs" style={{ color: 'var(--danger)', fontWeight: 600 }}>Fuera de servicio</span>
+                    )}
                   </div>
 
                   <div style={{ position: 'relative', width: gridWidth, height: ROW_HEIGHT, flexShrink: 0 }}>
-                    {/* Celdas clickeables (fondo) — una por día */}
+                    {/* Celdas clickeables (fondo) — una por día. Fuera de
+                        servicio: sin onClick (el backend igual lo rechazaría,
+                        reservation-availability.service.ts::isOutOfService())
+                        + rayado visual, para no dejar al staff intentar sin
+                        saber por qué va a fallar. */}
                     {days.map((ms, i) => (
                       <div
                         key={ms}
-                        onClick={() => onEmptySlotClick(resource.id, msToDate(ms))}
+                        onClick={outOfService ? undefined : () => onEmptySlotClick(resource.id, msToDate(ms))}
                         style={{
                           position: 'absolute', left: i * DAY_WIDTH, top: 0, width: DAY_WIDTH, height: ROW_HEIGHT,
                           borderLeft: i > 0 ? '1px solid var(--border)' : undefined,
-                          cursor: 'pointer',
+                          cursor: outOfService ? 'not-allowed' : 'pointer',
+                          background: outOfService
+                            ? 'repeating-linear-gradient(45deg, var(--surface-3), var(--surface-3) 8px, var(--surface-2) 8px, var(--surface-2) 16px)'
+                            : undefined,
                         }}
                       />
                     ))}
