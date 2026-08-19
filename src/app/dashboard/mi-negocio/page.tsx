@@ -1,15 +1,11 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { businessHoursApi, businessProfileApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import type { OperatingWindow } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Sin módulo propio — acento brass por defecto (sección 6 del doc).
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
@@ -197,7 +193,7 @@ export default function MiNegocioPage() {
   }
 
   return (
-    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
     <div style={{ maxWidth: '40rem' }}>
       <div className="page-header">
         <div>

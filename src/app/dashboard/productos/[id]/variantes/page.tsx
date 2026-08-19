@@ -2,16 +2,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { productsApi, variantsApi, extractErrorMessage } from '@/lib/api'
 import type { Product, ProductVariant, CreateVariantInput, UpdateVariantInput } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Acento clay (POS_RESTAURANTE, mismo módulo que Productos).
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -228,7 +224,7 @@ export default function VariantesPage() {
   const basePrice = product?.basePrice ?? 0
 
   return (
-    <div className={`bastion bastion-clay ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion bastion-clay`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Back + Header */}
       <div className="page-header" style={{ alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

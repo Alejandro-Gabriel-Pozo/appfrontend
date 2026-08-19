@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
 import { extractErrorMessage } from '@/lib/api'
 import { isPlanLimitError, isPlatformUnavailable, getErrorMessage } from '@/lib/apiErrors'
@@ -12,9 +11,6 @@ import type { Category } from '@/lib/types'
 // Acento brass (core, sin gate de módulo). UpgradePrompt ya usa una paleta
 // clara (amarillo sobre blanco) — se ve bien tal cual sobre parchment, sin
 // tocarlo.
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 export default function CategoriasPage() {
   const { toast } = useToast()
@@ -95,7 +91,7 @@ export default function CategoriasPage() {
   }
 
   return (
-    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Categorías</h1>

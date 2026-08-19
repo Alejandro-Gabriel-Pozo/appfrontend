@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { customersApi, customerAccountApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
@@ -8,9 +7,6 @@ import type { Customer, CustomerStatement, TransactionType, TransactionStatus } 
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Acento clay (mismo criterio que Órdenes/Productos — plata/POS).
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const TYPE_LABEL: Record<TransactionType, string> = {
   CHARGE: 'Cargo',
@@ -114,7 +110,7 @@ export default function CuentasCorrientesPage() {
   }
 
   return (
-    <div className={`bastion bastion-clay ${fraunces.variable} ${plexSans.variable} ${plexMono.variable} grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion bastion-clay grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Columna izquierda: buscar/elegir cliente */}
       <div>
         <h1 className="page-title mb-1" style={{ fontSize: 20, fontWeight: 600 }}>Cuentas Corrientes</h1>

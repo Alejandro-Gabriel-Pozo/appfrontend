@@ -1,15 +1,11 @@
 'use client'
 import { useState } from 'react'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { apiFetch } from '@/lib/api'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Sin módulo propio — acento brass por defecto (sección 6 del doc). El
 // banner de advertencia usa los tokens --warning* (brass) en vez de amber
 // hardcodeado — mismo semáforo "pendiente/atención" que ya usan los badges.
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(false)
@@ -44,7 +40,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Administración del sistema</h1>

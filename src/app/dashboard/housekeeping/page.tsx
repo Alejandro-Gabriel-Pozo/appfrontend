@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { housekeepingApi, resourcesApi, usersApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
@@ -12,9 +11,6 @@ import type { HousekeepingTask, HousekeepingStatus, Shift, Resource, TeamMember,
 // Segunda pantalla migrada (18/08/2026) — módulo PMS, acento brass, patrón
 // "rack": una ficha de color por recurso en vez de una tabla genérica (es el
 // elemento señal del sistema para housekeeping, sección 4 del doc).
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const STATUS_LABEL: Record<HousekeepingStatus, string> = {
   PENDING: 'Pendiente',
@@ -218,7 +214,7 @@ export default function HousekeepingPage() {
   const selectedTask = selectedResource ? getTaskForResource(selectedResource.id) : null
 
   return (
-    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Housekeeping</h1>

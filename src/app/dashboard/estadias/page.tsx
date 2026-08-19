@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { staysApi, resourcesApi, customersApi, reservationsApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import type { PaginatedResponse } from '@/lib/api'
@@ -11,9 +10,6 @@ import type { Stay, Resource, Customer, Reservation, Shift, StayFolio, Category 
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Tercera pantalla migrada (18/08/2026) — módulo PMS, acento brass.
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const SHIFT_LABEL: Record<Shift, string> = { MORNING: 'Mañana', AFTERNOON: 'Tarde', NIGHT: 'Noche' }
 
@@ -250,7 +246,7 @@ export default function EstadiasPage() {
   }
 
   return (
-    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Estadías</h1>

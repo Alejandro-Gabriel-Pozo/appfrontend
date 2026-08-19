@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { Refine } from '@refinedev/core'
 import routerProvider from '@refinedev/nextjs-router/app'
 import { ToastProvider, useToast } from '@/context/ToastContext'
@@ -10,6 +11,18 @@ import { useAuth } from '@/context/AuthContext'
 import { businessModulesApi, systemApi, type DeadLetterEvent } from '@/lib/api'
 import { dataProvider } from '@/lib/refine/dataProvider'
 import { createAuthProvider } from '@/lib/refine/authProvider'
+
+// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// Las 3 tipografías del sistema se cargan UNA vez acá (auditoria-modularidad.md
+// Fase 2, F8) — antes cada una de las 19 pantallas del dashboard las volvía a
+// cargar por separado, mismo bloque de 3 líneas copiado y pegado en cada
+// archivo. next/font expone cada fuente como una variable CSS
+// (--font-bastion-serif/sans/mono); puesta acá, en un ancestro de {children},
+// cascadea a cualquier pantalla que use la clase `.bastion` sin que esa
+// pantalla tenga que declararla de nuevo.
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 // Piloto del data provider (18/08/2026) — solo estos dos recursos tienen
 // adaptador en src/lib/refine/dataProvider.ts por ahora. Sumar acá cuando
@@ -340,6 +353,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         options={{ syncWithLocation: false, disableTelemetry: true }}
       >
       <div
+        className={`${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`}
         style={{
           display: 'flex',
           height: '100dvh',

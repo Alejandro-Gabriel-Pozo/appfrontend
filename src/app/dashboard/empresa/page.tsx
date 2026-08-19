@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { companiesApi, productsApi, extractErrorMessage } from '@/lib/api'
 import type { CompanyLink, CompanyProduct } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
@@ -8,9 +7,6 @@ import { useToast } from '@/context/ToastContext'
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Acento brass por defecto (sin módulo propio — el vínculo a empresa aplica
 // más allá de un solo módulo POS/PMS).
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 function fmt(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
@@ -76,7 +72,7 @@ export default function EmpresaPage() {
   }
 
   return (
-    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Empresa</h1>

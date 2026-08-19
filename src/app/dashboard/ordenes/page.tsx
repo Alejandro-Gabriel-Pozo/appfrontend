@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { ordersApi, customersApi, productsApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
@@ -9,9 +8,6 @@ import type { Order, OrderStatus, Customer, Product, CreateOrderItemInput } from
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Primera pantalla POS migrada (18/08/2026) — acento clay (.bastion-clay).
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 const PAGE_SIZE = 20
 
@@ -205,7 +201,7 @@ export default function OrdenesPage() {
   }
 
   return (
-    <div className={`bastion bastion-clay ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion bastion-clay`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
       <div className="page-header">
         <div>

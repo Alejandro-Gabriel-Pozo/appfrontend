@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
 import { categoriesApi, resourceHoursApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
@@ -8,9 +7,6 @@ import type { Resource, Category, OperatingWindow } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Acento brass (core, sin gate de módulo).
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 // basePrice admite '' mientras se tipea (18/08/2026, pedido del dueño) --
 // ver ProductFormState en dashboard/productos/page.tsx para el mismo criterio.
@@ -137,7 +133,7 @@ export default function RecursosPage() {
   const getCatName = (id: string) => categories.find(c => c.id === id)?.name ?? id
 
   return (
-    <div className={`bastion ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
       <div className="page-header">
         <div>

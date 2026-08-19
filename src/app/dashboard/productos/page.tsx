@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { useTable, useCreate, useUpdate, useDelete, useInvalidate } from '@refinedev/core'
 import { extractErrorMessage, productsApi, wasteReasonsApi, companiesApi } from '@/lib/api'
 import type { Product, CreateProductInput, UpdateProductInput, WasteReason, ProductType, CompanyLink } from '@/lib/types'
@@ -9,9 +8,6 @@ import { useToast } from '@/context/ToastContext'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
 // Acento clay (POS_RESTAURANTE).
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -611,7 +607,7 @@ export default function ProductosPage() {
   )
 
   return (
-    <div className={`bastion bastion-clay ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`bastion bastion-clay`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
       <div className="page-header">
         <div>
