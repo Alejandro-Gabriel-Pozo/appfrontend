@@ -19,6 +19,14 @@ export interface OperatingWindow {
 // siguen sin UI de edición en el dashboard (gap preexistente, no de este
 // cambio), se listan acá solo para que el tipo no mienta sobre lo que
 // devuelve GET /api/business-profile.
+// ─── Perfil fiscal del negocio EMISOR (19/08/2026) ────────────────────────────
+// Facturación Electrónica AFIP, Fase 1 (app-main/docs/pendientes-2026-08-18.md
+// punto P) -- sin conexión real a AFIP todavía, solo los datos que hacen falta
+// cargar antes de poder emitir. Sin catálogo cerrado para taxIdType/
+// taxCondition (mismo criterio que el backend): texto libre por ahora, AFIP
+// expone sus propios catálogos de referencia (FEParamGetTiposDoc/
+// FEParamGetCondicionIvaReceptor) para validar en serio recién cuando se
+// conecte de verdad.
 export interface BusinessProfile {
   id: string
   displayName: string | null
@@ -27,4 +35,14 @@ export interface BusinessProfile {
   timezone: string
   defaultCheckInTime: string
   defaultCheckOutTime: string
+  legalName: string | null
+  taxId: string | null
+  taxIdType: string | null
+  taxCondition: string | null
+  fiscalAddressLine1: string | null
+  fiscalAddressCity: string | null
+  fiscalAddressState: string | null
+  fiscalAddressPostalCode: string | null
+  fiscalAddressCountry: string | null
+  afipSalesPoint: number | null
 }

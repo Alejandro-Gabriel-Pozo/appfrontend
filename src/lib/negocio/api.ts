@@ -9,6 +9,16 @@ export const businessProfileApi = {
     contactEmail?: string | null
     defaultCheckInTime?: string
     defaultCheckOutTime?: string
+    legalName?: string | null
+    taxId?: string | null
+    taxIdType?: string | null
+    taxCondition?: string | null
+    fiscalAddressLine1?: string | null
+    fiscalAddressCity?: string | null
+    fiscalAddressState?: string | null
+    fiscalAddressPostalCode?: string | null
+    fiscalAddressCountry?: string | null
+    afipSalesPoint?: number | null
   }) => apiFetch<BusinessProfile>('/api/business-profile', { method: 'PUT', body: JSON.stringify(body) }),
 }
 

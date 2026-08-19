@@ -114,6 +114,165 @@ function BusinessIdentitySection() {
   )
 }
 
+// Perfil fiscal del negocio EMISOR (19/08/2026, Facturación Electrónica AFIP
+// Fase 1 -- app-main/docs/pendientes-2026-08-18.md punto P). Todo opcional:
+// sin esto cargado no se puede emitir un comprobante AFIP, pero el resto del
+// sistema sigue funcionando igual (reservas, POS, etc.) sin depender de ello.
+function FiscalProfileSection() {
+  const { toast } = useToast()
+  const [legalName, setLegalName] = useState('')
+  const [taxId, setTaxId] = useState('')
+  const [taxIdType, setTaxIdType] = useState('')
+  const [taxCondition, setTaxCondition] = useState('')
+  const [addressLine1, setAddressLine1] = useState('')
+  const [addressCity, setAddressCity] = useState('')
+  const [addressState, setAddressState] = useState('')
+  const [addressPostalCode, setAddressPostalCode] = useState('')
+  const [addressCountry, setAddressCountry] = useState('')
+  const [salesPoint, setSalesPoint] = useState<number | ''>('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    queueMicrotask(async () => {
+      try {
+        const profile = await businessProfileApi.get()
+        setLegalName(profile.legalName ?? '')
+        setTaxId(profile.taxId ?? '')
+        setTaxIdType(profile.taxIdType ?? '')
+        setTaxCondition(profile.taxCondition ?? '')
+        setAddressLine1(profile.fiscalAddressLine1 ?? '')
+        setAddressCity(profile.fiscalAddressCity ?? '')
+        setAddressState(profile.fiscalAddressState ?? '')
+        setAddressPostalCode(profile.fiscalAddressPostalCode ?? '')
+        setAddressCountry(profile.fiscalAddressCountry ?? '')
+        setSalesPoint(profile.afipSalesPoint ?? '')
+      } catch (err) {
+        toast(extractErrorMessage(err), 'error')
+      } finally {
+        setLoading(false)
+      }
+    })
+  }, [toast])
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      await businessProfileApi.update({
+        legalName: legalName.trim() || null,
+        taxId: taxId.trim() || null,
+        taxIdType: taxIdType.trim() || null,
+        taxCondition: taxCondition.trim() || null,
+        fiscalAddressLine1: addressLine1.trim() || null,
+        fiscalAddressCity: addressCity.trim() || null,
+        fiscalAddressState: addressState.trim() || null,
+        fiscalAddressPostalCode: addressPostalCode.trim() || null,
+        fiscalAddressCountry: addressCountry.trim() || null,
+        afipSalesPoint: salesPoint === '' ? null : salesPoint,
+      })
+      toast('Datos fiscales guardados', 'success')
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <div className="card p-4 h-32 skeleton" />
+
+  return (
+    <div className="card p-4">
+      <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Datos fiscales (AFIP)</p>
+      <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)' }}>
+        Necesarios para emitir comprobantes electrónicos AFIP. Sin esto cargado, el resto
+        del sistema sigue funcionando normalmente.
+      </p>
+      <form onSubmit={handleSave} className="space-y-3">
+        <div>
+          <label className="label">Razón social</label>
+          <input
+            type="text" className="input" value={legalName}
+            onChange={e => setLegalName(e.target.value)}
+            placeholder="Ej. Hotel Los Álamos SRL"
+          />
+        </div>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="label">CUIT</label>
+            <input
+              type="text" className="input" value={taxId}
+              onChange={e => setTaxId(e.target.value)}
+              placeholder="20-XXXXXXXX-X"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="label">Tipo de documento</label>
+            <input
+              type="text" className="input" value={taxIdType}
+              onChange={e => setTaxIdType(e.target.value)}
+              placeholder="CUIT"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="label">Condición frente al IVA</label>
+          <input
+            type="text" className="input" value={taxCondition}
+            onChange={e => setTaxCondition(e.target.value)}
+            placeholder="Responsable Inscripto"
+          />
+        </div>
+        <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+          <label className="label">Domicilio fiscal</label>
+          <input
+            type="text" className="input mb-2" value={addressLine1}
+            onChange={e => setAddressLine1(e.target.value)}
+            placeholder="Calle y número"
+          />
+          <div className="flex gap-2">
+            <input
+              type="text" className="input" value={addressCity}
+              onChange={e => setAddressCity(e.target.value)}
+              placeholder="Localidad"
+            />
+            <input
+              type="text" className="input" value={addressState}
+              onChange={e => setAddressState(e.target.value)}
+              placeholder="Provincia"
+            />
+          </div>
+          <div className="flex gap-2 mt-2">
+            <input
+              type="text" className="input" value={addressPostalCode}
+              onChange={e => setAddressPostalCode(e.target.value)}
+              placeholder="Código postal"
+            />
+            <input
+              type="text" className="input" value={addressCountry} maxLength={2}
+              onChange={e => setAddressCountry(e.target.value.toUpperCase())}
+              placeholder="AR"
+              style={{ maxWidth: '5rem' }}
+            />
+          </div>
+        </div>
+        <div>
+          <label className="label">Punto de venta AFIP</label>
+          <input
+            type="number" className="input" min={1} value={salesPoint}
+            onChange={e => setSalesPoint(e.target.value === '' ? '' : Number(e.target.value))}
+            placeholder="1"
+            style={{ maxWidth: '8rem' }}
+          />
+        </div>
+        <button type="submit" disabled={saving} className="btn-primary">
+          {saving ? <span className="spinner" /> : 'Guardar'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 export default function MiNegocioPage() {
   const { toast } = useToast()
   const [windows, setWindows] = useState<OperatingWindow[]>([])
@@ -207,6 +366,10 @@ export default function MiNegocioPage() {
 
       <div className="mb-6">
         <BusinessIdentitySection />
+      </div>
+
+      <div className="mb-6">
+        <FiscalProfileSection />
       </div>
 
       {loading ? (
