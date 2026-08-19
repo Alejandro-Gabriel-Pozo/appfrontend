@@ -20,6 +20,30 @@ export default function FacturarButton({ financialTransactionId }: { financialTr
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [notEnabled, setNotEnabled] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+
+  async function handleDownloadPdf() {
+    if (!invoice) return
+    setDownloadingPdf(true)
+    try {
+      const blob = await invoicesApi.downloadPdf(invoice.id)
+      // El viewer de artifacts bloquea descargas iniciadas por la propia
+      // página, pero esto es la app real del usuario en su propio
+      // navegador -- el patrón estándar de objectURL + <a> temporal aplica.
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `comprobante-${invoice.cbteNro ?? invoice.id}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setErrorMessage(extractErrorMessage(err))
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
 
   async function handleClick() {
     setLoading(true)
@@ -45,9 +69,20 @@ export default function FacturarButton({ financialTransactionId }: { financialTr
 
   if (invoice?.status === 'ISSUED') {
     return (
-      <span className="text-xs mono" style={{ color: 'var(--bastion-sage)' }}>
-        CAE {invoice.cae} · Cbte {invoice.cbteNro}
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs mono" style={{ color: 'var(--bastion-sage)' }}>
+          CAE {invoice.cae} · Cbte {invoice.cbteNro}
+        </span>
+        <button
+          type="button"
+          onClick={handleDownloadPdf}
+          disabled={downloadingPdf}
+          className="btn-mini btn-mini-neutral"
+        >
+          {downloadingPdf ? <span className="spinner" /> : null}
+          PDF
+        </button>
+      </div>
     )
   }
 

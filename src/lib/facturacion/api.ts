@@ -22,4 +22,15 @@ export const invoicesApi = {
   get: (id: string) => apiFetch<Invoice>(`/api/invoices/${id}`),
   listByFinancialTransaction: (financialTransactionId: string) =>
     apiFetch<Invoice[]>(`/api/invoices?financialTransactionId=${encodeURIComponent(financialTransactionId)}`),
+  // PDF binario -- no pasa por apiFetch (esa función siempre hace res.json()).
+  // /api/* es same-origin (rewrite de next.config.js a NEXT_PUBLIC_API_URL,
+  // ver comentario en lib/http.ts), así que la cookie de sesión viaja sola.
+  downloadPdf: async (id: string): Promise<Blob> => {
+    const res = await fetch(`/api/invoices/${id}/pdf`, { credentials: 'include' })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw { code: body.code ?? 'INTERNAL_ERROR', message: body.message ?? 'No se pudo generar el PDF', httpStatus: res.status }
+    }
+    return res.blob()
+  },
 }
