@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { businessHoursApi, businessProfileApi, afipCredentialsApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
+import { useIsOwner } from '@/hooks/useAuthRole'
 import type { OperatingWindow, AfipCredentialsStatus } from '@/lib/types'
 
 // ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
@@ -120,6 +121,14 @@ function BusinessIdentitySection() {
 // sistema sigue funcionando igual (reservas, POS, etc.) sin depender de ello.
 function FiscalProfileSection() {
   const { toast } = useToast()
+  const isOwner = useIsOwner()
+  // D3 (app-main docs/pendientes-2026-08-19.md): una vez que el CUIT ya
+  // está cargado, el backend exige OWNER_ONLY para tocar estos campos --
+  // `alreadyConfirmed` se fija con el valor que trajo la carga inicial
+  // (no con lo que se está tipeando ahora) para que el candado no
+  // parpadee mientras se edita el campo CUIT en la misma sesión.
+  const [alreadyConfirmed, setAlreadyConfirmed] = useState(false)
+  const locked = alreadyConfirmed && !isOwner
   const [legalName, setLegalName] = useState('')
   const [taxId, setTaxId] = useState('')
   const [taxIdType, setTaxIdType] = useState('')
@@ -151,6 +160,7 @@ function FiscalProfileSection() {
         setSalesPoint(profile.afipSalesPoint ?? '')
         setIvaRate(profile.defaultIvaRate)
         setPricesIncludeIva(profile.pricesIncludeIva)
+        setAlreadyConfirmed(profile.taxId !== null)
       } catch (err) {
         toast(extractErrorMessage(err), 'error')
       } finally {
@@ -194,7 +204,13 @@ function FiscalProfileSection() {
         Necesarios para emitir comprobantes electrónicos AFIP. Sin esto cargado, el resto
         del sistema sigue funcionando normalmente.
       </p>
+      {locked && (
+        <div className="mb-3 px-3 py-2 rounded-lg text-xs badge-completed">
+          Los datos fiscales ya están cargados — solo el propietario del negocio puede modificarlos.
+        </div>
+      )}
       <form onSubmit={handleSave} className="space-y-3">
+      <fieldset disabled={locked} className="space-y-3" style={locked ? { opacity: 0.6 } : undefined}>
         <div>
           <label className="label">Razón social</label>
           <input
@@ -271,6 +287,11 @@ function FiscalProfileSection() {
             style={{ maxWidth: '8rem' }}
           />
         </div>
+        </fieldset>
+        {/* IVA general/pricesIncludeIva quedan FUERA del candado -- no son
+            "razón social/CUIT/domicilio", el backend no los trata como
+            campo fiscal bloqueado (business-profile.service.ts,
+            FISCAL_FIELDS) y cualquier MANAGEMENT los sigue pudiendo tocar. */}
         <div className="flex gap-3 items-end pt-2" style={{ borderTop: '1px solid var(--border)' }}>
           <div>
             <label className="label">IVA general (%)</label>
@@ -300,6 +321,13 @@ function FiscalProfileSection() {
 // indicador de estado y la posibilidad de reemplazar o borrar.
 function AfipCertificateSection() {
   const { toast } = useToast()
+  const isOwner = useIsOwner()
+  // D3: `afipCuit` también es un campo fiscal (business-profile.service.ts,
+  // FISCAL_FIELDS) -- mismo candado que FiscalProfileSection, solo para
+  // este sub-formulario (el cert/clave de WSAA es otro repositorio, no
+  // pasa por acá).
+  const [alreadyConfirmed, setAlreadyConfirmed] = useState(false)
+  const cuitLocked = alreadyConfirmed && !isOwner
   const [status, setStatus] = useState<AfipCredentialsStatus | null>(null)
   const [notEnabled, setNotEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -324,6 +352,7 @@ function AfipCertificateSection() {
       ])
       setStatus(credStatus)
       setAfipCuit(profile.afipCuit ?? '')
+      setAlreadyConfirmed(profile.taxId !== null)
       setNotEnabled(false)
     } catch (err) {
       if (err && typeof err === 'object' && 'code' in err && err.code === 'MODULE_NOT_ENABLED') {
@@ -449,23 +478,30 @@ function AfipCertificateSection() {
           contra businessProfileApi, no afipCredentialsApi: no es un
           secreto, se puede releer y editar sin volver a cargar el cert. */}
       <form onSubmit={handleSaveCuit} className="space-y-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-        <div>
-          <label className="label">CUIT de autenticación (opcional)</label>
-          <input
-            className="input" value={afipCuit}
-            onChange={e => setAfipCuit(e.target.value)}
-            placeholder="Vacío = usar el CUIT legal de Datos fiscales"
-          />
-          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            Solo si necesitás autenticarte contra AFIP con un CUIT distinto
-            al legal — ej. un CUIT de testing en homologación. No cambia
-            &quot;Datos fiscales&quot;.
-          </p>
-        </div>
-        <button type="submit" disabled={savingCuit} className="btn-secondary">
-          {savingCuit ? <span className="spinner" /> : null}
-          Guardar CUIT de autenticación
-        </button>
+        {cuitLocked && (
+          <div className="px-3 py-2 rounded-lg text-xs badge-completed">
+            Los datos fiscales ya están cargados — solo el propietario del negocio puede modificar este CUIT.
+          </div>
+        )}
+        <fieldset disabled={cuitLocked} style={cuitLocked ? { opacity: 0.6 } : undefined}>
+          <div>
+            <label className="label">CUIT de autenticación (opcional)</label>
+            <input
+              className="input" value={afipCuit}
+              onChange={e => setAfipCuit(e.target.value)}
+              placeholder="Vacío = usar el CUIT legal de Datos fiscales"
+            />
+            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+              Solo si necesitás autenticarte contra AFIP con un CUIT distinto
+              al legal — ej. un CUIT de testing en homologación. No cambia
+              &quot;Datos fiscales&quot;.
+            </p>
+          </div>
+          <button type="submit" disabled={savingCuit} className="btn-secondary mt-2">
+            {savingCuit ? <span className="spinner" /> : null}
+            Guardar CUIT de autenticación
+          </button>
+        </fieldset>
       </form>
     </div>
   )
