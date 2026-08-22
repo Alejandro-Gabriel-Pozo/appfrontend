@@ -19,6 +19,10 @@ export type {
 export type { Resource, CreateResourceInput, UpdateResourceInput } from './recursos/types'
 export type { Role, TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput } from './usuarios/types'
 export type {
+  UserInvitationStatus, UserInvitation, CreateInvitationInput,
+  InvitationPreview, AcceptInvitationInput,
+} from './usuarios/types'
+export type {
   BookingMode, BookableService, CreateBookableServiceInput, UpdateBookableServiceInput,
   ResourceLock, RatePlan, CreateRatePlanInput, UpdateRatePlanInput,
   ServiceSchedule, CreateServiceScheduleInput, UpdateServiceScheduleInput,

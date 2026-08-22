@@ -1,6 +1,9 @@
 'use client'
 import { apiFetch } from '../http'
-import type { TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput, Role } from './types'
+import type {
+  TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput, Role,
+  UserInvitation, CreateInvitationInput, InvitationPreview, AcceptInvitationInput,
+} from './types'
 
 // ─── Team members (empleados) ───────────────────────────────────────────────────
 export const usersApi = {
@@ -20,4 +23,25 @@ export const rolesApi = {
   update: (id: string, body: { name?: string; permissionGroups?: string[] }) =>
     apiFetch<Role>(`/api/roles/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   remove: (id: string)                                => apiFetch<void>(`/api/roles/${id}`, { method: 'DELETE' }),
+}
+
+// ─── Invitaciones (D2, pendientes-2026-08-19.md) ────────────────────────────
+// Gestión -- requiere sesión de staff (MANAGEMENT), mismo cookie httpOnly
+// que el resto de /api/*.
+export const invitationsApi = {
+  list:   ()                            => apiFetch<UserInvitation[]>('/api/users/invitations'),
+  create: (body: CreateInvitationInput) => apiFetch<UserInvitation>('/api/users/invitations', { method: 'POST', body: JSON.stringify(body) }),
+  resend: (id: string)                  => apiFetch<void>(`/api/users/invitations/${id}/resend`, { method: 'POST' }),
+  revoke: (id: string)                  => apiFetch<void>(`/api/users/invitations/${id}`, { method: 'DELETE' }),
+}
+
+// Público -- lo llama alguien SIN sesión todavía (la pantalla de aceptar
+// invitación, fuera de /dashboard). `apiFetch` igual sirve: son rutas que
+// no chequean cookie del lado del backend, `credentials: 'include'` no
+// molesta.
+export const invitationAcceptanceApi = {
+  lookup: (token: string) =>
+    apiFetch<InvitationPreview>('/api/invitations/lookup', { method: 'POST', body: JSON.stringify({ token }) }),
+  accept: (body: AcceptInvitationInput) =>
+    apiFetch<{ email: string; businessName: string; requiresLogin: boolean }>('/api/invitations/accept', { method: 'POST', body: JSON.stringify(body) }),
 }

@@ -46,3 +46,47 @@ export interface UpdateTeamMemberInput {
   roleId?: string
   password?: string
 }
+
+// ─── Invitaciones (D2, pendientes-2026-08-19.md) ────────────────────────────
+// Vía alternativa a la alta directa de arriba: el ADMIN solo carga
+// email + rol, la persona invitada define su propia contraseña (o, si ya
+// tiene cuenta en otro negocio, solo confirma la invitación con la que ya
+// tiene). Ver backend: app-main src/usuarios-roles/user-invitation.routes.ts.
+
+export type UserInvitationStatus = 'PENDING' | 'ACCEPTED' | 'REVOKED'
+
+export interface UserInvitation {
+  id: string
+  businessId: string
+  businessName: string
+  email: string
+  roleId: string
+  roleName: string
+  status: UserInvitationStatus
+  invitedByIdentityId: string
+  acceptedIdentityId: string | null
+  expiresAt: string
+  acceptedAt: string | null
+  revokedAt: string | null
+  createdAt: string
+}
+
+export interface CreateInvitationInput {
+  email: string
+  roleId: string
+}
+
+/** Respuesta de POST /api/invitations/lookup — antes de pedir password. */
+export interface InvitationPreview {
+  email: string
+  businessName: string
+  roleName: string
+  /** false si el email ya tiene una identity (de este u otro negocio) -- no hace falta password. */
+  requiresPassword: boolean
+}
+
+export interface AcceptInvitationInput {
+  token: string
+  /** Solo si `InvitationPreview.requiresPassword` es true. */
+  password?: string
+}
