@@ -5,7 +5,16 @@ import { extractErrorMessage } from '@/lib/api'
 import { isPlanLimitError, isPlatformUnavailable, getErrorMessage } from '@/lib/apiErrors'
 import { useToast } from '@/context/ToastContext'
 import UpgradePrompt, { type PlanLimitPayload } from '@/components/UpgradePrompt'
-import type { Category } from '@/lib/types'
+import type { Category, CategoryField } from '@/lib/types'
+
+// Draft de campo dinámico en el modal — `_key` es solo para el `key` de
+// React en la lista (estable entre reordenamientos), nunca se manda al
+// backend.
+type FieldDraft = CategoryField & { _key: string }
+
+function emptyFieldDraft(): FieldDraft {
+  return { _key: crypto.randomUUID(), name: '', label: '', type: 'text', required: false }
+}
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento brass (core, sin gate de módulo). UpgradePrompt ya usa una paleta
@@ -28,6 +37,7 @@ export default function CategoriasPage() {
   const [modalOpen, setModalOpen]     = useState(false)
   const [editing, setEditing]         = useState<Category | null>(null)
   const [form, setForm]               = useState({ name: '', description: '', isLodging: false })
+  const [fieldDrafts, setFieldDrafts] = useState<FieldDraft[]>([])
   const [submitting, setSubmitting]   = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
   // Banner 402 — los datos vienen del backend, nunca hardcodeados
@@ -36,27 +46,64 @@ export default function CategoriasPage() {
   function openCreate() {
     setEditing(null)
     setForm({ name: '', description: '', isLodging: false })
+    setFieldDrafts([])
     setModalOpen(true)
   }
 
   function openEdit(c: Category) {
     setEditing(c)
     setForm({ name: c.name, description: c.description ?? '', isLodging: c.isLodging })
+    setFieldDrafts(c.fields.map(f => ({ ...f, _key: crypto.randomUUID() })))
     setModalOpen(true)
+  }
+
+  function addFieldDraft() {
+    setFieldDrafts(prev => [...prev, emptyFieldDraft()])
+  }
+
+  function updateFieldDraft(key: string, patch: Partial<FieldDraft>) {
+    setFieldDrafts(prev => prev.map(f => (f._key === key ? { ...f, ...patch } : f)))
+  }
+
+  function removeFieldDraft(key: string) {
+    setFieldDrafts(prev => prev.filter(f => f._key !== key))
+  }
+
+  // Mismo criterio que CategoryFieldSchema (app-main/src/api/schemas/category.schemas.ts):
+  // nombre/label obligatorios, "select" necesita al menos una opción. Valida
+  // en el cliente antes de mandar para no gastar un viaje al backend con un
+  // 400 evitable — el backend sigue siendo la fuente de verdad.
+  function fieldDraftsError(): string | null {
+    for (const f of fieldDrafts) {
+      if (!f.name.trim() || !f.label.trim()) return 'Todos los campos necesitan nombre y label'
+      if (f.type === 'select' && (!f.options || f.options.filter(o => o.trim()).length === 0)) {
+        return `El campo "${f.label || f.name}" es de tipo "Opciones" y necesita al menos una opción`
+      }
+    }
+    return null
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const fieldsErr = fieldDraftsError()
+    if (fieldsErr) {
+      toast(fieldsErr, 'error')
+      return
+    }
+    const fields: CategoryField[] = fieldDrafts.map(({ _key, ...f }) => ({
+      ...f,
+      ...(f.type === 'select' && { options: (f.options ?? []).map(o => o.trim()).filter(Boolean) }),
+    }))
     setSubmitting(true)
     try {
       if (editing) {
         // UPDATE: no aplica límite de plan
-        await updateCategory({ resource: 'categorias', id: editing.id, values: form })
+        await updateCategory({ resource: 'categorias', id: editing.id, values: { ...form, fields } })
         toast('Categoría actualizada', 'success')
         setModalOpen(false)
       } else {
         // CREATE: puede fallar con 402, 503 o error genérico
-        await createCategory({ resource: 'categorias', values: { ...form, fields: [] } })
+        await createCategory({ resource: 'categorias', values: { ...form, fields } })
         toast('Categoría creada', 'success')
         setModalOpen(false)
       }
@@ -189,6 +236,87 @@ export default function CategoriasPage() {
                   </span>
                 </span>
               </label>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="label" style={{ margin: 0 }}>
+                    Campos del formulario de reserva <span style={{ color: 'var(--text-tertiary)' }}>(opcional)</span>
+                  </label>
+                  <button type="button" onClick={addFieldDraft} className="btn-mini btn-mini-neutral" style={{ fontSize: 12 }}>
+                    + Agregar campo
+                  </button>
+                </div>
+                <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
+                  El cliente los completa al reservar (ej: cantidad de huéspedes extra, alergias, tamaño de mesa).
+                </p>
+                {fieldDrafts.length === 0 ? (
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Sin campos definidos.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {fieldDrafts.map(f => (
+                      <div key={f._key} className="p-3 rounded-lg" style={{ border: '1px solid var(--border)' }}>
+                        <div className="flex gap-2 mb-2">
+                          <input
+                            className="input"
+                            style={{ fontSize: 13 }}
+                            placeholder="Nombre interno (ej: alergias)"
+                            value={f.name}
+                            onChange={e => updateFieldDraft(f._key, { name: e.target.value })}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeFieldDraft(f._key)}
+                            className="btn-mini btn-mini-clay"
+                            aria-label="Quitar campo"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <input
+                          className="input mb-2"
+                          style={{ fontSize: 13 }}
+                          placeholder="Label visible para el cliente"
+                          value={f.label}
+                          onChange={e => updateFieldDraft(f._key, { label: e.target.value })}
+                        />
+                        <div className="flex gap-2 mb-2">
+                          <select
+                            className="input"
+                            style={{ fontSize: 13 }}
+                            value={f.type}
+                            onChange={e => updateFieldDraft(f._key, { type: e.target.value as CategoryField['type'] })}
+                          >
+                            <option value="text">Texto</option>
+                            <option value="number">Número</option>
+                            <option value="select">Opciones</option>
+                            <option value="boolean">Sí/No</option>
+                            <option value="date">Fecha</option>
+                          </select>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            <input
+                              type="checkbox"
+                              checked={f.required}
+                              onChange={e => updateFieldDraft(f._key, { required: e.target.checked })}
+                              style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
+                            />
+                            Obligatorio
+                          </label>
+                        </div>
+                        {f.type === 'select' && (
+                          <input
+                            className="input"
+                            style={{ fontSize: 13 }}
+                            placeholder="Opciones separadas por coma (ej: Chica, Mediana, Grande)"
+                            value={(f.options ?? []).join(', ')}
+                            onChange={e => updateFieldDraft(f._key, { options: e.target.value.split(',').map(o => o.trimStart()) })}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancelar</button>
                 <button type="submit" disabled={submitting} className="btn-primary flex-1">
