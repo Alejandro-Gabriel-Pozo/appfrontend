@@ -88,7 +88,7 @@ export default function ReservasPage() {
 
   // Modal nueva reserva
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState({ resourceId: '', serviceId: '', ratePlanId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
+  const [form, setForm] = useState({ resourceId: '', serviceId: '', ratePlanId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0, anyResource: false })
   // Tarifas del servicio elegido (spec de mejoras PMS, 18/08/2026) —
   // selector de DOS pasos: elegir servicio primero, después (si tiene
   // tarifas) elegir cuál. Sin tarifas cargadas, el servicio sigue usando
@@ -190,7 +190,12 @@ export default function ReservasPage() {
       await createReservation({
         resource: 'reservas',
         values: {
-          resourceId: form.resourceId,
+          // K4 — con "cualquier recurso disponible" tildado, se manda
+          // categoryId (del servicio elegido) en vez de resourceId; son
+          // mutuamente excluyentes del lado del backend (CreateReservationSchema).
+          ...(form.anyResource && selectedService
+            ? { categoryId: selectedService.categoryId }
+            : { resourceId: form.resourceId }),
           customer: { id: customer.id },
           startTime,
           endTime,
@@ -202,7 +207,7 @@ export default function ReservasPage() {
       })
       toast('Reserva creada', 'success')
       setModalOpen(false)
-      setForm({ resourceId: '', serviceId: '', ratePlanId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
+      setForm({ resourceId: '', serviceId: '', ratePlanId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0, anyResource: false })
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setFieldErrors(fe)
@@ -213,7 +218,7 @@ export default function ReservasPage() {
   }
 
   function openModal() {
-    setForm({ resourceId: '', serviceId: '', ratePlanId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0 })
+    setForm({ resourceId: '', serviceId: '', ratePlanId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', adultos: 1, ninos: 0, anyResource: false })
     setFieldErrors({})
     setSlotDate('')
     setAvailableSlots(null)
@@ -232,7 +237,7 @@ export default function ReservasPage() {
       resourceId, serviceId: '', ratePlanId: '', customerEmail: '',
       checkIn: dateStr, checkOut: nextDateStr,
       startTime: '', endTime: '',
-      adultos: 1, ninos: 0,
+      adultos: 1, ninos: 0, anyResource: false,
     })
     setFieldErrors({})
     setSlotDate('')
@@ -648,20 +653,44 @@ export default function ReservasPage() {
           )}
           <div>
             <label className="label">Recurso</label>
-            <select
-              className="input"
-              value={form.resourceId}
-              onChange={e => setForm(f => ({ ...f, resourceId: e.target.value }))}
-              required
-            >
-              <option value="">Seleccioná un recurso…</option>
-              {resources
-                .filter(r => lodgingResourceIds.has(r.id))
-                .filter(r => !selectedService || r.categoryId === selectedService.categoryId)
-                .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-            {fieldErrors['resourceId'] && (
-              <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>
+            {/* K4 (23/08/2026, pendientes-2026-08-23.md) — el backend ya
+                soporta asignación automática (categoryId en vez de
+                resourceId, ReservationService.findAvailableResourceInCategory)
+                pero no estaba expuesta acá. Solo disponible con un servicio
+                elegido: de ahí sale el categoryId. */}
+            {form.serviceId && (
+              <label className="flex items-center gap-2 text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
+                <input
+                  type="checkbox"
+                  checked={form.anyResource}
+                  onChange={e => setForm(f => ({ ...f, anyResource: e.target.checked, resourceId: '' }))}
+                  style={{ accentColor: 'var(--accent)' }}
+                />
+                Cualquier recurso disponible
+              </label>
+            )}
+            {form.anyResource && form.serviceId ? (
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                Se asigna automáticamente el primer recurso libre de la categoría del servicio elegido.
+              </p>
+            ) : (
+              <>
+                <select
+                  className="input"
+                  value={form.resourceId}
+                  onChange={e => setForm(f => ({ ...f, resourceId: e.target.value }))}
+                  required
+                >
+                  <option value="">Seleccioná un recurso…</option>
+                  {resources
+                    .filter(r => lodgingResourceIds.has(r.id))
+                    .filter(r => !selectedService || r.categoryId === selectedService.categoryId)
+                    .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+                {fieldErrors['resourceId'] && (
+                  <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>
+                )}
+              </>
             )}
           </div>
           <div>
@@ -1106,7 +1135,7 @@ export default function ReservasPage() {
                     <div>
                       <label className="label">Check-in pedido</label>
                       <input
-                        type="time" className="input"
+                        type="time" lang="es-AR" className="input"
                         value={scheduleRequestForm.requestedCheckInTime}
                         onChange={e => setScheduleRequestForm(f => ({ ...f, requestedCheckInTime: e.target.value }))}
                       />
@@ -1114,7 +1143,7 @@ export default function ReservasPage() {
                     <div>
                       <label className="label">Check-out pedido</label>
                       <input
-                        type="time" className="input"
+                        type="time" lang="es-AR" className="input"
                         value={scheduleRequestForm.requestedCheckOutTime}
                         onChange={e => setScheduleRequestForm(f => ({ ...f, requestedCheckOutTime: e.target.value }))}
                       />
