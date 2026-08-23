@@ -47,9 +47,8 @@ export default function ClientesPage() {
     addressLine1: '', addressCity: '', addressState: '', addressPostalCode: '', addressCountry: 'AR',
   })
   const [savingTaxProfile, setSavingTaxProfile] = useState(false)
-  const [dniInput, setDniInput] = useState('')
-  const [lookingUpByCuit, setLookingUpByCuit] = useState(false)
-  const [lookingUpByDni, setLookingUpByDni] = useState(false)
+  const [taxLookupInput, setTaxLookupInput] = useState('')
+  const [lookingUpTax, setLookingUpTax] = useState(false)
 
   // Tarifas especiales
   const [resources, setResources] = useState<Resource[]>([])
@@ -105,7 +104,7 @@ export default function ClientesPage() {
       addressPostalCode: profile?.address?.postalCode ?? '',
       addressCountry: profile?.address?.country ?? 'AR',
     })
-    setDniInput('')
+    setTaxLookupInput('')
   }
 
   async function openEdit(c: Customer) {
@@ -177,48 +176,58 @@ export default function ClientesPage() {
     }
   }
 
-  /** Un solo click: DNI → CUIT → datos completos del padrón, todo en una acción. */
-  async function handleLookupByDni() {
-    if (!dniInput.trim()) return
-    setLookingUpByDni(true)
-    try {
-      const { cuit } = await padronApi.lookupByDni(dniInput.trim())
-      if (!cuit) {
-        toast('Ese DNI no tiene ningún CUIT/CUIL asociado en el padrón de ARCA', 'error')
-        return
-      }
-      const taxpayer = await padronApi.lookupByCuit(cuit)
-      if (!taxpayer) {
-        // Raro (el DNI sí resolvió a un CUIT) pero posible -- se completa
-        // al menos el CUIT encontrado, el resto queda para completar a mano.
-        setTaxForm(f => ({ ...f, taxId: cuit, taxIdType: 'CUIT' }))
-        toast('Se encontró el CUIT pero no hay más datos en el padrón — completá el resto a mano', 'error')
-        return
-      }
-      applyTaxpayerLookup(taxpayer, cuit)
-      toast('Datos completados desde el padrón de ARCA', 'success')
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setLookingUpByDni(false)
-    }
-  }
+  /**
+   * Campo único de búsqueda -- auto-detecta qué tipeó el usuario (pedido
+   * del dueño, 23/08/2026, pendientes-2026-08-23.md): 11 dígitos (con o sin
+   * guiones) es CUIT, 7-8 dígitos es DNI (resuelve DNI → CUIT → datos
+   * completos del padrón en un solo click), cualquier otra cosa son letras
+   * -- y buscar por razón social contra el padrón de ARCA no es posible:
+   * los webservices ws_sr_padron_a5/a13 solo aceptan CUIT o DNI como clave,
+   * no hay ningún método de búsqueda por nombre en el SDK (@arcasdk/core).
+   */
+  async function handleTaxLookup() {
+    const raw = taxLookupInput.trim()
+    if (!raw) return
+    const digitsOnly = raw.replace(/-/g, '')
 
-  async function handleLookupByCuit() {
-    if (!taxForm.taxId.trim()) return
-    setLookingUpByCuit(true)
+    if (!/^\d+$/.test(digitsOnly)) {
+      toast('La búsqueda por razón social no está disponible en el padrón de ARCA — completá los datos a mano', 'error')
+      return
+    }
+
+    setLookingUpTax(true)
     try {
-      const taxpayer = await padronApi.lookupByCuit(taxForm.taxId.trim())
-      if (!taxpayer) {
-        toast('Ese CUIT no existe en el padrón de ARCA', 'error')
-        return
+      if (digitsOnly.length === 11) {
+        const taxpayer = await padronApi.lookupByCuit(digitsOnly)
+        if (!taxpayer) {
+          toast('Ese CUIT no existe en el padrón de ARCA', 'error')
+          return
+        }
+        applyTaxpayerLookup(taxpayer, taxpayer.cuit)
+        toast('Datos completados desde el padrón de ARCA', 'success')
+      } else if (digitsOnly.length === 7 || digitsOnly.length === 8) {
+        const { cuit } = await padronApi.lookupByDni(digitsOnly)
+        if (!cuit) {
+          toast('Ese DNI no tiene ningún CUIT/CUIL asociado en el padrón de ARCA', 'error')
+          return
+        }
+        const taxpayer = await padronApi.lookupByCuit(cuit)
+        if (!taxpayer) {
+          // Raro (el DNI sí resolvió a un CUIT) pero posible -- se completa
+          // al menos el CUIT encontrado, el resto queda para completar a mano.
+          setTaxForm(f => ({ ...f, taxId: cuit, taxIdType: 'CUIT' }))
+          toast('Se encontró el CUIT pero no hay más datos en el padrón — completá el resto a mano', 'error')
+          return
+        }
+        applyTaxpayerLookup(taxpayer, cuit)
+        toast('Datos completados desde el padrón de ARCA', 'success')
+      } else {
+        toast('Ingresá un CUIT (11 dígitos) o un DNI (7-8 dígitos)', 'error')
       }
-      applyTaxpayerLookup(taxpayer, taxpayer.cuit)
-      toast('Datos completados desde el padrón de ARCA', 'success')
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
-      setLookingUpByCuit(false)
+      setLookingUpTax(false)
     }
   }
 
@@ -497,17 +506,17 @@ export default function ClientesPage() {
                 <div className="flex gap-2 mb-3">
                   <input
                     className="input flex-1"
-                    placeholder="Autocompletar por DNI (7-8 dígitos)…"
-                    value={dniInput}
-                    onChange={e => setDniInput(e.target.value)}
+                    placeholder="CUIT o DNI para autocompletar desde ARCA…"
+                    value={taxLookupInput}
+                    onChange={e => setTaxLookupInput(e.target.value)}
                   />
                   <button
                     type="button"
-                    onClick={handleLookupByDni}
-                    disabled={lookingUpByDni || !dniInput.trim()}
+                    onClick={handleTaxLookup}
+                    disabled={lookingUpTax || !taxLookupInput.trim()}
                     className="btn-secondary shrink-0"
                   >
-                    {lookingUpByDni ? <span className="spinner" /> : 'Buscar por DNI'}
+                    {lookingUpTax ? <span className="spinner" /> : 'Buscar'}
                   </button>
                 </div>
 
@@ -529,15 +538,6 @@ export default function ClientesPage() {
                       value={taxForm.taxId}
                       onChange={e => setTaxForm(f => ({ ...f, taxId: e.target.value }))}
                     />
-                    <button
-                      type="button"
-                      onClick={handleLookupByCuit}
-                      disabled={lookingUpByCuit || !taxForm.taxId.trim() || !['CUIT', 'CUIL'].includes(taxForm.taxIdType)}
-                      className="btn-secondary shrink-0"
-                      title={!['CUIT', 'CUIL'].includes(taxForm.taxIdType) ? 'Solo para CUIT/CUIL' : undefined}
-                    >
-                      {lookingUpByCuit ? <span className="spinner" /> : 'Buscar'}
-                    </button>
                   </div>
                   <input
                     className="input w-full"
