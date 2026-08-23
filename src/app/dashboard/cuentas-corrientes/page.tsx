@@ -4,7 +4,7 @@ import { customersApi, customerAccountApi, extractErrorMessage } from '@/lib/api
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import FacturarButton from '@/components/FacturarButton'
-import type { Customer, CustomerStatement, TransactionType, TransactionStatus } from '@/lib/types'
+import type { Customer, CustomerStatement, TransactionType, TransactionStatus, OutstandingInvoice } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento clay (mismo criterio que Órdenes/Productos — plata/POS).
@@ -52,6 +52,15 @@ export default function CuentasCorrientesPage() {
   const [payNotes, setPayNotes] = useState('')
   const [paying, setPaying] = useState(false)
 
+  // I4 (23/08/2026, pendientes-2026-08-23.md — conciliación de pagos,
+  // verificación de auditoría externa): "Registrar Pago" deja de ser una
+  // acción ciega — lista las facturas ISSUED pendientes de cobro del
+  // cliente y deja elegir cuáles salda este pago (y cuánto de cada una).
+  const [outstandingInvoices, setOutstandingInvoices] = useState<OutstandingInvoice[]>([])
+  const [loadingInvoices, setLoadingInvoices] = useState(false)
+  // invoiceId -> monto asignado (string, tal como lo tipea el usuario)
+  const [allocations, setAllocations] = useState<Record<string, string>>({})
+
   // F1-Pieza 1 (23/08/2026, pendientes-2026-08-23.md) — filtro RÍGIDO de
   // base de datos, no de UI: `currentAccountEnabled: true` hace que el
   // propio backend (SqlCustomerRepository.getAll()) excluya a los
@@ -86,11 +95,40 @@ export default function CuentasCorrientesPage() {
     }
   }, [toast])
 
-  function openPay() {
+  async function openPay() {
+    if (!selected) return
     setPayAmount('')
     setPayNotes('')
+    setAllocations({})
     setPayOpen(true)
+    setLoadingInvoices(true)
+    try {
+      const invoices = await customerAccountApi.getOutstandingInvoices(selected.id)
+      setOutstandingInvoices(invoices)
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setLoadingInvoices(false)
+    }
   }
+
+  function toggleInvoice(inv: OutstandingInvoice, checked: boolean) {
+    setAllocations(prev => {
+      const next = { ...prev }
+      if (checked) {
+        const remaining = Math.max(0, (parseFloat(payAmount) || 0) - allocatedTotal)
+        next[inv.invoiceId] = String(Math.min(inv.outstanding, remaining || inv.outstanding))
+      } else {
+        delete next[inv.invoiceId]
+      }
+      return next
+    })
+  }
+
+  const allocatedTotal = useMemo(
+    () => Object.values(allocations).reduce((sum, v) => sum + (parseFloat(v) || 0), 0),
+    [allocations],
+  )
 
   async function handleRecordPayment(e: React.FormEvent) {
     e.preventDefault()
@@ -100,10 +138,14 @@ export default function CuentasCorrientesPage() {
       // idempotencyKey generada acá — si el pedido se reintenta por un
       // corte de red, el backend no duplica el pago.
       const idempotencyKey = crypto.randomUUID()
+      const allocationList = Object.entries(allocations)
+        .map(([invoiceId, amount]) => ({ invoiceId, amount: parseFloat(amount) }))
+        .filter(a => a.amount > 0)
       await customerAccountApi.recordPayment(selected.id, {
         amount: parseFloat(payAmount),
         idempotencyKey,
         ...(payNotes && { notes: payNotes }),
+        ...(allocationList.length > 0 && { allocations: allocationList }),
       })
       toast('Pago registrado', 'success')
       setPayOpen(false)
@@ -234,7 +276,7 @@ export default function CuentasCorrientesPage() {
         )}
       </div>
 
-      {/* Modal registrar pago */}
+      {/* Modal registrar pago — conciliación (I4, 23/08/2026) */}
       <Modal open={payOpen} onClose={() => setPayOpen(false)} title="Registrar pago">
         <form onSubmit={handleRecordPayment} className="space-y-4">
           <div>
@@ -259,9 +301,72 @@ export default function CuentasCorrientesPage() {
               onChange={e => setPayNotes(e.target.value)}
             />
           </div>
+
+          {/* Conciliación — qué factura(s) salda este pago. Vacío = pago
+              sin destino, comportamiento previo sin cambios. */}
+          {loadingInvoices ? (
+            <div className="space-y-2">
+              {[...Array(2)].map((_, i) => <div key={i} className="h-10 rounded-lg skeleton" />)}
+            </div>
+          ) : outstandingInvoices.length > 0 && (
+            <div>
+              <label className="label">Facturas pendientes de cobro (opcional)</label>
+              <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
+                Elegí a qué factura(s) aplicar este pago. Lo que no asignes queda contra la cuenta, sin factura asociada.
+              </p>
+              <div className="card" style={{ maxHeight: 220, overflowY: 'auto' }}>
+                {outstandingInvoices.map(inv => {
+                  const checked = inv.invoiceId in allocations
+                  return (
+                    <div
+                      key={inv.invoiceId}
+                      className="flex items-center gap-3 px-3 py-2"
+                      style={{ borderBottom: '1px solid var(--border)' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={e => toggleInvoice(inv, e.target.checked)}
+                        style={{ accentColor: 'var(--accent)' }}
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                          {inv.cbteNro ? `Comprobante ${String(inv.cbteNro).padStart(8, '0')}` : `Comprobante tipo ${inv.cbteTipo}`}
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                          Pendiente: {fmtMoney(inv.outstanding)} de {fmtMoney(inv.impTotal)}
+                        </p>
+                      </div>
+                      {checked && (
+                        <input
+                          type="number"
+                          min={0.01}
+                          max={inv.outstanding}
+                          step={0.01}
+                          className="input"
+                          style={{ width: 100, padding: '4px 8px' }}
+                          value={allocations[inv.invoiceId]}
+                          onChange={e => setAllocations(prev => ({ ...prev, [inv.invoiceId]: e.target.value }))}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-xs mt-2" style={{ color: allocatedTotal > (parseFloat(payAmount) || 0) ? 'var(--danger)' : 'var(--text-tertiary)' }}>
+                Asignado: {fmtMoney(allocatedTotal)} de {fmtMoney(parseFloat(payAmount) || 0)}
+                {allocatedTotal > (parseFloat(payAmount) || 0) && ' — supera el monto pagado'}
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setPayOpen(false)} className="btn-secondary flex-1">Cancelar</button>
-            <button type="submit" disabled={paying} className="btn-primary flex-1">
+            <button
+              type="submit"
+              disabled={paying || allocatedTotal > (parseFloat(payAmount) || 0)}
+              className="btn-primary flex-1"
+            >
               {paying ? <span className="spinner" /> : null}
               Registrar
             </button>

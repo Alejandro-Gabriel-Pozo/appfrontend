@@ -15,6 +15,7 @@ export type { CustomerTaxProfile, CustomerTaxProfileAddress, UpsertCustomerTaxPr
 export type {
   TransactionType, TransactionStatus, FinancialTransaction,
   AccountsReceivableStatus, AccountReceivable, AccountsReceivableReportRow,
+  OutstandingInvoice,
 } from './finanzas/types'
 export type { Resource, CreateResourceInput, UpdateResourceInput } from './recursos/types'
 export type { Role, TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput } from './usuarios/types'

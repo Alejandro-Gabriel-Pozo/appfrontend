@@ -1,7 +1,7 @@
 'use client'
 import { apiFetch } from '../http'
 import type { PaginatedResponse } from '../http'
-import type { FinancialTransaction } from '../finanzas/types'
+import type { FinancialTransaction, OutstandingInvoice } from '../finanzas/types'
 import type {
   Customer, CustomerRate, CustomerStatement, CustomerListFilters,
   CustomerTaxProfile, UpsertCustomerTaxProfileInput, TaxpayerLookupResult,
@@ -49,8 +49,17 @@ export const customerRatesApi = {
 // ─── Cuentas corrientes ──────────────────────────────────────────────────────
 export const customerAccountApi = {
   getStatement: (customerId: string) => apiFetch<CustomerStatement>(`/api/customers/${customerId}/account`),
-  recordPayment: (customerId: string, body: { amount: number; idempotencyKey?: string; notes?: string }) =>
-    apiFetch<FinancialTransaction>(`/api/customers/${customerId}/payments`, { method: 'POST', body: JSON.stringify(body) }),
+  /** I4 (23/08/2026) — facturas ISSUED con saldo pendiente, para el modal de conciliación de "Registrar Pago". */
+  getOutstandingInvoices: (customerId: string) =>
+    apiFetch<OutstandingInvoice[]>(`/api/customers/${customerId}/outstanding-invoices`),
+  /** `allocations` (I4) — qué factura(s) salda este pago. Omitido = pago sin destino, comportamiento previo. Devuelve siempre un array. */
+  recordPayment: (customerId: string, body: {
+    amount: number
+    idempotencyKey?: string
+    notes?: string
+    allocations?: { invoiceId: string; amount: number }[]
+  }) =>
+    apiFetch<FinancialTransaction[]>(`/api/customers/${customerId}/payments`, { method: 'POST', body: JSON.stringify(body) }),
 }
 
 // ─── Perfil fiscal (19/08/2026) ─────────────────────────────────────────────

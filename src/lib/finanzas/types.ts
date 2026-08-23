@@ -15,7 +15,19 @@ export interface FinancialTransaction {
   currency: string
   status: TransactionStatus
   notes?: string | null
+  /** I4 (23/08/2026) — solo en type='PAYMENT': qué factura salda este pago (conciliación). Null = pago sin destino. */
+  settledInvoiceId?: string | null
   createdAt: string
+}
+
+/** I4 (23/08/2026) — factura ISSUED con saldo pendiente, para el modal de conciliación de "Registrar Pago". */
+export interface OutstandingInvoice {
+  invoiceId: string
+  cbteTipo: number
+  cbteNro: number | null
+  impTotal: number
+  outstanding: number
+  issuedAt: string | null
 }
 
 // ─── Folio de estadía / Cuentas por cobrar (A1, paso 6) ────────────────────────
