@@ -25,7 +25,7 @@ export default function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Modal open={open} onClose={onClose} title={title} size="max-w-sm">
-      <p className="text-sm text-slate-300 mb-6 leading-relaxed">{description}</p>
+      <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--text-secondary, #cbd5e1)' }}>{description}</p>
       <div className="flex gap-3">
         <button
           type="button"
@@ -41,11 +41,9 @@ export default function ConfirmDialog({
           disabled={loading}
           className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
           style={{
-            background: variant === 'danger' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
-            color: variant === 'danger' ? '#f87171' : '#34d399',
-            border: `1px solid ${
-              variant === 'danger' ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)'
-            }`,
+            background: variant === 'danger' ? 'var(--danger-dim)' : 'var(--success-dim)',
+            color: variant === 'danger' ? 'var(--danger)' : 'var(--success)',
+            border: `1px solid ${variant === 'danger' ? 'var(--danger-border)' : 'var(--success-border)'}`,
           }}
         >
           {loading && (

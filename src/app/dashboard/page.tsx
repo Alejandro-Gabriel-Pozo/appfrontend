@@ -2,67 +2,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { resourcesApi, reservationsApi } from '@/lib/api'
+import TelemetryCard from '@/components/TelemetryCard'
+import SignalBadge from '@/components/SignalBadge'
 
 type Reservation = { id?: string | number; status?: string; created_at?: string; resource_id?: string | number }
 type Resource     = { id?: string | number; name?: string; active?: boolean }
-
-function KpiCard({
-  label,
-  value,
-  sub,
-  icon,
-  variant,
-  loading,
-}: {
-  label: string
-  value: string | number
-  sub: string
-  icon: React.ReactNode
-  variant?: 'success' | 'warning' | 'danger' | 'info'
-  loading: boolean
-}) {
-  if (loading) {
-    return (
-      <div className="kpi-card">
-        <div className="skeleton h-3 w-20 mb-4" />
-        <div className="skeleton h-8 w-14 mb-3" />
-        <div className="skeleton h-3 w-28" />
-      </div>
-    )
-  }
-
-  const accentColor: Record<string, string> = {
-    success: 'var(--success)',
-    warning: 'var(--warning)',
-    danger:  'var(--danger)',
-    info:    'var(--info)',
-  }
-  const accentDim: Record<string, string> = {
-    success: 'var(--success-dim)',
-    warning: 'var(--warning-dim)',
-    danger:  'var(--danger-dim)',
-    info:    'var(--info-dim)',
-  }
-  const color = variant ? accentColor[variant] : 'var(--accent)'
-  const dim   = variant ? accentDim[variant]   : 'var(--accent-dim)'
-  const variantClass = variant ? ` kpi-card-${variant}` : ''
-
-  return (
-    <div className={`kpi-card${variantClass}`}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="kpi-label">{label}</span>
-        <div
-          className="flex items-center justify-center w-8 h-8 rounded-lg"
-          style={{ backgroundColor: dim, color }}
-        >
-          {icon}
-        </div>
-      </div>
-      <p className="kpi-value">{value}</p>
-      <p className="kpi-trend">{sub}</p>
-    </div>
-  )
-}
 
 function QuickLink({
   href,
@@ -89,11 +33,11 @@ function QuickLink({
 function RecentReservations({ reservations, loading }: { reservations: Reservation[]; loading: boolean }) {
   const recent = reservations.slice(0, 5)
 
-  const statusClass: Record<string, string> = {
-    CONFIRMED: 'badge-confirmed',
-    PENDING:   'badge-pending',
-    COMPLETED: 'badge-completed',
-    CANCELLED: 'badge-cancelled',
+  const statusState: Record<string, 'confirmed' | 'pending' | 'completed' | 'cancelled'> = {
+    CONFIRMED: 'confirmed',
+    PENDING:   'pending',
+    COMPLETED: 'completed',
+    CANCELLED: 'cancelled',
   }
 
   const statusLabel: Record<string, string> = {
@@ -168,9 +112,10 @@ function RecentReservations({ reservations, loading }: { reservations: Reservati
                       : '—'}
                   </td>
                   <td>
-                    <span className={statusClass[r.status ?? ''] ?? 'badge-pending'}>
-                      {statusLabel[r.status ?? ''] ?? r.status ?? '—'}
-                    </span>
+                    <SignalBadge
+                      state={statusState[r.status ?? ''] ?? 'pending'}
+                      label={statusLabel[r.status ?? ''] ?? r.status ?? '—'}
+                    />
                   </td>
                 </tr>
               ))}
@@ -208,7 +153,7 @@ export default function DashboardHome() {
   })
 
   return (
-    <div className="animate-fade-in">
+    <div className="zulu animate-fade-in" style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
 
       {/* Header */}
       <div className="page-header">
@@ -230,7 +175,7 @@ export default function DashboardHome() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
+        <TelemetryCard
           loading={loading}
           label="Total Reservas"
           value={reservations.length}
@@ -243,7 +188,7 @@ export default function DashboardHome() {
             </svg>
           }
         />
-        <KpiCard
+        <TelemetryCard
           loading={loading}
           label="Confirmadas"
           value={confirmed}
@@ -255,7 +200,7 @@ export default function DashboardHome() {
             </svg>
           }
         />
-        <KpiCard
+        <TelemetryCard
           loading={loading}
           label="Pendientes"
           value={pending}
@@ -267,7 +212,7 @@ export default function DashboardHome() {
             </svg>
           }
         />
-        <KpiCard
+        <TelemetryCard
           loading={loading}
           label="Recursos activos"
           value={activeRes}

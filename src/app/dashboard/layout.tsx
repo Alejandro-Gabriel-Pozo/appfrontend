@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
+import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { Refine } from '@refinedev/core'
 import routerProvider from '@refinedev/nextjs-router/app'
 import { ToastProvider, useToast } from '@/context/ToastContext'
@@ -12,18 +12,17 @@ import { useIsManagement } from '@/hooks/useAuthRole'
 import { businessModulesApi, systemApi, type DeadLetterEvent } from '@/lib/api'
 import { dataProvider } from '@/lib/refine/dataProvider'
 import { createAuthProvider } from '@/lib/refine/authProvider'
+import SystemRail from '@/components/SystemRail'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
-// Las 3 tipografías del sistema se cargan UNA vez acá (auditoria-modularidad.md
-// Fase 2, F8) — antes cada una de las 19 pantallas del dashboard las volvía a
-// cargar por separado, mismo bloque de 3 líneas copiado y pegado en cada
-// archivo. next/font expone cada fuente como una variable CSS
-// (--font-bastion-serif/sans/mono); puesta acá, en un ancestro de {children},
-// cascadea a cualquier pantalla que use la clase `.bastion` sin que esa
-// pantalla tenga que declararla de nuevo.
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['300', '500', '600'], variable: '--font-bastion-serif' })
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-bastion-sans' })
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-bastion-mono' })
+// ─── Sistema de diseño "ZULU" (docs/*, migración 23/08/2026 — reemplaza a
+// Bastión) ──────────────────────────────────────────────────────────────
+// Las 3 tipografías se cargan UNA vez acá (mismo criterio que ya regía para
+// Bastión, auditoria-modularidad.md Fase 2/F8) — cascadean como variables
+// CSS (--font-zulu-display/sans/mono) a cualquier pantalla que use `.zulu`
+// sin que esa pantalla tenga que declararlas de nuevo.
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], weight: ['500', '600'], variable: '--font-zulu-display' })
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-zulu-sans' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-zulu-mono' })
 
 // Piloto del data provider (18/08/2026) — solo estos dos recursos tienen
 // adaptador en src/lib/refine/dataProvider.ts por ahora. Sumar acá cuando
@@ -337,8 +336,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0c0e14' }}>
-        <span style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid #10b981', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#060a1f' }}>
+        <span style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid #00e0ff', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
@@ -354,14 +353,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         options={{ syncWithLocation: false, disableTelemetry: true }}
       >
       <div
-        className={`${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`}
+        className={`zulu ${spaceGrotesk.variable} ${plexSans.variable} ${plexMono.variable}`}
         style={{
           display: 'flex',
           height: '100dvh',
-          background: '#0c0e14',
-          color: '#e2e4ea',
+          background: 'var(--bg)',
+          color: 'var(--text-primary)',
           overflow: 'hidden',
-          fontFamily: "'Inter', 'system-ui', sans-serif",
         }}
       >
         {/* ── SIDEBAR ─────────────────────────────────────────────── */}
@@ -371,8 +369,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             inset: sidebarOpen ? '0 auto 0 0' : undefined,
             zIndex: 40,
             width: 240,
-            background: '#13151e',
-            borderRight: '1px solid rgba(255,255,255,0.07)',
+            background: 'var(--surface-1)',
+            borderRight: '1px solid var(--border)',
             display: 'flex',
             flexDirection: 'column',
             transition: 'transform 200ms cubic-bezier(0.16,1,0.3,1)',
@@ -388,7 +386,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               display: 'flex',
               alignItems: 'center',
               padding: '0 20px',
-              borderBottom: '1px solid rgba(255,255,255,0.07)',
+              borderBottom: '1px solid var(--border)',
               gap: 10,
               flexShrink: 0,
             }}
@@ -398,27 +396,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 width: 30,
                 height: 30,
                 borderRadius: 8,
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                boxShadow: '0 0 12px var(--accent-dim)',
               }}
             >
-              <svg width="16" height="16" fill="none" stroke="white" strokeWidth={2.2} viewBox="0 0 24 24">
+              <svg width="16" height="16" fill="none" stroke="#060a1f" strokeWidth={2.2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round"
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
             <div>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#fff', lineHeight: 1.2 }}>ReservaApp</p>
-              <p style={{ fontSize: 10, color: '#4b5563', lineHeight: 1.2 }}>Panel de gestión</p>
+              <p className="mono" style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.2, letterSpacing: '0.04em' }}>ReservaApp</p>
+              <p style={{ fontSize: 10, color: 'var(--text-tertiary)', lineHeight: 1.2 }}>Panel de gestión</p>
             </div>
           </div>
 
           {/* Nav */}
           <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 10px' }}>
-            <p style={{ fontSize: 10, fontWeight: 600, color: '#374151', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 10px 8px' }}>
+            <p className="mono" style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px 8px' }}>
               Navegación
             </p>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -439,8 +438,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         borderRadius: 8,
                         fontSize: 13.5,
                         fontWeight: active ? 600 : 400,
-                        color: active ? '#10b981' : '#9ca3af',
-                        background: active ? 'rgba(16,185,129,0.1)' : 'transparent',
+                        color: active ? 'var(--accent)' : 'var(--text-secondary)',
+                        background: active ? 'var(--accent-dim)' : 'transparent',
                         textDecoration: 'none',
                         transition: 'all 150ms ease',
                         position: 'relative',
@@ -455,7 +454,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             bottom: '20%',
                             width: 3,
                             borderRadius: '0 4px 4px 0',
-                            background: '#10b981',
+                            background: 'var(--accent)',
+                            boxShadow: '0 0 8px var(--accent)',
                           }}
                         />
                       )}
@@ -479,7 +479,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           {/* Usuario */}
-          <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ padding: '12px 10px', borderTop: '1px solid var(--border)' }}>
             {user ? (
               <>
                 <div
@@ -498,11 +498,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       width: 32,
                       height: 32,
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg,#10b981,#047857)',
+                      background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#fff',
+                      color: '#060a1f',
                       fontSize: 12,
                       fontWeight: 700,
                       flexShrink: 0,
@@ -511,10 +511,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     {user.email[0]?.toUpperCase()}
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: 500, color: '#e2e4ea', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {user.email}
                     </p>
-                    <p style={{ fontSize: 10, color: '#4b5563', textTransform: 'capitalize' }}>
+                    <p className="mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>
                       {user.role.toLowerCase() || 'usuario'}
                     </p>
                   </div>
@@ -529,7 +529,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     padding: '7px 10px',
                     borderRadius: 8,
                     fontSize: 12,
-                    color: '#6b7280',
+                    color: 'var(--text-secondary)',
                     background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
@@ -575,8 +575,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '0 20px',
-              borderBottom: '1px solid rgba(255,255,255,0.07)',
-              background: '#0c0e14',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--bg)',
               flexShrink: 0,
               gap: 12,
             }}
@@ -590,7 +590,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   display: 'none',
                   padding: '6px',
                   borderRadius: 8,
-                  color: '#9ca3af',
+                  color: 'var(--text-secondary)',
                   background: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
@@ -602,33 +602,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: '#4b5563' }}>Dashboard</span>
+                <span className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Dashboard</span>
                 {pathname !== '/dashboard' && (
                   <>
-                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" style={{ color: '#374151' }}>
+                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" style={{ color: 'var(--border-lg)' }}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
-                    <span style={{ fontSize: 12, color: '#e2e4ea', fontWeight: 500 }}>{currentTitle}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{currentTitle}</span>
                   </>
                 )}
               </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '4px 10px',
-                  borderRadius: 20,
-                  background: 'rgba(16,185,129,0.1)',
-                  border: '1px solid rgba(16,185,129,0.2)',
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                <span style={{ fontSize: 11, color: '#10b981', fontWeight: 500 }}>En línea</span>
-              </div>
+              <SystemRail isManagement={isManagement} />
             </div>
           </header>
 
@@ -667,7 +654,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
           }
-          a:hover { color: #e2e4ea !important; background: rgba(255,255,255,0.05) !important; }
+          a:hover { color: var(--text-primary) !important; background: rgba(255,255,255,0.05) !important; }
         `}</style>
       </div>
       </Refine>

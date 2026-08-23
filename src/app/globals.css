@@ -743,4 +743,154 @@
     font-weight: 600 !important;
   }
   .bastion [role="dialog"] button svg { color: var(--bastion-slate); }
+
+  /* ── Sistema de diseño "ZULU" (guía de transferencia aportada por el
+     dueño, 23/08/2026) — reemplaza a Bastión. Mismo mecanismo de scope
+     opt-in vía clase en el div raíz de una pantalla, mismo criterio de
+     "reasignar los tokens genéricos" que ya usaba .bastion, así que
+     .card, .btn-primary, .table, .badge-pending, .input y .empty-state
+     repintan solos sin tocar cada regla. Un solo acento primario (cian) en
+     todo el dashboard
+     — la guía es explícita en que el ámbar nunca es una segunda acción
+     primaria (tabla §1), así que a diferencia de Bastión (brass/clay por
+     módulo) acá no hay modificador de color por vertical; PMS vs. POS se
+     distingue por vocabulario (RouteStepper/SignalBadge), no por acento. */
+  .zulu {
+    --zulu-navy-0: #060a1f;
+    --zulu-navy-1: #0b1130;
+    --zulu-navy-2: #131b47;
+    --zulu-navy-3: #1a2352;
+    --zulu-navy-border: #232c5e;
+    --zulu-neon: #00e0ff;
+    --zulu-neon-dim: #0aa8c2;
+    --zulu-text-0: #f2f5ff;
+    --zulu-text-1: #aab2de;
+    --zulu-text-2: #6b74a6;
+
+    --bg: var(--zulu-navy-0);
+    --surface-0: var(--zulu-navy-0);
+    --surface-1: var(--zulu-navy-1);
+    --surface-2: var(--zulu-navy-2);
+    --surface-3: var(--zulu-navy-2);
+    --surface-4: var(--zulu-navy-3);
+
+    --border: var(--zulu-navy-border);
+    --border-md: var(--zulu-navy-border);
+    --border-lg: #2e3a72;
+
+    --text-primary: var(--zulu-text-0);
+    --text-secondary: var(--zulu-text-1);
+    --text-tertiary: var(--zulu-text-2);
+
+    --accent: var(--zulu-neon);
+    --accent-dark: var(--zulu-neon-dim);
+    --accent-hover: #33e6ff;
+    --accent-dim: rgba(0, 224, 255, 0.10);
+    --accent-border: rgba(0, 224, 255, 0.28);
+
+    /* Semáforo — ámbar reservado para warning/atención, nunca acento
+       primario. Info se alinea con la familia cian para no competir con
+       dos azules distintos en la misma pantalla. */
+    --warning: #f0b429;
+    --warning-dim: rgba(240, 180, 41, 0.12);
+    --warning-border: rgba(240, 180, 41, 0.3);
+
+    --danger: #ff6b6b;
+    --danger-dim: rgba(255, 107, 107, 0.12);
+    --danger-border: rgba(255, 107, 107, 0.3);
+
+    --success: #34d399;
+    --success-dim: rgba(52, 211, 153, 0.12);
+    --success-border: rgba(52, 211, 153, 0.28);
+
+    --info: var(--zulu-neon-dim);
+    --info-dim: rgba(10, 168, 194, 0.14);
+    --info-border: rgba(10, 168, 194, 0.32);
+
+    --r-sm: 6px;
+    --r-md: 8px;
+    --r-lg: 14px;
+    --r-xl: 16px;
+
+    background-color: var(--zulu-navy-0);
+    color: var(--zulu-text-0);
+    font-family: var(--font-zulu-sans, 'IBM Plex Sans', system-ui, sans-serif);
+  }
+
+  .zulu h1, .zulu h2, .zulu h3 {
+    font-family: var(--font-zulu-display, 'Space Grotesk', sans-serif);
+    color: var(--zulu-text-0);
+    letter-spacing: -0.02em;
+  }
+
+  .zulu .mono,
+  .zulu .table-cell-mono {
+    font-family: var(--font-zulu-mono, 'IBM Plex Mono', ui-monospace, monospace);
+  }
+
+  /* Métricas grandes en tipografía display (guía §2: "métricas o
+     decisiones de alta jerarquía"); labels/trend en mono (telemetría). */
+  .zulu .kpi-label,
+  .zulu .kpi-trend {
+    font-family: var(--font-zulu-mono, 'IBM Plex Mono', monospace);
+  }
+  .zulu .kpi-value {
+    font-family: var(--font-zulu-display, 'Space Grotesk', sans-serif);
+  }
+
+  .zulu .badge-pending,
+  .zulu .badge-confirmed,
+  .zulu .badge-completed,
+  .zulu .badge-cancelled,
+  .zulu .badge-active {
+    font-family: var(--font-zulu-mono, 'IBM Plex Mono', monospace);
+    letter-spacing: 0.02em;
+  }
+
+  .zulu .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 0 0 3px var(--accent-dim), 0 0 14px rgba(0, 224, 255, 0.32);
+  }
+
+  /* Punto de señal (SignalBadge/SystemRail) — toma el color por herencia
+     de currentColor, así que no necesita un mapa de color en JS: el
+     span .badge-* padre ya fija `color`, el punto lo hereda. */
+  .signal-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .signal-dot-active { animation: pulse-dot 2s ease-in-out infinite; }
+
+  /* ── SystemRail — línea de estado del header (guía §5) ── */
+  .system-rail {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-family: var(--font-zulu-mono, 'IBM Plex Mono', monospace);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .system-rail i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
+  .system-rail-healthy   { background: var(--accent-dim);  border: 1px solid var(--accent-border);  color: var(--accent); }
+  .system-rail-healthy i { animation: pulse-dot 2.6s ease-in-out infinite; }
+  .system-rail-syncing   { background: var(--accent-dim);  border: 1px solid var(--accent-border);  color: var(--accent); }
+  .system-rail-syncing i { animation: pulse-dot 1s ease-in-out infinite; }
+  .system-rail-attention   { background: var(--warning-dim); border: 1px solid var(--warning-border); color: var(--warning); }
+  .system-rail-attention i { animation: pulse-dot 1.2s ease-in-out infinite; }
+  .system-rail-blocked   { background: var(--danger-dim); border: 1px solid var(--danger-border); color: var(--danger); }
+  .system-rail-blocked i { box-shadow: none; }
 }
