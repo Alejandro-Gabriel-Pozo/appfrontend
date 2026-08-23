@@ -14,11 +14,13 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   COMPLETED: 'Completada',
 }
 
-const STATUS_COLOR: Record<OrderStatus, { bg: string; text: string; dot: string }> = {
-  DRAFT:     { bg: 'rgba(100,116,139,0.12)', text: '#94a3b8', dot: '#64748b' },
-  CONFIRMED: { bg: 'rgba(16,185,129,0.12)',  text: '#10b981', dot: '#10b981' },
-  CANCELLED: { bg: 'rgba(239,68,68,0.12)',   text: '#f87171', dot: '#ef4444' },
-  COMPLETED: { bg: 'rgba(59,130,246,0.12)',  text: '#60a5fa', dot: '#3b82f6' },
+// Mismo criterio que dashboard/ordenes/page.tsx (STATUS_BADGE_CLASS) — un
+// solo lugar de verdad para qué color representa cada estado de orden.
+const STATUS_BADGE_CLASS: Record<OrderStatus, string> = {
+  DRAFT:     'badge-pending',
+  CONFIRMED: 'badge-confirmed',
+  COMPLETED: 'badge-completed',
+  CANCELLED: 'badge-cancelled',
 }
 
 const ITEM_TYPE_LABEL: Record<string, string> = {
@@ -38,17 +40,7 @@ function fmtMoney(n: number) {
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 function Skeleton({ h = 20, w = '100%', radius = 8 }: { h?: number; w?: number | string; radius?: number }) {
-  return (
-    <div
-      style={{
-        height: h,
-        width: w,
-        borderRadius: radius,
-        background: 'rgba(255,255,255,0.06)',
-        animation: 'pulse 1.5s ease-in-out infinite',
-      }}
-    />
-  )
+  return <div className="skeleton" style={{ height: h, width: w, borderRadius: radius }} />
 }
 
 export default function OrderDetailPage() {
@@ -184,7 +176,7 @@ export default function OrderDetailPage() {
   // ─── LOADING ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ maxWidth: 800, margin: '0 auto' }}>
+      <div className="zulu" style={{ maxWidth: 800, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
           <Skeleton h={16} w={90} />
           <Skeleton h={28} w={220} />
@@ -195,43 +187,34 @@ export default function OrderDetailPage() {
           <Skeleton h={200} />
           <Skeleton h={80} />
         </div>
-        <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
       </div>
     )
   }
 
   if (notFound || !order) {
     return (
-      <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center', paddingTop: 80 }}>
-        <svg style={{ width: 48, height: 48, color: '#374151', margin: '0 auto 16px' }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <div className="zulu" style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center', paddingTop: 80 }}>
+        <svg style={{ width: 48, height: 48, color: 'var(--text-tertiary)', margin: '0 auto 16px' }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
-        <h2 style={{ color: '#e2e4ea', fontWeight: 600, marginBottom: 8 }}>Orden no encontrada</h2>
-        <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 24 }}>El ID ingresado no corresponde a ninguna orden.</p>
-        <Link href="/dashboard/ordenes" style={{ color: '#10b981', fontSize: 14 }}>← Volver a Órdenes</Link>
+        <h2 style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8 }}>Orden no encontrada</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>El ID ingresado no corresponde a ninguna orden.</p>
+        <Link href="/dashboard/ordenes" style={{ color: 'var(--accent)', fontSize: 14 }}>← Volver a Órdenes</Link>
       </div>
     )
   }
 
-  const sc = STATUS_COLOR[order.status]
   const isDraft = order.status === 'DRAFT'
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
+    <div className="zulu" style={{ maxWidth: 800, margin: '0 auto' }}>
       <style>{`
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        .detail-card {
-          background: #13151e;
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 12px;
-          margin-bottom: 16px;
-        }
         .detail-card-header {
           padding: 16px 20px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
+          border-bottom: 1px solid var(--border);
           font-size: 13px;
           font-weight: 600;
-          color: #9ca3af;
+          color: var(--text-secondary);
           text-transform: uppercase;
           letter-spacing: 0.06em;
         }
@@ -244,14 +227,14 @@ export default function OrderDetailPage() {
         .meta-item label {
           display: block;
           font-size: 11px;
-          color: #4b5563;
+          color: var(--text-tertiary);
           text-transform: uppercase;
           letter-spacing: 0.07em;
           margin-bottom: 4px;
         }
         .meta-item p {
           font-size: 14px;
-          color: #e2e4ea;
+          color: var(--text-primary);
           font-weight: 500;
         }
         .item-row {
@@ -259,7 +242,7 @@ export default function OrderDetailPage() {
           align-items: center;
           gap: 12px;
           padding: 10px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.04);
+          border-bottom: 1px solid var(--border);
         }
         .item-row:last-child { border-bottom: none; }
         .btn-action {
@@ -272,32 +255,32 @@ export default function OrderDetailPage() {
           font-weight: 500;
           border: none;
           cursor: pointer;
-          transition: opacity 150ms;
+          transition: filter 150ms;
         }
         .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-confirm  { background: rgba(16,185,129,0.12); color: #10b981; }
-        .btn-confirm:not(:disabled):hover  { background: rgba(16,185,129,0.22); }
-        .btn-complete { background: rgba(59,130,246,0.12);  color: #60a5fa; }
-        .btn-complete:not(:disabled):hover { background: rgba(59,130,246,0.22); }
-        .btn-cancel   { background: rgba(239,68,68,0.1);   color: #f87171; }
-        .btn-cancel:not(:disabled):hover   { background: rgba(239,68,68,0.2); }
+        .btn-confirm  { background: var(--success-dim); color: var(--success); }
+        .btn-confirm:not(:disabled):hover  { filter: brightness(1.2); }
+        .btn-complete { background: var(--info-dim);    color: var(--info); }
+        .btn-complete:not(:disabled):hover { filter: brightness(1.2); }
+        .btn-cancel   { background: var(--danger-dim);  color: var(--danger); }
+        .btn-cancel:not(:disabled):hover   { filter: brightness(1.2); }
         .btn-ghost {
           display: inline-flex; align-items: center; gap: 6px;
           padding: 7px 14px; border-radius: 8px; font-size: 13px;
-          background: rgba(255,255,255,0.05); color: #9ca3af;
+          background: rgba(255,255,255,0.05); color: var(--text-secondary);
           border: none; cursor: pointer; transition: background 150ms;
         }
         .btn-ghost:hover { background: rgba(255,255,255,0.09); }
         .input-sm {
           background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid var(--border-md);
           border-radius: 8px;
           padding: 6px 10px;
           font-size: 13px;
-          color: #e2e4ea;
+          color: var(--text-primary);
           outline: none;
         }
-        .input-sm:focus { border-color: #10b981; }
+        .input-sm:focus { border-color: var(--accent); }
       `}</style>
 
       {/* ── Encabezado ── */}
@@ -305,27 +288,19 @@ export default function OrderDetailPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Link
             href="/dashboard/ordenes"
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6b7280', textDecoration: 'none' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-tertiary)', textDecoration: 'none' }}
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
             Órdenes
           </Link>
-          <span style={{ color: '#374151' }}>/</span>
-          <span style={{ fontSize: 13, color: '#9ca3af', fontFamily: 'monospace' }}>{order.id.slice(0, 12)}…</span>
+          <span style={{ color: 'var(--text-tertiary)' }}>/</span>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{order.id.slice(0, 12)}…</span>
         </div>
 
         {/* Estado badge */}
-        <span
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '5px 12px', borderRadius: 20,
-            fontSize: 12, fontWeight: 600,
-            background: sc.bg, color: sc.text,
-          }}
-        >
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot, display: 'inline-block' }} />
+        <span className={STATUS_BADGE_CLASS[order.status]}>
           {STATUS_LABEL[order.status]}
         </span>
       </div>
@@ -385,7 +360,7 @@ export default function OrderDetailPage() {
       )}
 
       {/* ── Metadatos ── */}
-      <div className="detail-card">
+      <div className="card" style={{ marginBottom: 16 }}>
         <div className="detail-card-header">Información</div>
         <div className="detail-card-body">
           <div className="meta-grid">
@@ -393,12 +368,12 @@ export default function OrderDetailPage() {
               <label>Cliente</label>
               <p>{customer?.fullName ?? '—'}</p>
               {customer?.email && (
-                <span style={{ fontSize: 12, color: '#6b7280' }}>{customer.email}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{customer.email}</span>
               )}
             </div>
             <div className="meta-item">
               <label>Total</label>
-              <p style={{ color: '#10b981', fontWeight: 700, fontSize: 18 }}>
+              <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 18 }}>
                 {fmtMoney(order.totalAmount)}
               </p>
             </div>
@@ -421,12 +396,12 @@ export default function OrderDetailPage() {
             {order.cancelledAt && (
               <div className="meta-item">
                 <label>Cancelada</label>
-                <p style={{ color: '#f87171' }}>{fmtDate(order.cancelledAt)}</p>
+                <p style={{ color: 'var(--danger)' }}>{fmtDate(order.cancelledAt)}</p>
               </div>
             )}
             <div className="meta-item">
               <label>ID completo</label>
-              <p style={{ fontFamily: 'monospace', fontSize: 11, color: '#6b7280', wordBreak: 'break-all' }}>
+              <p style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
                 {order.id}
               </p>
             </div>
@@ -435,17 +410,17 @@ export default function OrderDetailPage() {
       </div>
 
       {/* ── Ítems ── */}
-      <div className="detail-card">
+      <div className="card" style={{ marginBottom: 16 }}>
         <div className="detail-card-header">Ítems ({order.items.length})</div>
         <div className="detail-card-body" style={{ padding: isDraft ? '16px 20px 8px' : '20px' }}>
           {order.items.length === 0 ? (
-            <p style={{ color: '#4b5563', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>Sin ítems</p>
+            <p style={{ color: 'var(--text-tertiary)', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>Sin ítems</p>
           ) : (
             <>
               {/* Cabecera columnas */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 90px 90px 40px', gap: 8, padding: '0 0 6px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 90px 90px 40px', gap: 8, padding: '0 0 6px', borderBottom: '1px solid var(--border)' }}>
                 {['Producto', 'Tipo', 'Cant.', 'Subtotal', ''].map((h, i) => (
-                  <span key={i} style={{ fontSize: 11, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
+                  <span key={i} style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}
               </div>
 
@@ -458,27 +433,27 @@ export default function OrderDetailPage() {
                     gap: 8,
                     alignItems: 'center',
                     padding: '10px 0',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    borderBottom: '1px solid var(--border)',
                     opacity: removingItem === item.id ? 0.4 : 1,
                     transition: 'opacity 200ms',
                   }}
                 >
                   <div>
-                    <p style={{ fontSize: 14, color: '#e2e4ea', fontWeight: 500 }}>
+                    <p style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500 }}>
                       {getProductName(item)}
                     </p>
-                    <p style={{ fontSize: 11, color: '#4b5563' }}>{fmtMoney(item.unitPrice)} c/u</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{fmtMoney(item.unitPrice)} c/u</p>
                   </div>
                   <span style={{
                     fontSize: 11, padding: '2px 8px', borderRadius: 4,
-                    background: 'rgba(255,255,255,0.06)', color: '#9ca3af',
+                    background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)',
                   }}>
                     {ITEM_TYPE_LABEL[item.itemType] ?? item.itemType}
                   </span>
-                  <span style={{ fontSize: 14, color: '#9ca3af', fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
                     × {item.quantity}
                   </span>
-                  <span style={{ fontSize: 14, color: '#e2e4ea', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                     {fmtMoney(item.subtotal)}
                   </span>
                   {isDraft ? (
@@ -487,10 +462,10 @@ export default function OrderDetailPage() {
                       disabled={removingItem !== null}
                       style={{
                         width: 28, height: 28, borderRadius: 6,
-                        background: 'rgba(239,68,68,0.1)', color: '#f87171',
+                        background: 'var(--danger-dim)', color: 'var(--danger)',
                         border: 'none', cursor: 'pointer', display: 'flex',
                         alignItems: 'center', justifyContent: 'center',
-                        fontSize: 14, transition: 'background 150ms',
+                        fontSize: 14, transition: 'filter 150ms',
                       }}
                       aria-label="Quitar ítem"
                     >
@@ -504,10 +479,10 @@ export default function OrderDetailPage() {
               <div style={{
                 display: 'flex', justifyContent: 'flex-end',
                 paddingTop: 12, marginTop: 4,
-                borderTop: '1px solid rgba(255,255,255,0.08)',
+                borderTop: '1px solid var(--border-md)',
               }}>
-                <span style={{ fontSize: 11, color: '#4b5563', marginRight: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: '#10b981', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
                   {fmtMoney(order.totalAmount)}
                 </span>
               </div>
@@ -516,8 +491,8 @@ export default function OrderDetailPage() {
 
           {/* Agregar ítem — solo DRAFT */}
           {isDraft && (
-            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Agregar ítem
               </p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -569,7 +544,7 @@ export default function OrderDetailPage() {
       </div>
 
       {/* ── Notas ── */}
-      <div className="detail-card">
+      <div className="card" style={{ marginBottom: 16 }}>
         <div className="detail-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Notas</span>
           {isDraft && !editingNotes && (
@@ -610,7 +585,7 @@ export default function OrderDetailPage() {
               </div>
             </>
           ) : (
-            <p style={{ fontSize: 14, color: order.notes ? '#c9cdd4' : '#4b5563', fontStyle: order.notes ? 'normal' : 'italic' }}>
+            <p style={{ fontSize: 14, color: order.notes ? 'var(--text-secondary)' : 'var(--text-tertiary)', fontStyle: order.notes ? 'normal' : 'italic' }}>
               {order.notes || 'Sin notas.'}
             </p>
           )}
