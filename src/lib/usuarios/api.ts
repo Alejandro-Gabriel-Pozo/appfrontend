@@ -3,6 +3,7 @@ import { apiFetch } from '../http'
 import type {
   TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput, Role,
   UserInvitation, CreateInvitationInput, InvitationPreview, AcceptInvitationInput,
+  PasswordResetPreview, AcceptPasswordResetInput,
 } from './types'
 
 // ─── Team members (empleados) ───────────────────────────────────────────────────
@@ -44,4 +45,20 @@ export const invitationAcceptanceApi = {
     apiFetch<InvitationPreview>('/api/invitations/lookup', { method: 'POST', body: JSON.stringify({ token }) }),
   accept: (body: AcceptInvitationInput) =>
     apiFetch<{ email: string; businessName: string; requiresLogin: boolean }>('/api/invitations/accept', { method: 'POST', body: JSON.stringify(body) }),
+}
+
+// ─── Reseteo de contraseña (K1, 23/08/2026, pendientes-2026-08-23.md) ──────
+// Gestión -- requiere sesión de staff (MANAGEMENT), dispara el mail con el link.
+export const passwordResetApi = {
+  requestLink: (membershipId: string) =>
+    apiFetch<void>(`/api/users/${membershipId}/password-reset-link`, { method: 'POST' }),
+}
+
+// Público -- misma lógica que invitationAcceptanceApi: sin sesión todavía
+// (la pantalla de confirmar reseteo, fuera de /dashboard).
+export const passwordResetAcceptanceApi = {
+  lookup: (token: string) =>
+    apiFetch<PasswordResetPreview>('/api/password-resets/lookup', { method: 'POST', body: JSON.stringify({ token }) }),
+  accept: (body: AcceptPasswordResetInput) =>
+    apiFetch<{ email: string; requiresLogin: boolean }>('/api/password-resets/accept', { method: 'POST', body: JSON.stringify(body) }),
 }

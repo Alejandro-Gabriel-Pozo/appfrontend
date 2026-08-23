@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
-import { rolesApi, invitationsApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { rolesApi, invitationsApi, passwordResetApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import { useIsOwner } from '@/hooks/useAuthRole'
 import Modal from '@/components/Modal'
@@ -57,6 +57,13 @@ export default function UsuariosPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<TeamMember | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  // K1 (23/08/2026, pendientes-2026-08-23.md) — el backend rechaza con 403
+  // ROLE_HIERARCHY_PROTECTED si un actor no-OWNER intenta fijar la
+  // contraseña de alguien OWNER_ONLY/MANAGEMENT directo por PUT. `isOwner`
+  // ya viene de useIsOwner() (no gatea nada por sí solo, es UI — el
+  // backend es quien de verdad rechaza).
+  const [sendingResetLink, setSendingResetLink] = useState(false)
 
   // ── Invitaciones (D2, pendientes-2026-08-19.md) ──────────────────────────
   // No migrado a Refine -- mismo criterio que "roles" arriba: es una lista
@@ -138,6 +145,28 @@ export default function UsuariosPage() {
   // Incluye roles custom que el negocio haya creado, no solo los 4 fijos
   // de antes (14/08/2026).
   const assignableRoles = roles.filter(r => r.name !== 'OWNER' && r.active)
+
+  // K1 (23/08/2026) — el rol del usuario que se está editando, para saber
+  // si está protegido por jerarquía (OWNER_ONLY/MANAGEMENT). `editing.roleId`
+  // es la fuente real (roleName es solo para mostrar, no para autorizar —
+  // mismo criterio que el backend, ver platform.repository.ts).
+  const editingRole = editing ? roles.find(r => r.id === editing.roleId) : null
+  const editingIsProtected = editing?.roleName === 'OWNER'
+    || (editingRole?.permissionGroups.some(g => g === 'OWNER_ONLY' || g === 'MANAGEMENT') ?? false)
+  const canSetPasswordDirectly = !editing || !editingIsProtected || isOwner
+
+  async function handleSendResetLink() {
+    if (!editing) return
+    setSendingResetLink(true)
+    try {
+      await passwordResetApi.requestLink(editing.id)
+      toast(`Le mandamos un mail a ${editing.email} para restablecer su contraseña`, 'success')
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setSendingResetLink(false)
+    }
+  }
 
   // Roles no está migrado a esta pantalla — se sigue trayendo directo.
   useEffect(() => {
@@ -443,25 +472,38 @@ export default function UsuariosPage() {
             </div>
           )}
 
-          <div>
-            <label className="label">{editing ? 'Nueva contraseña (opcional)' : 'Contraseña'}</label>
-            <input
-              type="password"
-              className="input"
-              style={fieldErrors['password'] ? { borderColor: 'var(--danger)' } : undefined}
-              value={form.password}
-              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              placeholder={editing ? 'Dejar vacío para no cambiarla' : '••••••••'}
-              minLength={8}
-              required={!editing}
-            />
-            {editing && (
-              <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                Si esta persona trabaja en más de un negocio, no vas a poder cambiarle la contraseña desde acá.
+          {canSetPasswordDirectly ? (
+            <div>
+              <label className="label">{editing ? 'Nueva contraseña (opcional)' : 'Contraseña'}</label>
+              <input
+                type="password"
+                className="input"
+                style={fieldErrors['password'] ? { borderColor: 'var(--danger)' } : undefined}
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                placeholder={editing ? 'Dejar vacío para no cambiarla' : '••••••••'}
+                minLength={8}
+                required={!editing}
+              />
+              {editing && (
+                <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Si esta persona trabaja en más de un negocio, no vas a poder cambiarle la contraseña desde acá.
+                </p>
+              )}
+              {fieldErrors['password'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['password']}</p>}
+            </div>
+          ) : (
+            <div>
+              <label className="label">Contraseña</label>
+              <p className="mt-1 mb-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                Por el rol de esta persona, no se puede fijar la contraseña directo desde acá — mandale un link para que la elija ella misma.
               </p>
-            )}
-            {fieldErrors['password'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['password']}</p>}
-          </div>
+              <button type="button" onClick={handleSendResetLink} disabled={sendingResetLink} className="btn-secondary">
+                {sendingResetLink ? <span className="spinner" /> : null}
+                Enviar link para restablecer contraseña
+              </button>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancelar</button>

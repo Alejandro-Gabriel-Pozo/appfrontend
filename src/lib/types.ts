@@ -22,6 +22,7 @@ export type { Role, TeamMember, CreateTeamMemberInput, UpdateTeamMemberInput } f
 export type {
   UserInvitationStatus, UserInvitation, CreateInvitationInput,
   InvitationPreview, AcceptInvitationInput,
+  PasswordResetPreview, AcceptPasswordResetInput,
 } from './usuarios/types'
 export type {
   BookingMode, BookableService, CreateBookableServiceInput, UpdateBookableServiceInput,

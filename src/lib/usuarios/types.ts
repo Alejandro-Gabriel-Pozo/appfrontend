@@ -107,3 +107,20 @@ export interface AcceptInvitationInput {
   /** Solo si `InvitationPreview.requiresPassword` es true. */
   password?: string
 }
+
+// ─── Reseteo de contraseña (K1, 23/08/2026, pendientes-2026-08-23.md) ──────
+// Vía general para restablecer la contraseña de un usuario existente —
+// obligatoria cuando el objetivo es OWNER_ONLY/MANAGEMENT y quien lo pide no
+// es OWNER (el backend rechaza con 403 ROLE_HIERARCHY_PROTECTED si se
+// intenta fijarla directo por PUT /api/users/:id en ese caso). Ver backend:
+// app-main src/usuarios-roles/password-reset.routes.ts.
+
+/** Respuesta de POST /api/password-resets/lookup — antes de pedir la contraseña nueva. */
+export interface PasswordResetPreview {
+  email: string
+}
+
+export interface AcceptPasswordResetInput {
+  token: string
+  newPassword: string
+}
