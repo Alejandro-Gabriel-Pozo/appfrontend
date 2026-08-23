@@ -153,7 +153,7 @@ export default function ScheduleManager({ open, onClose, service }: ScheduleMana
           <div>
             <label className="label">Hora</label>
             <input
-              type="time" className="input" required
+              type="time" lang="es-AR" className="input" required
               value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
             />
           </div>

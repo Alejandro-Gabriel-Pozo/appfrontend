@@ -88,7 +88,7 @@ function BusinessIdentitySection() {
           <div className="flex-1">
             <label className="label">Check-in estándar</label>
             <input
-              type="time" className="input" value={checkInTime}
+              type="time" lang="es-AR" className="input" value={checkInTime}
               onChange={e => setCheckInTime(e.target.value)}
               required
             />
@@ -96,7 +96,7 @@ function BusinessIdentitySection() {
           <div className="flex-1">
             <label className="label">Check-out estándar</label>
             <input
-              type="time" className="input" value={checkOutTime}
+              type="time" lang="es-AR" className="input" value={checkOutTime}
               onChange={e => setCheckOutTime(e.target.value)}
               required
             />
@@ -640,11 +640,11 @@ export default function MiNegocioPage() {
                     <div className="flex items-end gap-2">
                       <div>
                         <label className="label">Desde</label>
-                        <input type="time" className="input" value={newStart} onChange={e => setNewStart(e.target.value)} required />
+                        <input type="time" lang="es-AR" className="input" value={newStart} onChange={e => setNewStart(e.target.value)} required />
                       </div>
                       <div>
                         <label className="label">Hasta</label>
-                        <input type="time" className="input" value={newEnd} onChange={e => setNewEnd(e.target.value)} required />
+                        <input type="time" lang="es-AR" className="input" value={newEnd} onChange={e => setNewEnd(e.target.value)} required />
                       </div>
                       <button type="submit" disabled={saving} className="btn-primary">
                         {saving ? <span className="spinner" /> : 'Guardar'}

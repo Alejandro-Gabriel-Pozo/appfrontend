@@ -271,8 +271,8 @@ export default function RecursosPage() {
                     <select className="input" value={hourForm.dayOfWeek} onChange={e => setHourForm(f => ({ ...f, dayOfWeek: Number(e.target.value) }))}>
                       {DAY_LABEL.map((d, i) => <option key={i} value={i}>{d}</option>)}
                     </select>
-                    <input type="time" className="input" value={hourForm.startTime} onChange={e => setHourForm(f => ({ ...f, startTime: e.target.value }))} />
-                    <input type="time" className="input" value={hourForm.endTime} onChange={e => setHourForm(f => ({ ...f, endTime: e.target.value }))} />
+                    <input type="time" lang="es-AR" className="input" value={hourForm.startTime} onChange={e => setHourForm(f => ({ ...f, startTime: e.target.value }))} />
+                    <input type="time" lang="es-AR" className="input" value={hourForm.endTime} onChange={e => setHourForm(f => ({ ...f, endTime: e.target.value }))} />
                     <button type="button" onClick={handleAddHour} disabled={addingHour} className="btn-secondary shrink-0">
                       {addingHour ? <span className="spinner" /> : '+ Agregar'}
                     </button>
