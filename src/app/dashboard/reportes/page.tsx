@@ -3,7 +3,7 @@ import { useState } from 'react'
 import ApiSection from '@/components/ApiSection'
 import { apiFetch } from '@/lib/api'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Sin módulo propio — acento brass por defecto (sección 6 del doc).
 
 export default function ReportesPage() {
@@ -25,7 +25,7 @@ export default function ReportesPage() {
   const [arTo, setArTo] = useState('')
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Reportes</h1>

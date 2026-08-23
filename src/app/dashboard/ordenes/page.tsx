@@ -6,8 +6,8 @@ import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import type { Order, OrderStatus, Customer, Product, CreateOrderItemInput } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
-// Primera pantalla POS migrada (18/08/2026) — acento clay (.bastion-clay).
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
+// Primera pantalla POS migrada a Bastión (18/08/2026), ahora en ZULU.
 
 const PAGE_SIZE = 20
 
@@ -201,7 +201,7 @@ export default function OrdenesPage() {
   }
 
   return (
-    <div className={`bastion bastion-clay`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
       <div className="page-header">
         <div>

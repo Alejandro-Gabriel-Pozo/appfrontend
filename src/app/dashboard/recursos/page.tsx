@@ -5,7 +5,7 @@ import { categoriesApi, resourceHoursApi, extractErrorMessage, extractFieldError
 import { useToast } from '@/context/ToastContext'
 import type { Resource, Category, OperatingWindow } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento brass (core, sin gate de módulo).
 
 // basePrice admite '' mientras se tipea (18/08/2026, pedido del dueño) --
@@ -133,7 +133,7 @@ export default function RecursosPage() {
   const getCatName = (id: string) => categories.find(c => c.id === id)?.name ?? id
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
       <div className="page-header">
         <div>

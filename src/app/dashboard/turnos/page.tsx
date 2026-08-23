@@ -6,7 +6,7 @@ import Modal from '@/components/Modal'
 import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
 import type { Reservation, ReservationStatus } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Backlog E1 (13/08/2026, alcance completo 18/08) — separa el panel de
 // servicios puntuales (Turnos) del de alojamiento (Reservas + Estadías).
 // Es un clon deliberado de dashboard/reservas/page.tsx con el filtro de
@@ -192,7 +192,7 @@ export default function TurnosPage() {
   }
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
       <div className="page-header">
         <div>

@@ -6,7 +6,7 @@ import Modal from '@/components/Modal'
 import FacturarButton from '@/components/FacturarButton'
 import type { Customer, CustomerStatement, TransactionType, TransactionStatus } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento clay (mismo criterio que Órdenes/Productos — plata/POS).
 
 const TYPE_LABEL: Record<TransactionType, string> = {
@@ -111,7 +111,7 @@ export default function CuentasCorrientesPage() {
   }
 
   return (
-    <div className={`bastion bastion-clay grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Columna izquierda: buscar/elegir cliente */}
       <div>
         <h1 className="page-title mb-1" style={{ fontSize: 20, fontWeight: 600 }}>Cuentas Corrientes</h1>
@@ -175,7 +175,7 @@ export default function CuentasCorrientesPage() {
 
             <div className="card p-5 mb-6">
               <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-tertiary)' }}>Saldo</p>
-              <p className="text-2xl font-semibold mono" style={{ color: statement.balance > 0 ? 'var(--danger)' : 'var(--bastion-sage)' }}>
+              <p className="text-2xl font-semibold mono" style={{ color: statement.balance > 0 ? 'var(--danger)' : 'var(--success)' }}>
                 {fmtMoney(statement.balance)}
               </p>
               <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>

@@ -10,7 +10,7 @@ import RatePlanManager from '@/components/RatePlanManager'
 import ScheduleManager from '@/components/ScheduleManager'
 import type { BookableService, Category, BookingMode } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento brass (core, sin gate de módulo). ResourceLockPicker (modal de
 // recursos bloqueados) queda con su texto interno sin retintar a propósito
 // — es un componente compartido chico, gris-sobre-blanco sigue siendo
@@ -136,7 +136,7 @@ export default function ServiciosPage() {
   const getCatName = (id: string) => categories.find(c => c.id === id)?.name ?? id
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Servicios</h1>

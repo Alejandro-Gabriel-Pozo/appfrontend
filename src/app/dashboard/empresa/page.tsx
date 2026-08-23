@@ -4,7 +4,7 @@ import { companiesApi, productsApi, extractErrorMessage } from '@/lib/api'
 import type { CompanyLink, CompanyProduct } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento brass por defecto (sin módulo propio — el vínculo a empresa aplica
 // más allá de un solo módulo POS/PMS).
 
@@ -72,7 +72,7 @@ export default function EmpresaPage() {
   }
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Empresa</h1>
@@ -145,7 +145,7 @@ export default function EmpresaPage() {
                     <tr key={c.id}>
                       <td className="table-cell-primary">{c.name}</td>
                       <td className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{c.sku ?? '—'}</td>
-                      <td className="mono" style={{ fontWeight: 600, color: 'var(--bastion-sage)' }}>{fmt(c.basePrice)}</td>
+                      <td className="mono" style={{ fontWeight: 600, color: 'var(--success)' }}>{fmt(c.basePrice)}</td>
                       <td className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{new Date(c.updatedAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
                     </tr>
                   ))}

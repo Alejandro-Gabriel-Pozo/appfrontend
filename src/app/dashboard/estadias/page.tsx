@@ -8,7 +8,7 @@ import { useIsManagement } from '@/hooks/useAuthRole'
 import Modal from '@/components/Modal'
 import type { Stay, Resource, Customer, Reservation, Shift, StayFolio, Category } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Tercera pantalla migrada (18/08/2026) — módulo PMS, acento brass.
 
 const SHIFT_LABEL: Record<Shift, string> = { MORNING: 'Mañana', AFTERNOON: 'Tarde', NIGHT: 'Noche' }
@@ -245,7 +245,7 @@ export default function EstadiasPage() {
   }
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Estadías</h1>
@@ -404,7 +404,7 @@ export default function EstadiasPage() {
             ) : folio && (
               <div className="card p-4">
                 <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-tertiary)' }}>Saldo de la estadía</p>
-                <p className="text-xl font-semibold" style={{ color: folio.balance > 0 ? 'var(--danger)' : 'var(--bastion-sage)' }}>
+                <p className="text-xl font-semibold" style={{ color: folio.balance > 0 ? 'var(--danger)' : 'var(--success)' }}>
                   {fmtMoney(folio.balance)}
                 </p>
                 {folio.balance > 0 ? (

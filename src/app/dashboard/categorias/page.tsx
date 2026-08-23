@@ -7,7 +7,7 @@ import { useToast } from '@/context/ToastContext'
 import UpgradePrompt, { type PlanLimitPayload } from '@/components/UpgradePrompt'
 import type { Category } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento brass (core, sin gate de módulo). UpgradePrompt ya usa una paleta
 // clara (amarillo sobre blanco) — se ve bien tal cual sobre parchment, sin
 // tocarlo.
@@ -91,7 +91,7 @@ export default function CategoriasPage() {
   }
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Categorías</h1>

@@ -5,7 +5,7 @@ import { useToast } from '@/context/ToastContext'
 import { useIsOwner } from '@/hooks/useAuthRole'
 import type { OperatingWindow, AfipCredentialsStatus } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Sin módulo propio — acento brass por defecto (sección 6 del doc).
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -586,7 +586,7 @@ export default function MiNegocioPage() {
   }
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
     <div style={{ maxWidth: '40rem' }}>
       <div className="page-header">
         <div>

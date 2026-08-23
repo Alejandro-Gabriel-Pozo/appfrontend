@@ -5,7 +5,7 @@ import { extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import type { WasteReason } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento clay (POS_RESTAURANTE) — mismo módulo que Productos/Órdenes.
 
 export default function MotivosMermaPage() {
@@ -67,7 +67,7 @@ export default function MotivosMermaPage() {
   }
 
   return (
-    <div className={`bastion bastion-clay`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Motivos de Merma</h1>

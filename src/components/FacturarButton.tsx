@@ -71,7 +71,7 @@ export default function FacturarButton({ financialTransactionId }: { financialTr
     return (
       <div className="flex flex-col items-start gap-1">
         <div className="flex items-center gap-2">
-          <span className="text-xs mono" style={{ color: 'var(--bastion-sage)' }}>
+          <span className="text-xs mono" style={{ color: 'var(--success)' }}>
             CAE {invoice.cae} · Cbte {invoice.cbteNro}
           </span>
           <button

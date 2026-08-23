@@ -6,7 +6,7 @@ import { productsApi, recipeItemsApi, extractErrorMessage } from '@/lib/api'
 import type { Product, RecipeItem, CreateRecipeItemInput } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento clay (POS_RESTAURANTE, mismo módulo que Productos).
 
 function fmt(n: number) {
@@ -202,7 +202,7 @@ export default function RecetaPage() {
   const availableComponents = allProducts.filter(p => p.id !== productId && p.active)
 
   return (
-    <div className={`bastion bastion-clay`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header" style={{ alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <Link

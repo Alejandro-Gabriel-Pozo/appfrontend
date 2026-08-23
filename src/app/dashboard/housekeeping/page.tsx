@@ -7,7 +7,7 @@ import { useIsManagement } from '@/hooks/useAuthRole'
 import Modal from '@/components/Modal'
 import type { HousekeepingTask, HousekeepingStatus, Shift, Resource, TeamMember, Category, LateCheckout } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Segunda pantalla migrada (18/08/2026) — módulo PMS, acento brass, patrón
 // "rack": una ficha de color por recurso en vez de una tabla genérica (es el
 // elemento señal del sistema para housekeeping, sección 4 del doc).
@@ -37,14 +37,14 @@ const STATUS_BADGE_CLASS: Record<HousekeepingStatus, string> = {
 // pero en versión "bloque de color" en vez de pill (principio 4 del doc:
 // escaneable como bloque desde lejos, clave en operación de mostrador).
 const STATUS_TILE: Record<HousekeepingStatus, { bg: string; border: string; dot: string }> = {
-  PENDING:        { bg: 'var(--bastion-brass-soft)',  border: 'var(--bastion-brass)', dot: 'var(--bastion-brass)' },
-  ASSIGNED:       { bg: 'var(--bastion-neutral-bg)',  border: '#C7CCDA',              dot: 'var(--bastion-neutral-text)' },
-  IN_PROGRESS:    { bg: 'var(--bastion-neutral-bg)',  border: '#C7CCDA',              dot: 'var(--bastion-neutral-text)' },
-  DONE:           { bg: 'var(--bastion-sage-bg)',     border: 'var(--bastion-sage)',  dot: 'var(--bastion-sage)' },
-  INSPECTED:      { bg: 'var(--bastion-sage-bg)',     border: 'var(--bastion-sage)',  dot: 'var(--bastion-sage)' },
-  OUT_OF_SERVICE: { bg: 'var(--bastion-clay-bg)',     border: 'var(--bastion-clay)',  dot: 'var(--bastion-clay)' },
+  PENDING:        { bg: 'var(--warning-dim)', border: 'var(--warning)', dot: 'var(--warning)' },
+  ASSIGNED:       { bg: 'var(--info-dim)',    border: 'var(--info)',    dot: 'var(--info)' },
+  IN_PROGRESS:    { bg: 'var(--info-dim)',    border: 'var(--info)',    dot: 'var(--info)' },
+  DONE:           { bg: 'var(--success-dim)', border: 'var(--success)', dot: 'var(--success)' },
+  INSPECTED:      { bg: 'var(--success-dim)', border: 'var(--success)', dot: 'var(--success)' },
+  OUT_OF_SERVICE: { bg: 'var(--danger-dim)',  border: 'var(--danger)',  dot: 'var(--danger)' },
 }
-const EMPTY_TILE = { bg: 'var(--bastion-card)', border: 'var(--bastion-line)', dot: 'var(--bastion-line)' }
+const EMPTY_TILE = { bg: 'var(--surface-2)', border: 'var(--border)', dot: 'var(--border)' }
 
 const SHIFT_LABEL: Record<Shift, string> = { MORNING: 'Mañana', AFTERNOON: 'Tarde', NIGHT: 'Noche' }
 
@@ -249,7 +249,7 @@ export default function HousekeepingPage() {
   const selectedTask = selectedResource ? getTaskForResource(selectedResource.id) : null
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Housekeeping</h1>
@@ -300,7 +300,7 @@ export default function HousekeepingPage() {
           </span>
         ))}
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', border: '1px solid var(--bastion-line)', display: 'inline-block' }} />
+          <span style={{ width: 8, height: 8, borderRadius: '50%', border: '1px solid var(--border)', display: 'inline-block' }} />
           Sin tarea
         </span>
       </div>
@@ -346,11 +346,11 @@ export default function HousekeepingPage() {
                     position: 'absolute', top: 10, right: 10,
                     width: 8, height: 8, borderRadius: '50%',
                     background: task ? tile.dot : 'transparent',
-                    border: task ? 'none' : '1px solid var(--bastion-line)',
+                    border: task ? 'none' : '1px solid var(--border)',
                   }}
                 />
-                <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--bastion-text)', paddingRight: 14 }}>{r.name}</span>
-                <span style={{ fontSize: 11.5, color: 'var(--bastion-slate)' }}>
+                <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', paddingRight: 14 }}>{r.name}</span>
+                <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
                   {task ? `${STATUS_LABEL[task.status]} · ${SHIFT_LABEL[task.shift]}` : 'Sin tarea'}
                 </span>
                 {lateCheckout && (
@@ -360,8 +360,8 @@ export default function HousekeepingPage() {
                       position: 'absolute', top: 10, left: 10,
                       fontSize: 10, fontWeight: 600, letterSpacing: 0.2,
                       padding: '2px 6px', borderRadius: 999,
-                      background: 'var(--bastion-clay-bg)', color: 'var(--bastion-clay)',
-                      border: '1px solid var(--bastion-clay)',
+                      background: 'var(--danger-dim)', color: 'var(--danger)',
+                      border: '1px solid var(--danger)',
                     }}
                   >
                     ⏰ hasta {lateCheckout.approvedCheckOutTime?.slice(0, 5) ?? '—'}
@@ -457,8 +457,8 @@ export default function HousekeepingPage() {
               className="mb-4"
               style={{
                 padding: '10px 12px', borderRadius: 10,
-                background: 'var(--bastion-clay-bg)', border: '1px solid var(--bastion-clay)',
-                fontSize: 13, color: 'var(--bastion-clay)',
+                background: 'var(--danger-dim)', border: '1px solid var(--danger)',
+                fontSize: 13, color: 'var(--danger)',
               }}
             >
               ⏰ Late check-out aprobado — no limpiar antes de las{' '}

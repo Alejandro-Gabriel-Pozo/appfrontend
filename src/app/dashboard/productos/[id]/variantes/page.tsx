@@ -6,7 +6,7 @@ import { productsApi, variantsApi, extractErrorMessage } from '@/lib/api'
 import type { Product, ProductVariant, CreateVariantInput, UpdateVariantInput } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento clay (POS_RESTAURANTE, mismo módulo que Productos).
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -224,7 +224,7 @@ export default function VariantesPage() {
   const basePrice = product?.basePrice ?? 0
 
   return (
-    <div className={`bastion bastion-clay`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Back + Header */}
       <div className="page-header" style={{ alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -242,7 +242,7 @@ export default function VariantesPage() {
           </h1>
           {product && (
             <p className="page-subtitle" style={{ marginTop: 0 }}>
-              Precio base: <span className="mono" style={{ color: 'var(--bastion-sage)', fontWeight: 600 }}>
+              Precio base: <span className="mono" style={{ color: 'var(--success)', fontWeight: 600 }}>
                 {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(product.basePrice)}
               </span>
               {' · '}{variants.length} variante{variants.length !== 1 ? 's' : ''}
@@ -285,7 +285,7 @@ export default function VariantesPage() {
                 <tr key={v.id}>
                   <td className="table-cell-primary">{v.name}</td>
                   <td className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{v.sku ?? '—'}</td>
-                  <td className="mono" style={{ fontWeight: 600, color: v.priceOverride !== null ? 'var(--bastion-brass)' : 'var(--bastion-sage)' }}>
+                  <td className="mono" style={{ fontWeight: 600, color: v.priceOverride !== null ? 'var(--accent)' : 'var(--success)' }}>
                     {fmt(v.priceOverride, basePrice)}
                     {v.priceOverride !== null && (
                       <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginLeft: 4 }}>(override)</span>

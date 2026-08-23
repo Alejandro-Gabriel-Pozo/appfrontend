@@ -7,7 +7,7 @@ import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import type { Customer, CustomerRate, Resource, BookableService, CustomerTaxProfile } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Sin módulo propio — acento brass por defecto (sección 6 del doc).
 
 const KIND_LABEL: Record<'INDIVIDUAL' | 'COMPANY', string> = {
@@ -322,7 +322,7 @@ export default function ClientesPage() {
   }
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ fontSize: 22, fontWeight: 600 }}>Clientes</h1>
@@ -598,7 +598,7 @@ export default function ClientesPage() {
                       <span className="text-xs ml-2" style={{ color: 'var(--text-tertiary)' }}>{rate.resourceId ? 'recurso' : 'servicio'}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm mono" style={{ color: 'var(--bastion-sage)' }}>${rate.price.toLocaleString('es-AR')}</span>
+                      <span className="text-sm mono" style={{ color: 'var(--success)' }}>${rate.price.toLocaleString('es-AR')}</span>
                       <button type="button" onClick={() => setRateToRemove(rate)} style={{ color: 'var(--text-tertiary)' }} aria-label="Quitar tarifa especial">
                         ×
                       </button>

@@ -26,9 +26,9 @@ const VISIBLE_DAYS = 7
 const MS_PER_DAY = 86_400_000
 
 const STATUS_BAR_STYLE: Record<Exclude<ReservationStatus, 'CANCELLED'>, { bg: string; border: string; text: string }> = {
-  PENDING:   { bg: 'var(--bastion-brass-soft)', border: 'var(--bastion-brass)', text: 'var(--bastion-brass)' },
-  CONFIRMED: { bg: 'var(--bastion-sage-bg)',    border: 'var(--bastion-sage)',  text: 'var(--bastion-sage)' },
-  COMPLETED: { bg: 'var(--bastion-neutral-bg)', border: '#C7CCDA',             text: 'var(--bastion-neutral-text)' },
+  PENDING:   { bg: 'var(--warning-dim)', border: 'var(--warning)', text: 'var(--warning)' },
+  CONFIRMED: { bg: 'var(--info-dim)',    border: 'var(--info)',    text: 'var(--info)' },
+  COMPLETED: { bg: 'var(--success-dim)', border: 'var(--success-border)', text: 'var(--success)' },
 }
 
 function todayUTCMidnightMs(): number {
@@ -276,7 +276,7 @@ export default function RoomCalendar({
                   key={ms}
                   style={{
                     width: DAY_WIDTH, flexShrink: 0, textAlign: 'center', padding: '8px 4px',
-                    background: isToday ? 'var(--bastion-brass-soft)' : undefined,
+                    background: isToday ? 'var(--accent-dim)' : undefined,
                   }}
                 >
                   <p className="text-xs" style={{ color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>{weekday}</p>

@@ -9,11 +9,9 @@ import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/
 import { useIsManagement } from '@/hooks/useAuthRole'
 import type { Reservation, ReservationStatus, RatePlan } from '@/lib/types'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
-// Primera pantalla migrada (18/08/2026) — módulo PMS, acento brass. El scope
-// vive en la clase .bastion (globals.css); acá solo se cargan las 3
-// tipografías vía next/font (auto-hosted, sin <link> manual) y se exponen
-// como variables CSS que consume ese scope.
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
+// Primera pantalla migrada a Bastión (18/08/2026), ahora en ZULU. El scope
+// vive en la clase .zulu (globals.css).
 
 const STATUS_LABEL: Record<ReservationStatus, string> = {
   PENDING: 'Pendiente',
@@ -22,9 +20,9 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
   COMPLETED: 'Completada',
 }
 
-// Semáforo Bastión (sección 5 del doc): pending=brass, confirmed=sage,
-// completed=gris neutro, cancelled=clay — badge-* ya vive en globals.css
-// y toma esa paleta automáticamente dentro del scope .bastion.
+// Semáforo de estado: pending=warning, confirmed=info, completed=success,
+// cancelled=danger — badge-* ya vive en globals.css y toma esa paleta
+// automáticamente dentro del scope .zulu.
 const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
   PENDING: 'badge-pending',
   CONFIRMED: 'badge-confirmed',
@@ -434,7 +432,7 @@ export default function ReservasPage() {
   }
 
   return (
-    <div className={`bastion`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
       <div className="page-header">
         <div>
@@ -998,7 +996,7 @@ export default function ReservasPage() {
                 >
                   <div
                     className="rounded-lg p-3"
-                    style={{ background: 'var(--bastion-brass-soft, rgba(180,140,60,0.08))', border: '1px solid var(--bastion-brass, var(--border-md))' }}
+                    style={{ background: 'var(--warning-dim)', border: '1px solid var(--warning-border)' }}
                   >
                     <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
                       Ajuste de precio pendiente

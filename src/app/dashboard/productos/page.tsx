@@ -6,7 +6,7 @@ import { extractErrorMessage, productsApi, wasteReasonsApi, companiesApi } from 
 import type { Product, CreateProductInput, UpdateProductInput, WasteReason, ProductType, CompanyLink } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
 
-// ─── Sistema de diseño "Bastión" (docs/sistema-diseno-bastion.md) ────────────
+// ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento clay (POS_RESTAURANTE).
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -607,7 +607,7 @@ export default function ProductosPage() {
   )
 
   return (
-    <div className={`bastion bastion-clay`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
+    <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
       <div className="page-header">
         <div>
@@ -662,7 +662,7 @@ export default function ProductosPage() {
                 <tr key={p.id}>
                   <td className="table-cell-primary">{p.name}</td>
                   <td className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{p.sku ?? '—'}</td>
-                  <td className="mono" style={{ fontWeight: 600, color: 'var(--bastion-sage)' }}>{fmt(p.basePrice)}</td>
+                  <td className="mono" style={{ fontWeight: 600, color: 'var(--success)' }}>{fmt(p.basePrice)}</td>
                   <td className="mono" style={{ color: p.stockQuantity <= p.stockMinAlert ? 'var(--warning)' : 'var(--text-secondary)' }}>
                     {p.hasVariants ? '—' : p.stockQuantity}
                   </td>
