@@ -53,3 +53,38 @@ vez, en `dashboard/layout.tsx`.** Una pantalla nueva del dashboard que
 use la clase `.bastion` NO necesita volver a importar
 `Fraunces`/`IBM_Plex_Sans`/`IBM_Plex_Mono` — las variables CSS ya
 cascadean desde el layout.
+
+## Refine — cuándo usarlo (aplicado, no aspiracional)
+
+**Toda pantalla nueva del dashboard que liste/cree/edite/borre un
+recurso con contraparte en `lib/refine/dataProvider.ts`** usa
+`useTable`/`useForm`/`useCreate`/`useUpdate`/`useDelete` de
+`@refinedev/core` — nunca `useState` + `useEffect` + `*Api.list()` a
+mano para ese caso. Si el recurso no tiene adaptador todavía, se agrega
+en `dataProvider.ts` siguiendo `ResourceAdapter` antes de escribir la
+pantalla. Estado real de la migración, qué falta y qué queda afuera a
+propósito: `docs/roadmap-migracion-refine.md`.
+
+**Excepción explícita — no van por Refine:** pantallas singleton de
+configuración (`mi-negocio`, `empresa`), reportes de solo lectura
+(`reportes`), paneles de acciones puntuales sin lista (`admin`), y
+cualquier vista que no mapee 1:1 a un recurso con list/create/update/
+delete (detalle de una orden con acciones con nombre, cuentas
+corrientes). Estas siguen con fetch directo vía `lib/<dominio>/api.ts`.
+Un fetch crudo de OTRO recurso solo para llenar un combo/selector dentro
+de una pantalla ya migrada tampoco es una excepción que declarar — no es
+el recurso que esa pantalla gestiona, no aplica la regla.
+
+**Sub-recursos anidados** (receta/variantes de un producto, horario de
+un recurso/servicio, tarifas de un servicio/cliente — viven siempre
+dentro del detalle de su padre, nunca como lista independiente) son una
+pregunta de diseño del data provider sin resolver, no una excepción
+decidida ni una migración pendiente — ver `docs/roadmap-migracion-refine.md`
+sección 3. No agregarles un adaptador por tu cuenta sin confirmar antes
+la convención de scope.
+
+**Al tocar una pantalla existente que no usa Refine y sí aplica el
+criterio de arriba** (recursos, servicios, productos, usuarios,
+clientes...), migrarla como parte del mismo cambio — no se acumula
+deuda nueva sobre lo que ya está identificado en
+`docs/roadmap-migracion-refine.md`.
