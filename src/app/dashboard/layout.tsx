@@ -124,6 +124,13 @@ const NAV = [
     href: '/dashboard/usuarios',
     label: 'Usuarios',
     icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+    // F2 (23/08/2026, pendientes-2026-08-23.md) -- reportado por el dueño:
+    // RECEPTIONIST veía este ítem en el nav (y podía navegar a la pantalla
+    // completa, con nombre/email/rol de todo el personal) aunque el
+    // backend rechaza sus mutaciones (authorize(Roles.MANAGEMENT)). Ver
+    // dashboard/usuarios/page.tsx para el mismo gate aplicado a la
+    // pantalla, por si alguien entra directo por URL.
+    managementOnly: true,
   },
   {
     href: '/dashboard/mi-negocio',
@@ -316,7 +323,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [isAuthenticated])
 
   const visibleNav = NAV.filter(
-    item => !item.moduleKey || modules === null || modules[item.moduleKey] !== false,
+    item =>
+      (!item.moduleKey || modules === null || modules[item.moduleKey] !== false) &&
+      (!item.managementOnly || isManagement),
   )
 
   useEffect(() => { queueMicrotask(() => setSidebarOpen(false)) }, [pathname])
