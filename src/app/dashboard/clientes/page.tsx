@@ -40,7 +40,7 @@ export default function ClientesPage() {
 
   // Editar cliente (incluye tags)
   const [editTarget, setEditTarget] = useState<Customer | null>(null)
-  const [editForm, setEditForm] = useState({ displayName: '', kind: 'INDIVIDUAL' as 'INDIVIDUAL' | 'COMPANY', active: true })
+  const [editForm, setEditForm] = useState({ displayName: '', kind: 'INDIVIDUAL' as 'INDIVIDUAL' | 'COMPANY', active: true, enableCurrentAccount: false })
   const [saving, setSaving] = useState(false)
   const [newTag, setNewTag] = useState('')
   const [addingTag, setAddingTag] = useState(false)
@@ -139,6 +139,7 @@ export default function ClientesPage() {
         displayName: full.fullName,
         kind: full.kind ?? 'INDIVIDUAL',
         active: full.active ?? true,
+        enableCurrentAccount: full.enableCurrentAccount ?? false,
       })
       setRates(customerRates)
       setRateForm({ targetType: 'resource', targetId: '', price: '', notes: '' })
@@ -478,6 +479,20 @@ export default function ClientesPage() {
                 />
                 Cliente activo
               </label>
+              <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                <input
+                  type="checkbox"
+                  checked={editForm.enableCurrentAccount}
+                  onChange={e => setEditForm(f => ({ ...f, enableCurrentAccount: e.target.checked }))}
+                  style={{ accentColor: 'var(--accent)' }}
+                />
+                Habilitar cuenta corriente
+              </label>
+              {editForm.enableCurrentAccount && (
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Este cliente va a aparecer en el panel de Cuentas Corrientes.
+                </p>
+              )}
               <button type="submit" disabled={saving} className="btn-primary w-full">
                 {saving ? <span className="spinner" /> : null}
                 Guardar cambios

@@ -52,10 +52,15 @@ export default function CuentasCorrientesPage() {
   const [payNotes, setPayNotes] = useState('')
   const [paying, setPaying] = useState(false)
 
+  // F1-Pieza 1 (23/08/2026, pendientes-2026-08-23.md) — filtro RÍGIDO de
+  // base de datos, no de UI: `currentAccountEnabled: true` hace que el
+  // propio backend (SqlCustomerRepository.getAll()) excluya a los
+  // huéspedes sin cuenta corriente habilitada. Spec del dueño: "no deben
+  // aparecer en este listado general bajo ninguna circunstancia".
   useEffect(() => {
     queueMicrotask(() => {
       setLoadingCustomers(true)
-      customersApi.list()
+      customersApi.list({ currentAccountEnabled: true })
         .then(res => setCustomers(Array.isArray(res) ? res : res.data))
         .catch(err => toast(extractErrorMessage(err), 'error'))
         .finally(() => setLoadingCustomers(false))

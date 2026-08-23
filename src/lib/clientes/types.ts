@@ -25,6 +25,8 @@ export interface Customer {
   email: string
   kind?: 'INDIVIDUAL' | 'COMPANY'
   active?: boolean
+  /** F1-Pieza 1 (23/08/2026) — tipificación para Cuentas Corrientes. */
+  enableCurrentAccount?: boolean
   tags?: CustomerTag[]
   createdAt: string
   updatedAt: string
@@ -41,6 +43,8 @@ export interface CustomerListFilters {
   limit?:  number
   email?:  string
   search?: string
+  /** F1-Pieza 1 (23/08/2026) — filtro RÍGIDO de base para el panel de Cuentas Corrientes. */
+  currentAccountEnabled?: boolean
 }
 
 // ─── Perfil fiscal (19/08/2026, auditoría de producto — padrón de ARCA) ────────

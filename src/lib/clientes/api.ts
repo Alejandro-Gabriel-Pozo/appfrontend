@@ -15,6 +15,7 @@ export const customersApi = {
     if (filters.limit)  params.set('limit',  String(filters.limit))
     if (filters.email)  params.set('email',  filters.email)
     if (filters.search) params.set('search', filters.search)
+    if (filters.currentAccountEnabled) params.set('currentAccountEnabled', 'true')
     const qs = params.toString()
     return apiFetch<PaginatedResponse<Customer> | Customer[]>(
       `/api/customers${qs ? `?${qs}` : ''}`,
@@ -28,7 +29,7 @@ export const customersApi = {
   get: (id: string) => apiFetch<Customer>(`/api/customers/${id}`),
   create: (body: { fullName: string; email: string }) =>
     apiFetch<Customer>('/api/customers', { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: string, body: Partial<{ displayName: string; kind: 'INDIVIDUAL' | 'COMPANY'; active: boolean }>) =>
+  update: (id: string, body: Partial<{ displayName: string; kind: 'INDIVIDUAL' | 'COMPANY'; active: boolean; enableCurrentAccount: boolean }>) =>
     apiFetch<Customer>(`/api/customers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   addTag: (id: string, tagName: string) =>
     apiFetch<Customer>(`/api/customers/${id}/tags`, { method: 'POST', body: JSON.stringify({ tagName }) }),
