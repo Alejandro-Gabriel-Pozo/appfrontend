@@ -22,6 +22,9 @@ export const customersApi = {
   },
   findByEmail: (email: string) =>
     apiFetch<Customer | null>(`/api/customers?email=${encodeURIComponent(email)}`),
+  /** G1 (23/08/2026) — busca contra los perfiles fiscales ya cargados (no el padrón de ARCA). Body, nunca query string (A7.2, el CUIT/DNI es PII). */
+  searchByTaxId: (taxId: string) =>
+    apiFetch<Customer[]>('/api/customers/search-by-tax-id', { method: 'POST', body: JSON.stringify({ taxId }) }),
   get: (id: string) => apiFetch<Customer>(`/api/customers/${id}`),
   create: (body: { fullName: string; email: string }) =>
     apiFetch<Customer>('/api/customers', { method: 'POST', body: JSON.stringify(body) }),

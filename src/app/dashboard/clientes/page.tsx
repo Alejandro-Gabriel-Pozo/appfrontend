@@ -27,6 +27,11 @@ export default function ClientesPage() {
   // igual que create/update lo hacen solos vía Refine.
   const invalidate = useInvalidate()
   const [search, setSearch] = useState('')
+  // G1 (23/08/2026) — si lo que se tipeó son solo dígitos (7+, forma de un
+  // CUIT/DNI), se busca contra customer_tax_profiles en el backend en vez
+  // de filtrar por nombre/email en memoria -- el CUIT/DNI de un cliente no
+  // viaja en la lista que ya se cargó, hay que pedirlo aparte.
+  const [taxIdMatches, setTaxIdMatches] = useState<Customer[] | null>(null)
 
   // Crear cliente
   const [createOpen, setCreateOpen] = useState(false)
@@ -69,13 +74,28 @@ export default function ClientesPage() {
     })
   }, [toast])
 
+  useEffect(() => {
+    const digitsOnly = search.trim().replace(/[-\s.]/g, '')
+    if (digitsOnly.length < 7 || !/^\d+$/.test(digitsOnly)) {
+      setTaxIdMatches(null)
+      return
+    }
+    const timer = setTimeout(() => {
+      customersApi.searchByTaxId(digitsOnly)
+        .then(setTaxIdMatches)
+        .catch(err => toast(extractErrorMessage(err), 'error'))
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [search, toast])
+
   const filtered = useMemo(() => {
     if (!search.trim()) return customers
+    if (taxIdMatches !== null) return taxIdMatches
     const q = search.trim().toLowerCase()
     return customers.filter(c =>
       c.fullName?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q)
     )
-  }, [customers, search])
+  }, [customers, search, taxIdMatches])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -349,7 +369,7 @@ export default function ClientesPage() {
         <input
           type="search"
           className="input w-full max-w-xs"
-          placeholder="Buscar por nombre o email…"
+          placeholder="Buscar por nombre, email o CUIT/DNI…"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
