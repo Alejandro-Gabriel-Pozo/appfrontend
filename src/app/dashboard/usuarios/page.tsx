@@ -29,9 +29,14 @@ type FormState = {
   email: string
   password: string
   roleId: string
+  fullName: string
+  dni: string
+  phone: string
+  employeeNumber: string
+  hiredAt: string
 }
 
-const EMPTY: FormState = { email: '', password: '', roleId: '' }
+const EMPTY: FormState = { email: '', password: '', roleId: '', fullName: '', dni: '', phone: '', employeeNumber: '', hiredAt: '' }
 
 export default function UsuariosPage() {
   const { toast } = useToast()
@@ -159,6 +164,11 @@ export default function UsuariosPage() {
       email: m.email,
       password: '',
       roleId: m.roleName === 'OWNER' ? defaultAssignableRoleId() : m.roleId,
+      fullName: m.fullName ?? '',
+      dni: m.dni ?? '',
+      phone: m.phone ?? '',
+      employeeNumber: m.employeeNumber ?? '',
+      hiredAt: m.hiredAt ? m.hiredAt.slice(0, 10) : '',
     })
     setFieldErrors({})
     setModalOpen(true)
@@ -179,11 +189,28 @@ export default function UsuariosPage() {
           values: {
             ...(editing.roleName !== 'OWNER' && { roleId: form.roleId }),
             ...(form.password && { password: form.password }),
+            fullName: form.fullName || undefined,
+            dni: form.dni || undefined,
+            phone: form.phone || undefined,
+            employeeNumber: form.employeeNumber || undefined,
+            hiredAt: form.hiredAt || undefined,
           },
         })
         toast('Usuario actualizado', 'success')
       } else {
-        await createMember({ resource: 'usuarios', values: { email: form.email, password: form.password, roleId: form.roleId } })
+        await createMember({
+          resource: 'usuarios',
+          values: {
+            email: form.email,
+            password: form.password,
+            roleId: form.roleId,
+            fullName: form.fullName || undefined,
+            dni: form.dni || undefined,
+            phone: form.phone || undefined,
+            employeeNumber: form.employeeNumber || undefined,
+            hiredAt: form.hiredAt || undefined,
+          },
+        })
         toast('Usuario creado', 'success')
       }
       setModalOpen(false)
@@ -298,7 +325,9 @@ export default function UsuariosPage() {
           <table className="table">
             <thead>
               <tr>
+                <th>Nombre</th>
                 <th>Email</th>
+                <th>Legajo</th>
                 <th>Rol</th>
                 <th>Estado</th>
                 <th />
@@ -307,7 +336,9 @@ export default function UsuariosPage() {
             <tbody>
               {members.map(m => (
                 <tr key={m.id}>
-                  <td className="table-cell-primary">{m.email}</td>
+                  <td className="table-cell-primary">{m.fullName ?? '—'}</td>
+                  <td>{m.email}</td>
+                  <td className="mono" style={{ fontSize: 12 }}>{m.employeeNumber ?? '—'}</td>
                   <td><span className="badge-completed">{ROLE_LABEL[m.roleName] ?? m.roleName}</span></td>
                   <td><span className={m.active ? 'badge-confirmed' : 'badge-completed'}>{m.active ? 'Activo' : 'Inactivo'}</span></td>
                   <td>
@@ -343,6 +374,58 @@ export default function UsuariosPage() {
             />
             {editing && <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>El email no se puede cambiar desde acá.</p>}
             {fieldErrors['email'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['email']}</p>}
+          </div>
+
+          <div>
+            <label className="label">Nombre completo</label>
+            <input
+              className="input"
+              value={form.fullName}
+              onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
+              placeholder="Juan Pérez"
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="label">DNI</label>
+              <input
+                className="input"
+                value={form.dni}
+                onChange={e => setForm(f => ({ ...f, dni: e.target.value }))}
+                placeholder="30111222"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="label">Teléfono</label>
+              <input
+                className="input"
+                value={form.phone}
+                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                placeholder="+54 9 11 5555-5555"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="label">Legajo</label>
+              <input
+                className="input"
+                value={form.employeeNumber}
+                onChange={e => setForm(f => ({ ...f, employeeNumber: e.target.value }))}
+                placeholder="LEG-001"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="label">Fecha de ingreso</label>
+              <input
+                type="date"
+                className="input"
+                value={form.hiredAt}
+                onChange={e => setForm(f => ({ ...f, hiredAt: e.target.value }))}
+              />
+            </div>
           </div>
 
           {editing?.roleName !== 'OWNER' && (

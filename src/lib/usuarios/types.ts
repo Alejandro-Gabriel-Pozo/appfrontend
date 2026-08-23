@@ -34,17 +34,34 @@ export interface TeamMember {
   active: boolean
   createdAt: string
   email: string
+  /** F2 (23/08/2026) — de la PERSONA (identity), compartido si trabaja en más de un negocio. */
+  fullName: string | null
+  dni: string | null
+  phone: string | null
+  /** F2 (23/08/2026) — del EMPLEO en ESTE negocio (membership), no de la persona. */
+  employeeNumber: string | null
+  hiredAt: string | null
 }
 
 export interface CreateTeamMemberInput {
   email: string
   password: string
   roleId: string
+  fullName?: string
+  dni?: string
+  phone?: string
+  employeeNumber?: string
+  hiredAt?: string
 }
 
 export interface UpdateTeamMemberInput {
   roleId?: string
   password?: string
+  fullName?: string
+  dni?: string
+  phone?: string
+  employeeNumber?: string
+  hiredAt?: string
 }
 
 // ─── Invitaciones (D2, pendientes-2026-08-19.md) ────────────────────────────
