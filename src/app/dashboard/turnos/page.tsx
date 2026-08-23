@@ -57,7 +57,7 @@ export default function TurnosPage() {
 
   // Modal nuevo turno
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
+  const [form, setForm] = useState({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', anyResource: false })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -115,7 +115,10 @@ export default function TurnosPage() {
       await createReservation({
         resource: 'reservas',
         values: {
-          resourceId: form.resourceId,
+          // K4 — ver comentario equivalente en dashboard/reservas/page.tsx.
+          ...(form.anyResource && selectedService
+            ? { categoryId: selectedService.categoryId }
+            : { resourceId: form.resourceId }),
           customer: { id: customer.id },
           startTime,
           endTime,
@@ -124,7 +127,7 @@ export default function TurnosPage() {
       })
       toast('Turno creado', 'success')
       setModalOpen(false)
-      setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
+      setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', anyResource: false })
     } catch (err) {
       const fe = extractFieldErrors(err)
       if (Object.keys(fe).length > 0) setFieldErrors(fe)
@@ -135,7 +138,7 @@ export default function TurnosPage() {
   }
 
   function openModal() {
-    setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '' })
+    setForm({ resourceId: '', serviceId: '', customerEmail: '', startTime: '', endTime: '', checkIn: '', checkOut: '', anyResource: false })
     setFieldErrors({})
     setSlotDate('')
     setAvailableSlots(null)
@@ -362,20 +365,42 @@ export default function TurnosPage() {
           </div>
           <div>
             <label className="label">Recurso</label>
-            <select
-              className="input"
-              value={form.resourceId}
-              onChange={e => setForm(f => ({ ...f, resourceId: e.target.value }))}
-              required
-            >
-              <option value="">Seleccioná un recurso…</option>
-              {resources
-                .filter(r => serviceResourceIds.has(r.id))
-                .filter(r => !selectedService || r.categoryId === selectedService.categoryId)
-                .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-            {fieldErrors['resourceId'] && (
-              <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>
+            {/* K4 (23/08/2026, pendientes-2026-08-23.md) — mismo patrón que
+                dashboard/reservas/page.tsx: el backend ya soporta asignación
+                automática por categoría, solo faltaba exponerla acá. */}
+            {form.serviceId && (
+              <label className="flex items-center gap-2 text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
+                <input
+                  type="checkbox"
+                  checked={form.anyResource}
+                  onChange={e => setForm(f => ({ ...f, anyResource: e.target.checked, resourceId: '' }))}
+                  style={{ accentColor: 'var(--accent)' }}
+                />
+                Cualquier recurso disponible
+              </label>
+            )}
+            {form.anyResource && form.serviceId ? (
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                Se asigna automáticamente el primer recurso libre de la categoría del servicio elegido.
+              </p>
+            ) : (
+              <>
+                <select
+                  className="input"
+                  value={form.resourceId}
+                  onChange={e => setForm(f => ({ ...f, resourceId: e.target.value }))}
+                  required
+                >
+                  <option value="">Seleccioná un recurso…</option>
+                  {resources
+                    .filter(r => serviceResourceIds.has(r.id))
+                    .filter(r => !selectedService || r.categoryId === selectedService.categoryId)
+                    .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+                {fieldErrors['resourceId'] && (
+                  <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>
+                )}
+              </>
             )}
           </div>
           <div>
