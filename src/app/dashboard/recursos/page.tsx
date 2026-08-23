@@ -234,20 +234,42 @@ export default function RecursosPage() {
                 </select>
                 {fieldErrors['categoryId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['categoryId']}</p>}
               </div>
-              <div>
-                <label className="label">Precio base ($)</label>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  className="input"
-                  style={fieldErrors['basePrice'] ? { borderColor: 'var(--danger)' } : undefined}
-                  value={form.basePrice}
-                  onChange={e => setForm(f => ({ ...f, basePrice: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                  required
-                />
-                {fieldErrors['basePrice'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['basePrice']}</p>}
-              </div>
+              {/* Precio base -- fallback de último nivel para reservar este
+                  Recurso DIRECTO, sin pasar por un Servicio del catálogo
+                  (que ya trae su propio precio). No es el campo principal
+                  de pricing -- se demuestra colapsado para no competir en
+                  jerarquía visual con Nombre/Categoría (K5, pendientes-
+                  2026-08-23.md). El backend ya lo trata como opcional
+                  (default 0, resources.routes.ts) -- sin `required` acá. */}
+              <details
+                className="rounded-lg"
+                style={{ border: '1px solid var(--border)' }}
+                open={!!(editing && editing.basePrice > 0)}
+              >
+                <summary
+                  className="label"
+                  style={{ cursor: 'pointer', padding: '10px 12px', margin: 0 }}
+                >
+                  Precio base ($) <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>— caso excepcional</span>
+                </summary>
+                <div style={{ padding: '0 12px 12px' }}>
+                  <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
+                    Se usa solo si este recurso se reserva directo, sin elegir un
+                    Servicio del catálogo. Si tus reservas siempre pasan por un
+                    Servicio, podés dejarlo en 0.
+                  </p>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    className="input"
+                    style={fieldErrors['basePrice'] ? { borderColor: 'var(--danger)' } : undefined}
+                    value={form.basePrice}
+                    onChange={e => setForm(f => ({ ...f, basePrice: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                  />
+                  {fieldErrors['basePrice'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['basePrice']}</p>}
+                </div>
+              </details>
 
               {editing && (
                 <div>
