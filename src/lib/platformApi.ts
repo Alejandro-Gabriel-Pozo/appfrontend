@@ -57,6 +57,26 @@ export interface PlatformStats {
   generatedAt: string
 }
 
+// L (23/08/2026) — `null` en los numéricos = sin límite; arrays vacíos en
+// las dos listas de "permitidos" = sin restricción. Mismo criterio que la
+// columna/tabla real (platform.schema.sql BLOQUE PLAN_LIMITS) — el
+// mapeo a Infinity/'ALL' solo pasa del lado del backend de negocio
+// (PlatformRepository.getPlanLimits), no acá.
+export interface PlatformPlanLimits {
+  plan: string
+  maxCategories: number | null
+  maxResources: number | null
+  maxActiveMemberships: number | null
+  maxCustomRoles: number | null
+  allowedRoleNames: string[]
+  allowedPermissionGroups: string[]
+}
+
+export interface PlatformRolePreset {
+  name: string
+  permissionGroups: string[]
+}
+
 // ─── API ────────────────────────────────────────────────────────────────
 export const platformApi = {
   login: (email: string, password: string) =>
@@ -85,6 +105,37 @@ export const platformApi = {
     provision: (id: string) =>
       platformFetch<{ message: string; business: PlatformBusiness }>(`/platform/businesses/${id}/provision`, {
         method: 'POST',
+      }),
+
+    // L (23/08/2026) — antes el único camino era un UPDATE a mano en la BD central.
+    updatePlan: (id: string, plan: string) =>
+      platformFetch<{ message: string; business: PlatformBusiness }>(`/platform/businesses/${id}/plan`, {
+        method: 'PATCH',
+        body: JSON.stringify({ plan }),
+      }),
+  },
+
+  // L (23/08/2026) — editar plan_limits/plan_limit_allowed_roles/
+  // plan_limit_allowed_permission_groups. Antes solo por script/migración
+  // versionada (pendientes-2026-08-18.md, decisión "no por ahora" del
+  // 19/08, reabierta esta sesión).
+  planLimits: {
+    list: () => platformFetch<PlatformPlanLimits[]>('/platform/plan-limits'),
+    update: (plan: string, input: Omit<PlatformPlanLimits, 'plan'>) =>
+      platformFetch<PlatformPlanLimits>(`/platform/plan-limits/${plan}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+  },
+
+  // L (23/08/2026) — catálogo global de los 5 roles de fábrica. Editar acá
+  // NO afecta negocios ya provisionados, solo los que se creen después.
+  rolePresets: {
+    list: () => platformFetch<PlatformRolePreset[]>('/platform/role-presets'),
+    update: (name: string, permissionGroups: string[]) =>
+      platformFetch<PlatformRolePreset>(`/platform/role-presets/${name}`, {
+        method: 'PUT',
+        body: JSON.stringify({ permissionGroups }),
       }),
   },
 }

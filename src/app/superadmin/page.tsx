@@ -25,6 +25,11 @@ const NEXT_STATUSES: Record<PlatformBusiness['status'], PlatformBusiness['status
   CANCELLED: [],
 }
 
+// L (23/08/2026) — a diferencia del estado, el plan no tiene transiciones
+// restringidas: cualquier plan a cualquier plan (mismo criterio que ya
+// valida platform.routes.ts).
+const ALL_PLANS = ['FREE', 'STARTER', 'PRO', 'ENTERPRISE']
+
 export default function SuperadminBusinessesPage() {
   const { toast } = useToast()
   const { session, clearSession } = usePlatformAuth()
@@ -67,6 +72,19 @@ export default function SuperadminBusinessesPage() {
     try {
       await platformApi.businesses.updateStatus(b.id, status as 'ACTIVE' | 'SUSPENDED' | 'CANCELLED')
       toast(`${b.name} → ${STATUS_LABEL[status]}`, 'success')
+      load()
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function handlePlanChange(b: PlatformBusiness, plan: string) {
+    setBusyId(b.id)
+    try {
+      await platformApi.businesses.updatePlan(b.id, plan)
+      toast(`${b.name} → plan ${plan}`, 'success')
       load()
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
@@ -161,6 +179,18 @@ export default function SuperadminBusinessesPage() {
                             ))}
                           </select>
                         )}
+                        {/* L (23/08/2026) — antes el único camino era un UPDATE a mano en la BD central. */}
+                        <select
+                          disabled={busyId === b.id}
+                          value=""
+                          onChange={e => e.target.value && handlePlanChange(b, e.target.value)}
+                          className="input text-xs py-1.5 w-auto"
+                        >
+                          <option value="" disabled>Cambiar plan…</option>
+                          {ALL_PLANS.filter(p => p !== b.plan).map(p => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
                       </div>
                     </td>
                   </tr>

@@ -7,6 +7,8 @@ const BASE = ''
 // ─── Tipos de error públicos ──────────────────────────────────────────────────
 export type ApiError =
   | { code: 'PLAN_LIMIT_REACHED'; message: string; plan: string; limit: number }
+  // L (23/08/2026) — techo de permisos de un rol CUSTOM por plan (usuarios-roles/roles.routes.ts).
+  | { code: 'PERMISSION_GROUP_NOT_AVAILABLE_IN_PLAN'; message: string; plan: string; permissionGroups: string[] }
   | { code: 'MODULE_NOT_ENABLED'; message: string; module: string }
   | { code: 'VALIDATION_ERROR';   message: string; errors: ZodFlatErrors }
   | { code: 'PLATFORM_UNAVAILABLE'; message: string }

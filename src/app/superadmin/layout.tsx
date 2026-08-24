@@ -1,8 +1,40 @@
 'use client'
 import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { ToastProvider } from '@/context/ToastContext'
 import { PlatformAuthProvider, usePlatformAuth } from '@/context/PlatformAuthContext'
+
+// L (23/08/2026) — antes /superadmin era una sola pantalla ("Negocios"),
+// sin nav. Ahora hay 3: Negocios, Planes, Roles de fábrica. Mismo estilo
+// Tailwind slate que ya usa page.tsx (el panel de superadmin no usa el
+// sistema de diseño .zulu del dashboard).
+const NAV_LINKS = [
+  { href: '/superadmin', label: 'Negocios' },
+  { href: '/superadmin/planes', label: 'Planes' },
+  { href: '/superadmin/roles-de-fabrica', label: 'Roles de fábrica' },
+]
+
+function SuperadminNav() {
+  const pathname = usePathname() ?? ''
+  return (
+    <nav className="flex items-center gap-1 px-6 pt-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      {NAV_LINKS.map(link => (
+        <Link
+          key={link.href}
+          href={link.href}
+          className="px-3 py-2 text-sm rounded-t-lg"
+          style={{
+            color: pathname === link.href ? 'white' : '#94a3b8',
+            background: pathname === link.href ? 'rgba(255,255,255,0.04)' : 'transparent',
+          }}
+        >
+          {link.label}
+        </Link>
+      ))}
+    </nav>
+  )
+}
 
 // Gate real, dentro de la misma jerarquía que envuelve el Provider — no se
 // puede usar usePlatformAuth() en este mismo componente porque el Provider
@@ -33,7 +65,12 @@ function Gate({ children }: { children: React.ReactNode }) {
     )
   }
 
-  return <>{children}</>
+  return (
+    <div style={{ minHeight: '100dvh', backgroundColor: 'var(--bg)' }}>
+      <SuperadminNav />
+      {children}
+    </div>
+  )
 }
 
 export default function SuperadminLayout({ children }: { children: React.ReactNode }) {

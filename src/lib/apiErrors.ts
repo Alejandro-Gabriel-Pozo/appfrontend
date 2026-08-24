@@ -32,6 +32,13 @@ export function isPlanLimitError(
   return isApiError(err) && err.code === 'PLAN_LIMIT_REACHED'
 }
 
+/** L (23/08/2026) — techo de permisos de un rol CUSTOM por plan (distinto de isPlanLimitError: acá el problema es una capacidad no incluida, no un número agotado). */
+export function isPermissionGroupNotAvailableInPlan(
+  err: unknown,
+): err is Extract<ApiError, { code: 'PERMISSION_GROUP_NOT_AVAILABLE_IN_PLAN' }> & { httpStatus: number } {
+  return isApiError(err) && err.code === 'PERMISSION_GROUP_NOT_AVAILABLE_IN_PLAN'
+}
+
 export function isValidationError(
   err: unknown,
 ): err is Extract<ApiError, { code: 'VALIDATION_ERROR' }> & { httpStatus: number } {

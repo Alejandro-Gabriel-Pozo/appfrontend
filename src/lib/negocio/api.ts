@@ -40,3 +40,21 @@ export const businessHoursApi = {
 export const businessModulesApi = {
   get: () => apiFetch<{ modules: Record<string, boolean> }>('/api/business/modules'),
 }
+
+// ─── Límites de plan del negocio (L, 23/08/2026) ─────────────────────────────
+// `null` en los numéricos = sin límite, 'ALL' en las listas = sin
+// restricción — mismo contrato que PlanLimits (app-main/src/config/plan-limits.ts).
+// Lo necesita dashboard/roles/page.tsx para el gating visual del CRUD de
+// roles propios (maxCustomRoles/allowedPermissionGroups).
+export interface BusinessPlanLimits {
+  maxCategories: number
+  maxResources: number
+  maxActiveMemberships: number
+  maxCustomRoles: number
+  allowedRoleNames: string[] | 'ALL'
+  allowedPermissionGroups: string[] | 'ALL'
+}
+
+export const businessPlanLimitsApi = {
+  get: () => apiFetch<{ plan: string; limits: BusinessPlanLimits }>('/api/business/plan-limits'),
+}

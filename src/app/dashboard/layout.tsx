@@ -40,6 +40,7 @@ const REFINE_RESOURCES = [
   { name: 'housekeeping', list: '/dashboard/housekeeping' },
   { name: 'ordenes', list: '/dashboard/ordenes' },
   { name: 'motivos-merma', list: '/dashboard/motivos-merma' },
+  { name: 'roles', list: '/dashboard/roles' },
 ]
 
 const NAV = [
@@ -133,6 +134,15 @@ const NAV = [
     managementOnly: true,
   },
   {
+    href: '/dashboard/roles',
+    label: 'Roles',
+    icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+    // L (23/08/2026) -- mismo criterio que Usuarios: el backend ya rechaza
+    // POST/PUT/DELETE /api/roles para roles sin MANAGEMENT, esto solo evita
+    // un link a una pantalla donde igual no podrían hacer nada.
+    managementOnly: true,
+  },
+  {
     href: '/dashboard/mi-negocio',
     label: 'Mi Negocio',
     icon: 'M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01',
@@ -165,6 +175,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/motivos-merma': 'Motivos de Merma',
   '/dashboard/reportes':    'Reportes',
   '/dashboard/usuarios':    'Usuarios',
+  '/dashboard/roles':       'Roles',
   '/dashboard/mi-negocio':  'Mi Negocio',
   '/dashboard/empresa':     'Empresa',
   '/dashboard/admin':       'Admin',
