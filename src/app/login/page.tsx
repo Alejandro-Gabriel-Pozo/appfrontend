@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { GoogleSignInButton } from '@/components/GoogleSignInButton'
+import ZuluBrand from '@/components/ZuluBrand'
 
 // Vacío a propósito: /api/* se pide same-origin, ver next.config.js (B2).
 const BASE = ''
@@ -138,32 +139,11 @@ export default function LoginPage() {
     >
       <div className="w-full max-w-[360px]">
 
-        {/* Logo + brand */}
+        {/* Lockup + promesa de coordinación */}
         <div className="flex flex-col items-center mb-8">
-          <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl mb-4"
-            style={{
-              backgroundColor: 'var(--accent-dark)',
-              boxShadow: '0 0 0 1px var(--accent-border), var(--shadow-md)',
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-              stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8"  y1="2" x2="8"  y2="6" />
-              <line x1="3"  y1="10" x2="21" y2="10" />
-              <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
-            </svg>
-          </div>
-          <h1
-            className="text-lg font-semibold"
-            style={{ color: 'var(--text-primary)', letterSpacing: '-0.025em' }}
-          >
-            ReservaHub
-          </h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            Panel de administración
+          <ZuluBrand subtitle="CENTRO OPERATIVO" />
+          <p className="text-xs mt-4 text-center max-w-[28ch]" style={{ color: 'var(--text-secondary)' }}>
+            Las señales de tu operación, en el mismo tiempo y contexto.
           </p>
         </div>
 
@@ -320,7 +300,7 @@ export default function LoginPage() {
           className="text-center text-[11px] mt-6"
           style={{ color: 'var(--text-tertiary)' }}
         >
-          ReservaHub &copy; {new Date().getFullYear()}
+          ZULU &copy; {new Date().getFullYear()}
         </p>
       </div>
     </div>

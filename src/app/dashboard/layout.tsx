@@ -13,6 +13,7 @@ import { businessModulesApi, systemApi, type DeadLetterEvent } from '@/lib/api'
 import { dataProvider } from '@/lib/refine/dataProvider'
 import { createAuthProvider } from '@/lib/refine/authProvider'
 import SystemRail from '@/components/SystemRail'
+import ZuluBrand from '@/components/ZuluBrand'
 
 // ─── Sistema de diseño "ZULU" (docs/*, migración 23/08/2026 — reemplaza a
 // Bastión) ──────────────────────────────────────────────────────────────
@@ -399,40 +400,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}
           className={`sidebar-desktop${sidebarOpen ? ' sidebar-open' : ''}`}
         >
-          {/* Logo */}
+          {/* Lockup de marca */}
           <div
             style={{
-              height: 60,
+              height: 74,
               display: 'flex',
               alignItems: 'center',
               padding: '0 20px',
               borderBottom: '1px solid var(--border)',
-              gap: 10,
               flexShrink: 0,
             }}
           >
-            <div
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                boxShadow: '0 0 12px var(--accent-dim)',
-              }}
-            >
-              <svg width="16" height="16" fill="none" stroke="#060a1f" strokeWidth={2.2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div>
-              <p className="mono" style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.2, letterSpacing: '0.04em' }}>ReservaApp</p>
-              <p style={{ fontSize: 10, color: 'var(--text-tertiary)', lineHeight: 1.2 }}>Panel de gestión</p>
-            </div>
+            <ZuluBrand subtitle="CENTRO OPERATIVO" compact />
           </div>
 
           {/* Nav */}
@@ -517,14 +496,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     style={{
                       width: 32,
                       height: 32,
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))',
+                      borderRadius: 10,
+                      background: 'var(--accent-dim)',
+                      border: '1px solid var(--accent-border)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#060a1f',
+                      color: 'var(--accent)',
                       fontSize: 12,
-                      fontWeight: 700,
+                      fontFamily: 'var(--font-zulu-mono)',
+                      fontWeight: 500,
                       flexShrink: 0,
                     }}
                   >
@@ -622,7 +603,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Dashboard</span>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>ZULU / OPERACIÓN</span>
                 {pathname !== '/dashboard' && (
                   <>
                     <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" style={{ color: 'var(--border-lg)' }}>

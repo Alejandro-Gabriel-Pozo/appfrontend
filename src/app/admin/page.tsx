@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ApiBlock from '@/components/ApiBlock'
+import ZuluBrand from '@/components/ZuluBrand'
 
 // Vacío a propósito: /api/* se pide same-origin, ver next.config.js (B2).
 const BASE = ''
@@ -35,7 +36,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1117]">
+    <div className="zulu min-h-screen" style={{ background: 'var(--bg)' }}>
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-xl border transition-all
           ${toast.type === 'ok'
@@ -47,25 +48,20 @@ export default function AdminPage() {
       )}
 
       <div className="flex">
-        <aside className="hidden lg:flex w-56 min-h-screen bg-[#13171f] border-r border-[#1e293b] flex-col py-6 px-4 fixed left-0 top-0">
-          <div className="flex items-center gap-2 mb-8">
-            <div className="w-7 h-7 rounded-lg bg-sky-600 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-            </div>
-            <span className="text-sm font-semibold text-white">Admin Panel</span>
+        <aside className="hidden lg:flex w-56 min-h-screen flex-col py-6 px-4 fixed left-0 top-0" style={{ background: 'var(--surface-1)', borderRight: '1px solid var(--border)' }}>
+          <div className="mb-8">
+            <ZuluBrand subtitle="API / OPERACIÓN" compact />
           </div>
           <nav className="space-y-1 flex-1">
             {['Auth','Recursos','Reservas','Reportes','Admin'].map(s => (
               <a key={s} href={`#section-${s.toLowerCase()}`}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-[#1e293b] transition">
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition" style={{ color: 'var(--text-secondary)' }}>
                 {s}
               </a>
             ))}
           </nav>
           <button onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-red-400 hover:bg-red-900/20 transition mt-4">
+            className="btn-ghost flex items-center gap-2 px-3 py-2 rounded-lg text-sm mt-4">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
               <polyline points="16 17 21 12 16 7"/>
@@ -78,13 +74,13 @@ export default function AdminPage() {
         <main className="flex-1 lg:ml-56 p-4 lg:p-8 space-y-10 max-w-3xl">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-white">Panel de Administración</h1>
+              <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-zulu-display)' }}>Panel técnico de ZULU</h1>
               <p className="text-sm text-slate-400 mt-0.5">
                 API: <span className="font-mono text-slate-300">app-chny.onrender.com</span>
               </p>
             </div>
             <button onClick={handleLogout}
-              className="lg:hidden text-xs text-slate-400 hover:text-red-400 border border-[#2d3748] px-3 py-1.5 rounded-lg transition">
+              className="lg:hidden btn-secondary text-xs px-3 py-1.5">
               Salir
             </button>
           </div>

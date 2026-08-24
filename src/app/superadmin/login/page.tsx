@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { platformApi } from '@/lib/platformApi'
 import { extractErrorMessage } from '@/lib/api'
 import { usePlatformAuth } from '@/context/PlatformAuthContext'
+import ZuluBrand from '@/components/ZuluBrand'
 
 export default function SuperadminLoginPage() {
   const router = useRouter()
@@ -33,19 +34,9 @@ export default function SuperadminLoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="w-full max-w-[360px]">
         <div className="flex flex-col items-center mb-8">
-          <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl mb-4"
-            style={{ backgroundColor: 'var(--accent-dark)', boxShadow: '0 0 0 1px var(--accent-border), var(--shadow-md)' }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" />
-            </svg>
-          </div>
-          <h1 className="text-lg font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>
-            ReservaHub — Plataforma
-          </h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            Acceso exclusivo SUPERADMIN
+          <ZuluBrand subtitle="PLATAFORMA / CONTROL" />
+          <p className="text-xs mt-4 text-center" style={{ color: 'var(--text-secondary)' }}>
+            Coordinación de negocios, roles y planes.
           </p>
         </div>
 
@@ -90,7 +81,7 @@ export default function SuperadminLoginPage() {
         </div>
 
         <p className="text-center text-[11px] mt-6" style={{ color: 'var(--text-tertiary)' }}>
-          ReservaHub &copy; {new Date().getFullYear()}
+          ZULU &copy; {new Date().getFullYear()}
         </p>
       </div>
     </div>

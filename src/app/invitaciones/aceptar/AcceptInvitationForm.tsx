@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { invitationAcceptanceApi, extractErrorMessage } from '@/lib/api'
 import type { InvitationPreview } from '@/lib/types'
+import ZuluBrand from '@/components/ZuluBrand'
 
 /**
  * D2, pendientes-2026-08-19.md — acepta una invitación de usuario. Página
@@ -72,16 +73,8 @@ export default function AcceptInvitationForm() {
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="w-full max-w-[360px]">
         <div className="flex flex-col items-center mb-8">
-          <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl mb-4"
-            style={{ backgroundColor: 'var(--accent-dark)', boxShadow: '0 0 0 1px var(--accent-border), var(--shadow-md)' }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <h1 className="text-lg font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>ReservaHub</h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Invitación</p>
+          <ZuluBrand subtitle="CENTRO OPERATIVO" />
+          <p className="text-xs mt-4 text-center" style={{ color: 'var(--text-secondary)' }}>Una señal nueva entra en contexto.</p>
         </div>
 
         <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--surface-2)', border: '1px solid var(--border-md)', boxShadow: 'var(--shadow-lg)' }}>
@@ -166,7 +159,7 @@ export default function AcceptInvitationForm() {
         </div>
 
         <p className="text-center text-[11px] mt-6" style={{ color: 'var(--text-tertiary)' }}>
-          ReservaHub &copy; {new Date().getFullYear()}
+          ZULU &copy; {new Date().getFullYear()}
         </p>
       </div>
     </div>

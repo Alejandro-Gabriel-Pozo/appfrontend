@@ -3,38 +3,38 @@
 @tailwind utilities;
 
 /*
-  Design Tokens — ReservaHub
-  Dark-first. Accent: Teal refinado (no eléctrico).
-  Superficie: zinc profundo, no pitch-black puro.
-  Texto: slate cálido en tres niveles.
+  Design Tokens — ZULU
+  Dark-first. Precisión tranquila: navy profundo, cian como señal.
+  Las variables genéricas se mantienen para que las pantallas existentes
+  puedan adoptar la identidad sin reescribir su estructura.
 */
 :root {
-  --sidebar-width: 220px;
+  --sidebar-width: 248px;
 
   /* Superficie — escala de 5 niveles */
-  --bg:          #0a0c10;
-  --surface-0:   #0d0f14;
-  --surface-1:   #121520;
-  --surface-2:   #181b27;
-  --surface-3:   #1e2130;
-  --surface-4:   #242839;
+  --bg:          #060a1f;
+  --surface-0:   #060a1f;
+  --surface-1:   #0b1130;
+  --surface-2:   #131b47;
+  --surface-3:   #1a2352;
+  --surface-4:   #202b61;
 
   /* Bordes alpha-blended */
-  --border:      rgba(255,255,255,0.055);
-  --border-md:   rgba(255,255,255,0.085);
-  --border-lg:   rgba(255,255,255,0.13);
+  --border:      rgba(35,44,94,0.88);
+  --border-md:   rgba(46,58,114,0.92);
+  --border-lg:   #394782;
 
   /* Texto — 3 niveles */
-  --text-primary:   #e4e6ef;
-  --text-secondary: #848aa0;
-  --text-tertiary:  #454a60;
+  --text-primary:   #f2f5ff;
+  --text-secondary: #aab2de;
+  --text-tertiary:  #6b74a6;
 
-  /* Accent — Teal refinado */
-  --accent:         #2dd4bf;
-  --accent-dark:    #0d9488;
-  --accent-hover:   #5eead4;
-  --accent-dim:     rgba(45,212,191,0.10);
-  --accent-border:  rgba(45,212,191,0.22);
+  /* Zulu Neon — reservado para señal, foco y acción */
+  --accent:         #00e0ff;
+  --accent-dark:    #0aa8c2;
+  --accent-hover:   #33e6ff;
+  --accent-dim:     rgba(0,224,255,0.10);
+  --accent-border:  rgba(0,224,255,0.28);
 
   /* Semánticos */
   --success:        #34d399;
@@ -109,7 +109,7 @@
   body {
     background-color: var(--surface-0);
     color: var(--text-primary);
-    font-family: var(--font-geist-sans, 'Inter', system-ui, sans-serif);
+    font-family: var(--font-zulu-sans, 'IBM Plex Sans', system-ui, sans-serif);
     font-size: 14px;
     line-height: 1.6;
   }
@@ -149,6 +149,48 @@
 
 /* ─── Components ─── */
 @layer components {
+
+  /* ── Lockup ZULU ── */
+  .brand-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+  }
+  .brand-lockup-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .brand-wordmark {
+    color: var(--text-primary);
+    font-family: var(--font-zulu-display, 'Space Grotesk', sans-serif);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    line-height: 1;
+  }
+  .brand-subtitle {
+    color: var(--text-tertiary);
+    font-family: var(--font-zulu-mono, 'IBM Plex Mono', monospace);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .brand-lockup-compact { gap: 9px; }
+  .brand-lockup-compact .brand-wordmark { font-size: 15px; }
+  .zulu-mark {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    filter: drop-shadow(0 0 7px rgba(0,224,255,0.24));
+  }
+  .zulu-mark svg { display: block; width: 100%; height: 100%; }
 
   /* ── Sidebar ── */
   .sidebar-link {

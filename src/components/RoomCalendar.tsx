@@ -128,7 +128,9 @@ export default function RoomCalendar({
   // render → nueva identidad → loop. Con el ref, el efecto solo reacciona
   // a cambios reales de semana.
   const onWeekChangeRef = useRef(onWeekChange)
-  onWeekChangeRef.current = onWeekChange
+  useEffect(() => {
+    onWeekChangeRef.current = onWeekChange
+  }, [onWeekChange])
   useEffect(() => {
     onWeekChangeRef.current(weekStartMs, weekStartMs + VISIBLE_DAYS * MS_PER_DAY)
   }, [weekStartMs])

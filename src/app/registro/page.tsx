@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
+import ZuluBrand from '@/components/ZuluBrand'
 
 // Vacío a propósito, mismo criterio que /login: /register se pide same-origin
 // (rewrite nuevo en next.config.js, 19/08/2026 -- el backend lo monta sin
@@ -56,21 +57,8 @@ export default function RegistroPage() {
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="w-full max-w-[380px]">
         <div className="flex flex-col items-center mb-8">
-          <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl mb-4"
-            style={{ backgroundColor: 'var(--accent-dark)', boxShadow: '0 0 0 1px var(--accent-border), var(--shadow-md)' }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-              stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8"  y1="2" x2="8"  y2="6" />
-              <line x1="3"  y1="10" x2="21" y2="10" />
-              <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
-            </svg>
-          </div>
-          <h1 className="text-lg font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>ReservaHub</h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Registrá tu negocio</p>
+          <ZuluBrand subtitle="CENTRO OPERATIVO" />
+          <p className="text-xs mt-4 text-center" style={{ color: 'var(--text-secondary)' }}>Una operación coordinada empieza con contexto.</p>
         </div>
 
         <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--surface-2)', border: '1px solid var(--border-md)', boxShadow: 'var(--shadow-lg)' }}>
@@ -134,7 +122,7 @@ export default function RegistroPage() {
         </div>
 
         <p className="text-center text-[11px] mt-6" style={{ color: 'var(--text-tertiary)' }}>
-          ReservaHub &copy; {new Date().getFullYear()}
+          ZULU &copy; {new Date().getFullYear()}
         </p>
       </div>
     </div>

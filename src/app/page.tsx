@@ -1,6 +1,7 @@
 'use client'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { ZuluMark } from '@/components/ZuluBrand'
 
 export default function Home() {
   const router = useRouter()
@@ -13,8 +14,13 @@ export default function Home() {
       .catch(() => router.replace('/login'))
   }, [router])
   return (
-    <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    <div className="zulu min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4" aria-label="Cargando ZULU">
+        <ZuluMark size={48} />
+        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-zulu-mono)' }}>
+          <span className="dot-live" /> Sincronizando sesión
+        </div>
+      </div>
     </div>
   )
 }
