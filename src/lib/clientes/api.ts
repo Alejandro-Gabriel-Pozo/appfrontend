@@ -10,11 +10,24 @@ import type {
 // ─── Customers ────────────────────────────────────────────────────────────────
 export const customersApi = {
   list: (filters: CustomerListFilters = {}) => {
+    // A7.2 (23/08/2026) — `search` es nombre/email tipeado por el usuario,
+    // PII: nunca en query string. Mismo criterio que searchByTaxId más
+    // abajo — un POST separado en vez de sumarlo a la query de arriba.
+    if (filters.search) {
+      return apiFetch<PaginatedResponse<Customer> | Customer[]>('/api/customers/search', {
+        method: 'POST',
+        body: JSON.stringify({
+          search: filters.search,
+          ...(filters.currentAccountEnabled && { currentAccountEnabled: true }),
+          ...(filters.page  !== undefined && { page: filters.page }),
+          ...(filters.limit !== undefined && { limit: filters.limit }),
+        }),
+      })
+    }
     const params = new URLSearchParams()
     if (filters.page)   params.set('page',   String(filters.page))
     if (filters.limit)  params.set('limit',  String(filters.limit))
     if (filters.email)  params.set('email',  filters.email)
-    if (filters.search) params.set('search', filters.search)
     if (filters.currentAccountEnabled) params.set('currentAccountEnabled', 'true')
     const qs = params.toString()
     return apiFetch<PaginatedResponse<Customer> | Customer[]>(

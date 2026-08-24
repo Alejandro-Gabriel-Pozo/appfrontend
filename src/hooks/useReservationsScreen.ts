@@ -21,13 +21,43 @@ import type { Reservation, Resource, ReservationStatus, BookableService, Categor
  * @param isLodging `true` para Reservas (alojamiento), `false` para
  *   Turnos (todo lo demás) — mismo filtro que ya regía cada pantalla por
  *   separado desde E1 (13/08/2026).
+ * @param paginationMode `'server'` (default) pagina de a 20 — la vista de
+ *   lista. `'off'` trae TODO lo que matchea el filtro sin paginar — lo
+ *   necesita la vista de calendario de Reservas (`RoomCalendar` dibuja
+ *   barras sobre un rango de fechas, no sobre "una página de 20"; con
+ *   paginación server-side ya no puede reusar el mismo array que la
+ *   lista). Turnos no tiene calendario, siempre usa 'server'. Cambiar este
+ *   valor reactivamente (ej. al togglear la vista) reusa el mismo
+ *   `useTable` — Refine dispara un nuevo fetch solo, sin duplicar la
+ *   lógica de invalidación de create/update/confirm/cancel/completar.
+ * @param dateRange Acota `'off'` a la semana visible del calendario — sin
+ *   esto, `mode: 'off'` traería TODO el historial de alojamiento sin
+ *   límite (mismo problema estructural que K2 resolvió para la lista,
+ *   reintroducido en miniatura). `undefined` = sin acotar (Turnos no lo
+ *   usa; tampoco tiene sentido combinarlo con `paginationMode: 'server'`,
+ *   la lista pagina, no navega por semana).
  */
-export function useReservationsScreen(isLodging: boolean) {
+export function useReservationsScreen(
+  isLodging: boolean,
+  paginationMode: 'server' | 'off' = 'server',
+  dateRange?: { from: string; to: string },
+) {
   const { toast } = useToast()
-  // Mismo recurso Refine 'reservas' en las dos pantallas — la separación
-  // es 100% filtrado client-side por categoría, no un recurso de backend
-  // distinto (es la misma entidad Reservation para ambos paneles).
-  const { result, tableQuery } = useTable<Reservation>({ resource: 'reservas', pagination: { mode: 'off' } })
+  // K2 (23/08/2026) — paginación/filtrado server-side. `isLodging`/`from`/`to`
+  // viajan fijos por pantalla vía `meta` (Reservas=true, Turnos=false) y es
+  // lo que separa las dos vistas en el backend ahora (antes era 100%
+  // client-side, filtrando `screenResourceIds` sobre la lista completa).
+  // status/search viajan como filtros Refine (ver el efecto debounced más
+  // abajo).
+  const {
+    result, tableQuery,
+    currentPage, setCurrentPage, pageCount,
+    setFilters,
+  } = useTable<Reservation>({
+    resource: 'reservas',
+    pagination: { mode: paginationMode, pageSize: 20 },
+    meta: { isLodging, from: dateRange?.from, to: dateRange?.to },
+  })
   const reservations = result.data
   const loading = tableQuery.isLoading
   const { mutateAsync: createReservation } = useCreate<Reservation>()
@@ -44,10 +74,11 @@ export function useReservationsScreen(isLodging: boolean) {
 
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<ReservationStatus | ''>('')
-  const [page, setPage] = useState(1)
 
   // Recursos/servicios no están migrados a Refine — se siguen trayendo
-  // directo, igual que antes en las dos pantallas.
+  // directo, igual que antes en las dos pantallas. Ya no se usan para
+  // filtrar la lista (eso lo resuelve el backend con `isLodging`), solo
+  // para resolver nombres y para el formulario de alta.
   useEffect(() => {
     queueMicrotask(() => {
       Promise.all([resourcesApi.list(), bookableServicesApi.list(), categoriesApi.list()])
@@ -73,25 +104,26 @@ export function useReservationsScreen(isLodging: boolean) {
     [services, screenCategoryIds],
   )
 
-  // Filtrado y paginación en cliente
-  const filtered = useMemo(() => {
-    let list = reservations.filter(r => screenResourceIds.has(r.resourceId))
-    if (filterStatus) list = list.filter(r => r.status === filterStatus)
-    if (search.trim()) {
-      const q = search.trim().toLowerCase()
-      list = list.filter(r =>
-        r.customer.fullName?.toLowerCase().includes(q) ||
-        r.customer.email?.toLowerCase().includes(q)
-      )
-    }
-    return list
-  }, [reservations, screenResourceIds, filterStatus, search])
+  // El backend ya devuelve la página filtrada (isLodging/status/search) —
+  // no hay más filtrado/paginado en memoria acá.
+  const filtered = reservations
+  const paginated = reservations
+  const page = currentPage
+  const setPage = setCurrentPage
+  const totalPages = pageCount
 
-  const PAGE_SIZE = 20
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-
-  useEffect(() => { queueMicrotask(() => setPage(1)) }, [search, filterStatus])
+  // Debounce de 400ms (mismo criterio que Clientes, K2) — status/search
+  // ahora disparan un fetch al backend, no un filtro en memoria instantáneo.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1)
+      setFilters([
+        { field: 'search', operator: 'contains', value: search.trim() || undefined },
+        { field: 'status', operator: 'eq', value: filterStatus || undefined },
+      ])
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [search, filterStatus, setCurrentPage, setFilters])
 
   /** @param entityLabel — "Reserva"/"Turno", para el texto de los toasts. */
   async function doAction(id: string, action: 'confirm' | 'cancel' | 'complete', entityLabel: string) {
@@ -125,6 +157,9 @@ export function useReservationsScreen(isLodging: boolean) {
     screenCategoryIds, screenResources, screenResourceIds, screenServices,
     search, setSearch, filterStatus, setFilterStatus,
     page, setPage, totalPages, paginated, filtered,
+    // Total real del backend — `filtered.length` es solo el tamaño de la
+    // página actual (≤20) desde que la paginación es server-side (K2).
+    total: result.total ?? reservations.length,
     actionLoading, setActionLoading, doAction,
     getResourceName, getServiceName,
   }

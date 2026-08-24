@@ -4,22 +4,45 @@ import type { PaginatedResponse } from '../http'
 import type { Reservation } from './types'
 
 export interface ReservationFilters {
-  page?:   number
-  limit?:  number
-  status?: string
-  from?:   string
-  to?:     string
+  page?:       number
+  limit?:      number
+  status?:     string
+  from?:       string
+  to?:         string
+  /** K2 (23/08/2026) — separa Reservas (alojamiento) de Turnos server-side. */
+  isLodging?:  boolean
+  /** K2 (23/08/2026) — busca por customer_name/customer_email CONGELADOS en la reserva. */
+  search?:     string
 }
 
 // ─── Reservations ─────────────────────────────────────────────────────────────
 export const reservationsApi = {
   list: (filters: ReservationFilters = {}) => {
+    // A7.2 (23/08/2026) — `search` es nombre/email tipeado por el usuario,
+    // PII: nunca en query string. El resto de los filtros no lo es, viajan
+    // igual en el body para no duplicar la llamada (mismo motivo que
+    // customersApi.list — el request es uno solo, no dos).
+    if (filters.search) {
+      return apiFetch<PaginatedResponse<Reservation> | Reservation[]>('/api/reservations/search', {
+        method: 'POST',
+        body: JSON.stringify({
+          search: filters.search,
+          ...(filters.status     !== undefined && { status: filters.status }),
+          ...(filters.from       !== undefined && { from: filters.from }),
+          ...(filters.to         !== undefined && { to: filters.to }),
+          ...(filters.isLodging  !== undefined && { isLodging: filters.isLodging }),
+          ...(filters.page       !== undefined && { page: filters.page }),
+          ...(filters.limit      !== undefined && { limit: filters.limit }),
+        }),
+      })
+    }
     const params = new URLSearchParams()
-    if (filters.page)   params.set('page',   String(filters.page))
-    if (filters.limit)  params.set('limit',  String(filters.limit))
-    if (filters.status) params.set('status', filters.status)
-    if (filters.from)   params.set('from',   filters.from)
-    if (filters.to)     params.set('to',     filters.to)
+    if (filters.page)               params.set('page',      String(filters.page))
+    if (filters.limit)              params.set('limit',     String(filters.limit))
+    if (filters.status)             params.set('status',    filters.status)
+    if (filters.from)               params.set('from',      filters.from)
+    if (filters.to)                 params.set('to',        filters.to)
+    if (filters.isLodging !== undefined) params.set('isLodging', String(filters.isLodging))
     const qs = params.toString()
     return apiFetch<PaginatedResponse<Reservation> | Reservation[]>(
       `/api/reservations${qs ? `?${qs}` : ''}`,

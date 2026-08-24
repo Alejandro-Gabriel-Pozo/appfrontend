@@ -22,8 +22,12 @@ import { housekeepingApi } from '@/lib/api'
 const DAY_WIDTH = 140
 const ROW_HEIGHT = 56
 const RESOURCE_COL_WIDTH = 160
-const VISIBLE_DAYS = 7
-const MS_PER_DAY = 86_400_000
+// Exportados — K2 (23/08/2026): el padre (dashboard/reservas/page.tsx)
+// necesita calcular el MISMO rango por defecto (semana de hoy) para pedirle
+// al backend solo esas reservas desde el primer render, en vez de esperar
+// al primer onWeekChange() y pagar un fetch sin acotar por fecha mientras tanto.
+export const VISIBLE_DAYS = 7
+export const MS_PER_DAY = 86_400_000
 
 const STATUS_BAR_STYLE: Record<Exclude<ReservationStatus, 'CANCELLED'>, { bg: string; border: string; text: string }> = {
   PENDING:   { bg: 'var(--warning-dim)', border: 'var(--warning)', text: 'var(--warning)' },
@@ -31,7 +35,7 @@ const STATUS_BAR_STYLE: Record<Exclude<ReservationStatus, 'CANCELLED'>, { bg: st
   COMPLETED: { bg: 'var(--success-dim)', border: 'var(--success-border)', text: 'var(--success)' },
 }
 
-function todayUTCMidnightMs(): number {
+export function todayUTCMidnightMs(): number {
   const now = new Date()
   return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
 }
@@ -96,6 +100,7 @@ export default function RoomCalendar({
   onReservationClick,
   onEmptySlotClick,
   onUpdated,
+  onWeekChange,
 }: {
   resources: Resource[]
   reservations: Reservation[]
@@ -104,9 +109,29 @@ export default function RoomCalendar({
   onReservationClick: (r: Reservation) => void
   onEmptySlotClick: (resourceId: string, date: Date) => void
   onUpdated: (id: string, changes: { startTime?: string; endTime?: string; resourceId?: string }) => void
+  /**
+   * K2 (23/08/2026) — el padre pide `reservations` con `from`/`to` acotados
+   * a la semana visible (antes traía TODO el historial de alojamiento sin
+   * límite, mismo problema estructural que K2 resolvió para la lista).
+   * Avisa la semana visible en cada navegación (y al montar) para que el
+   * padre pueda re-pedir solo ese rango.
+   */
+  onWeekChange: (weekStartMs: number, weekEndMs: number) => void
 }) {
   const [weekStartMs, setWeekStartMs] = useState(todayUTCMidnightMs)
   const [isDragging, setIsDragging] = useState(false)
+
+  // Ref en vez de dependencia directa del efecto de abajo — onWeekChange
+  // cambia de identidad en cada render del padre (es una arrow function
+  // inline); si el efecto dependiera de la prop en sí, cada render del
+  // padre dispararía el efecto de nuevo → setState en el padre → nuevo
+  // render → nueva identidad → loop. Con el ref, el efecto solo reacciona
+  // a cambios reales de semana.
+  const onWeekChangeRef = useRef(onWeekChange)
+  onWeekChangeRef.current = onWeekChange
+  useEffect(() => {
+    onWeekChangeRef.current(weekStartMs, weekStartMs + VISIBLE_DAYS * MS_PER_DAY)
+  }, [weekStartMs])
 
   // Habitaciones fuera de servicio (Housekeeping) — el backend ya bloquea
   // reservar sobre estas (reservation-availability.service.ts::

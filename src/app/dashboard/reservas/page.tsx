@@ -1,9 +1,9 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { reservationsApi, customersApi, ratePlansApi, customerAccountApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
-import RoomCalendar from '@/components/RoomCalendar'
+import RoomCalendar, { todayUTCMidnightMs, VISIBLE_DAYS, MS_PER_DAY } from '@/components/RoomCalendar'
 import FacturarButton from '@/components/FacturarButton'
 import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
 import { useIsManagement } from '@/hooks/useAuthRole'
@@ -67,9 +67,30 @@ const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: '
 export default function ReservasPage() {
   const { toast } = useToast()
   const isManagement = useIsManagement()
+  const [view, setView] = useState<'list' | 'calendar'>('list')
+  // K2 (23/08/2026) — acota el 'off' del calendario a la semana visible; sin
+  // esto traería TODO el historial de alojamiento sin límite (mismo
+  // problema estructural que K2 resolvió para la lista, en miniatura).
+  // Arranca en la semana de "hoy" — mismo default que RoomCalendar usa
+  // internamente (`todayUTCMidnightMs`) — así el primer fetch, antes de
+  // que el calendario llegue a montarse y avisar su semana real, ya viene
+  // acotado, no sin límite.
+  const [calendarRange, setCalendarRange] = useState(() => {
+    const start = todayUTCMidnightMs()
+    return { from: new Date(start).toISOString(), to: new Date(start + VISIBLE_DAYS * MS_PER_DAY).toISOString() }
+  })
+  const handleWeekChange = useCallback((startMs: number, endMs: number) => {
+    setCalendarRange({ from: new Date(startMs).toISOString(), to: new Date(endMs).toISOString() })
+  }, [])
+
   // Motor compartido con Turnos (Fase 4, auditoria-modularidad.md F4) —
   // trae recursos/servicios/categorías, filtra por isLodging, lista/busca/
   // pagina reservas, y las acciones de confirmar/cancelar/completar.
+  // K2 (23/08/2026) — la vista de calendario necesita TODAS las reservas
+  // de la semana visible, no una página de 20 (RoomCalendar dibuja un
+  // rango de fechas completo) — por eso el modo de paginación depende de
+  // `view`, no queda fijo en 'server', y solo en calendario se manda
+  // `calendarRange`.
   const {
     loading,
     createReservation, updateReservation, invalidate,
@@ -79,12 +100,10 @@ export default function ReservasPage() {
     screenResourceIds: lodgingResourceIds,
     screenServices: lodgingServices,
     search, setSearch, filterStatus, setFilterStatus,
-    page, setPage, totalPages, paginated, filtered,
+    page, setPage, totalPages, paginated, filtered, total,
     actionLoading, setActionLoading, doAction: doScreenAction,
     getResourceName, getServiceName,
-  } = useReservationsScreen(true)
-
-  const [view, setView] = useState<'list' | 'calendar'>('list')
+  } = useReservationsScreen(true, view === 'calendar' ? 'off' : 'server', view === 'calendar' ? calendarRange : undefined)
 
   // Modal nueva reserva
   const [modalOpen, setModalOpen] = useState(false)
@@ -470,6 +489,7 @@ export default function ReservasPage() {
           onReservationClick={openDetail}
           onEmptySlotClick={openModalForSlot}
           onUpdated={handleCalendarUpdate}
+          onWeekChange={handleWeekChange}
         />
       ) : (
         <>
@@ -587,7 +607,7 @@ export default function ReservasPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 text-sm">
               <span style={{ color: 'var(--text-tertiary)' }}>
-                {filtered.length} resultado{filtered.length !== 1 ? 's' : ''} · página {page} de {totalPages}
+                {total} resultado{total !== 1 ? 's' : ''} · página {page} de {totalPages}
               </span>
               <div className="flex gap-2">
                 <button

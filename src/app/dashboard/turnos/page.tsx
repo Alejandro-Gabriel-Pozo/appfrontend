@@ -50,7 +50,7 @@ export default function TurnosPage() {
     screenResourceIds: serviceResourceIds,
     screenServices: serviceServices,
     search, setSearch, filterStatus, setFilterStatus,
-    page, setPage, totalPages, paginated, filtered,
+    page, setPage, totalPages, paginated, filtered, total,
     actionLoading, setActionLoading, doAction: doScreenAction,
     getResourceName, getServiceName,
   } = useReservationsScreen(false)
@@ -318,7 +318,7 @@ export default function TurnosPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 text-sm">
               <span style={{ color: 'var(--text-tertiary)' }}>
-                {filtered.length} resultado{filtered.length !== 1 ? 's' : ''} · página {page} de {totalPages}
+                {total} resultado{total !== 1 ? 's' : ''} · página {page} de {totalPages}
               </span>
               <div className="flex gap-2">
                 <button
