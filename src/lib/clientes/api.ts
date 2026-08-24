@@ -1,7 +1,7 @@
 'use client'
 import { apiFetch } from '../http'
 import type { PaginatedResponse } from '../http'
-import type { FinancialTransaction, OutstandingInvoice } from '../finanzas/types'
+import type { FinancialTransaction, OutstandingInvoice, BillingPolicy, UpsertBillingPolicyInput } from '../finanzas/types'
 import type {
   Customer, CustomerRate, CustomerStatement, CustomerListFilters,
   CustomerTaxProfile, UpsertCustomerTaxProfileInput, TaxpayerLookupResult,
@@ -83,6 +83,14 @@ export const customerTaxProfileApi = {
   get: (customerId: string) => apiFetch<CustomerTaxProfile | null>(`/api/customers/${customerId}/tax-profile`),
   upsert: (customerId: string, body: UpsertCustomerTaxProfileInput) =>
     apiFetch<CustomerTaxProfile>(`/api/customers/${customerId}/tax-profile`, { method: 'PUT', body: JSON.stringify(body) }),
+}
+
+// ─── BillingPolicy (C1-Fase C, 23/08/2026) ─────────────────────────────────
+// Mismo criterio de gating que customerTaxProfileApi (módulo Facturación).
+export const billingPolicyApi = {
+  get: (customerId: string) => apiFetch<BillingPolicy | null>(`/api/customers/${customerId}/billing-policy`),
+  upsert: (customerId: string, body: UpsertBillingPolicyInput) =>
+    apiFetch<BillingPolicy>(`/api/customers/${customerId}/billing-policy`, { method: 'PUT', body: JSON.stringify(body) }),
 }
 
 // ─── Padrón de ARCA — autocompletar datos fiscales ─────────────────────────

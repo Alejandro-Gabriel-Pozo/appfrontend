@@ -19,6 +19,9 @@ export const afipCredentialsApi = {
 export const invoicesApi = {
   request: (body: { financialTransactionId: string }) =>
     apiFetch<Invoice>('/api/invoices', { method: 'POST', body: JSON.stringify(body) }),
+  /** C1-Fase C (23/08/2026) — "Facturar ahora": un comprobante cubriendo todo lo PENDIENTE_FACTURAR de una empresa. */
+  requestConsolidated: (companyCustomerId: string) =>
+    apiFetch<Invoice>('/api/invoices/consolidated', { method: 'POST', body: JSON.stringify({ companyCustomerId }) }),
   get: (id: string) => apiFetch<Invoice>(`/api/invoices/${id}`),
   listByFinancialTransaction: (financialTransactionId: string) =>
     apiFetch<Invoice[]>(`/api/invoices?financialTransactionId=${encodeURIComponent(financialTransactionId)}`),

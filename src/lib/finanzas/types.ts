@@ -18,6 +18,8 @@ export interface FinancialTransaction {
   /** I4 (23/08/2026) — solo en type='PAYMENT': qué factura salda este pago (conciliación). Null = pago sin destino. */
   settledInvoiceId?: string | null
   createdAt: string
+  /** F1-Pieza 2 (23/08/2026) — derivado (JOIN a reservations), solo si reservationId está seteado. Null si no hay reserva de origen. */
+  reservationNumber?: number | null
 }
 
 /** I4 (23/08/2026) — factura ISSUED con saldo pendiente, para el modal de conciliación de "Registrar Pago". */
@@ -47,6 +49,8 @@ export interface AccountReceivable {
   createdAt?: string
   invoicedAt?: string | null
   collectedAt?: string | null
+  /** F1-Pieza 3 (23/08/2026) — N° de comprobante anotado a mano al marcar "Facturado". No genera ninguna factura real en este alcance. */
+  invoiceRef?: string | null
 }
 
 export interface AccountsReceivableReportRow {
@@ -57,4 +61,34 @@ export interface AccountsReceivableReportRow {
   pendingAmount: number
   invoicedAmount: number
   collectedAmount: number
+}
+
+// ─── BillingPolicy (C1-Fase C, 23/08/2026) ─────────────────────────────────
+// Sin fila = política default (requiere seña si hay una configurada,
+// factura por reserva, vence al momento). requiresSenaToConfirm/
+// invoicingTrigger/cycleFrequency se guardan pero hoy no tienen ningún
+// efecto en el sistema todavía -- ver docblock del backend.
+
+export type InvoicingScope = 'per_reservation' | 'consolidated'
+export type InvoicingTrigger = 'on_completion' | 'scheduled'
+export type CycleFrequency = 'weekly' | 'monthly' | 'custom_days'
+
+export interface BillingPolicy {
+  customerId: string
+  requiresSenaToConfirm: boolean
+  invoicingScope: InvoicingScope
+  invoicingTrigger: InvoicingTrigger
+  cycleFrequency: CycleFrequency | null
+  cycleCustomDays: number | null
+  dueDays: number
+  updatedAt: string
+}
+
+export interface UpsertBillingPolicyInput {
+  requiresSenaToConfirm: boolean
+  invoicingScope: InvoicingScope
+  invoicingTrigger: InvoicingTrigger
+  cycleFrequency?: CycleFrequency | null
+  cycleCustomDays?: number | null
+  dueDays: number
 }

@@ -13,7 +13,8 @@ export type InvoiceStatus = 'PENDING' | 'ISSUED' | 'REJECTED' | 'FAILED_UNCERTAI
 export interface Invoice {
   id: string
   businessId: string
-  financialTransactionId: string
+  /** `null` = factura consolidada (C1-Fase C, 23/08/2026) -- cubre N cargos, no una sola FinancialTransaction. */
+  financialTransactionId: string | null
   status: InvoiceStatus
   ptoVta: number
   cbteTipo: number
