@@ -1,10 +1,11 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import Link from 'next/link'
 import { customersApi, customerAccountApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import FacturarButton from '@/components/FacturarButton'
-import type { Customer, CustomerStatement, TransactionType, TransactionStatus, OutstandingInvoice } from '@/lib/types'
+import type { Customer, CustomerStatement, TransactionType, TransactionStatus, OutstandingInvoice, FinancialTransaction } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento clay (mismo criterio que Órdenes/Productos — plata/POS).
@@ -35,6 +36,33 @@ const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: '
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false })
+}
+
+// F1-Pieza 2 (23/08/2026, pendientes-2026-08-23.md) — trazabilidad de folio:
+// a qué documento pertenece cada cargo. Reserva y estadía no tienen pantalla
+// de detalle propia todavía (ver D6/backlog) así que quedan como etiqueta;
+// Orden sí (dashboard/ordenes/[id]), así que se linkea. Mutuamente
+// excluyentes en la práctica -- ningún sitio de creación real setea
+// reservationId y orderId a la vez.
+function OrigenCell({ tx }: { tx: FinancialTransaction }) {
+  if (tx.reservationId) {
+    return (
+      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+        Reserva{tx.reservationNumber != null ? ` #${tx.reservationNumber}` : ''}
+      </span>
+    )
+  }
+  if (tx.orderId) {
+    return (
+      <Link href={`/dashboard/ordenes/${tx.orderId}`} className="text-xs" style={{ color: 'var(--accent)' }}>
+        Orden →
+      </Link>
+    )
+  }
+  if (tx.stayId) {
+    return <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Estadía</span>
+  }
+  return <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>—</span>
 }
 
 export default function CuentasCorrientesPage() {
@@ -125,9 +153,9 @@ export default function CuentasCorrientesPage() {
     })
   }
 
-  const allocatedTotal = useMemo(
-    () => Object.values(allocations).reduce((sum, v) => sum + (parseFloat(v) || 0), 0),
-    [allocations],
+  const allocatedTotal = Object.values(allocations).reduce(
+    (sum, v) => sum + (parseFloat(v) || 0),
+    0,
   )
 
   async function handleRecordPayment(e: React.FormEvent) {
@@ -241,6 +269,7 @@ export default function CuentasCorrientesPage() {
                     <tr>
                       <th>Fecha</th>
                       <th>Tipo</th>
+                      <th>Origen</th>
                       <th>Monto</th>
                       <th>Estado</th>
                       <th>Notas</th>
@@ -252,6 +281,7 @@ export default function CuentasCorrientesPage() {
                       <tr key={tx.id}>
                         <td className="mono" style={{ fontSize: 12 }}>{fmtDate(tx.createdAt)}</td>
                         <td>{TYPE_LABEL[tx.type]}</td>
+                        <td><OrigenCell tx={tx} /></td>
                         <td className="mono">{fmtMoney(tx.amount)}</td>
                         <td><span className={STATUS_BADGE_CLASS[tx.status]}>{STATUS_LABEL[tx.status]}</span></td>
                         <td className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{tx.notes ?? '—'}</td>
