@@ -55,8 +55,13 @@ export const passwordResetApi = {
 }
 
 // Público -- misma lógica que invitationAcceptanceApi: sin sesión todavía
-// (la pantalla de confirmar reseteo, fuera de /dashboard).
+// (la pantalla de confirmar reseteo, fuera de /dashboard). `request` (L,
+// 23/08/2026) es self-service -- el backend responde el mismo mensaje
+// genérico exista o no esa cuenta (anti-enumeración, A7.2), la UI no debe
+// intentar distinguir los dos casos tampoco.
 export const passwordResetAcceptanceApi = {
+  request: (email: string) =>
+    apiFetch<{ message: string }>('/api/password-resets/request', { method: 'POST', body: JSON.stringify({ email }) }),
   lookup: (token: string) =>
     apiFetch<PasswordResetPreview>('/api/password-resets/lookup', { method: 'POST', body: JSON.stringify({ token }) }),
   accept: (body: AcceptPasswordResetInput) =>

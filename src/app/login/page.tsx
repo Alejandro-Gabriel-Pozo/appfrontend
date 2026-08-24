@@ -257,7 +257,12 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <label className="label">Contraseña</label>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Contraseña</label>
+                    <Link href="/restablecer-contrasena/solicitar" className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                      ¿Olvidaste tu contraseña?
+                    </Link>
+                  </div>
                   <input
                     type="password"
                     required
