@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useTable, useCreate, useUpdate, useInvalidate } from '@refinedev/core'
 import { customersApi, customerRatesApi, resourcesApi, bookableServicesApi, customerTaxProfileApi, padronApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
@@ -17,7 +17,11 @@ const KIND_LABEL: Record<'INDIVIDUAL' | 'COMPANY', string> = {
 
 export default function ClientesPage() {
   const { toast } = useToast()
-  const { result, tableQuery } = useTable<Customer>({ resource: 'clientes', pagination: { mode: 'off' } })
+  const {
+    result, tableQuery,
+    currentPage, setCurrentPage, pageCount,
+    setFilters,
+  } = useTable<Customer>({ resource: 'clientes', pagination: { mode: 'server', pageSize: 20 } })
   const customers = result.data
   const loading = tableQuery.isLoading
   const { mutateAsync: createCustomer } = useCreate<Customer>()
@@ -74,28 +78,34 @@ export default function ClientesPage() {
     })
   }, [toast])
 
+  // K2 (23/08/2026) — Clientes pasó a paginación server-side. El buscador
+  // sigue siendo un único campo, con dos caminos server-side distintos
+  // (mismo debounce de 400ms de siempre, un solo efecto):
+  // - 7+ dígitos → CUIT/DNI, va a customers_tax_profiles (G1, exacto).
+  // - lo demás → filtro `search` (nombre O email) de GET /customers, ya
+  //   soportado por el backend (customer.repository.ts).
   useEffect(() => {
     const digitsOnly = search.trim().replace(/[-\s.]/g, '')
-    if (digitsOnly.length < 7 || !/^\d+$/.test(digitsOnly)) {
-      setTaxIdMatches(null)
-      return
-    }
+    const looksLikeTaxId = digitsOnly.length >= 7 && /^\d+$/.test(digitsOnly)
     const timer = setTimeout(() => {
-      customersApi.searchByTaxId(digitsOnly)
-        .then(setTaxIdMatches)
-        .catch(err => toast(extractErrorMessage(err), 'error'))
+      setCurrentPage(1)
+      if (looksLikeTaxId) {
+        customersApi.searchByTaxId(digitsOnly)
+          .then(setTaxIdMatches)
+          .catch(err => toast(extractErrorMessage(err), 'error'))
+        setFilters([{ field: 'search', operator: 'contains', value: undefined }])
+      } else {
+        setTaxIdMatches(null)
+        setFilters([{ field: 'search', operator: 'contains', value: search.trim() || undefined }])
+      }
     }, 400)
     return () => clearTimeout(timer)
-  }, [search, toast])
+  }, [search, toast, setCurrentPage, setFilters])
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return customers
-    if (taxIdMatches !== null) return taxIdMatches
-    const q = search.trim().toLowerCase()
-    return customers.filter(c =>
-      c.fullName?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q)
-    )
-  }, [customers, search, taxIdMatches])
+  // Con paginación server-side, `customers` ya viene filtrado por el
+  // backend (search) — acá solo se elige entre esa página y los matches
+  // exactos de CUIT/DNI (que no paginan, son unos pocos resultados).
+  const filtered = taxIdMatches !== null ? taxIdMatches : customers
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -421,6 +431,33 @@ export default function ClientesPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Paginación — la búsqueda por CUIT/DNI no pagina (son unos pocos matches exactos) */}
+      {taxIdMatches === null && pageCount > 1 && (
+        <div className="flex items-center justify-between mt-4 text-sm">
+          <span style={{ color: 'var(--text-tertiary)' }}>
+            {result.total ?? filtered.length} resultado{(result.total ?? filtered.length) !== 1 ? 's' : ''} · página {currentPage} de {pageCount}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="btn-secondary"
+              style={{ padding: '6px 12px' }}
+            >
+              ← Anterior
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(pageCount, p + 1))}
+              disabled={currentPage === pageCount}
+              className="btn-secondary"
+              style={{ padding: '6px 12px' }}
+            >
+              Siguiente →
+            </button>
+          </div>
         </div>
       )}
 
