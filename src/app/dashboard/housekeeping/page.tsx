@@ -578,7 +578,19 @@ export default function HousekeepingPage() {
                 {selectedMaintenanceWindow.endDate ? <> hasta <strong>{selectedMaintenanceWindow.endDate}</strong></> : ' (sin fecha de fin)'}.
               </p>
               {selectedMaintenanceWindow.reason && <p className="mt-1">{selectedMaintenanceWindow.reason}</p>}
-              {isManagement && (
+              {/* 25/08/2026 (pendientes-2026-08-25.md) -- una ventana ya
+                  reactivada sigue apareciendo acá (listActive() la sigue
+                  devolviendo hasta que pase su endDate: bloquea el resto
+                  del día en que se cerró, por diseño de close()). Antes
+                  "Reactivar" seguía visible y clickeable ahí, y tocarlo de
+                  nuevo daba un 409 confuso ("MaintenanceWindowAlreadyClosedError")
+                  sin explicar nada al staff. */}
+              {selectedMaintenanceWindow.closedAt ? (
+                <p className="mt-2" style={{ opacity: 0.8 }}>
+                  Ya se reactivó — sigue bloqueado hasta el final de{' '}
+                  <strong>{selectedMaintenanceWindow.endDate}</strong>, se libera solo después.
+                </p>
+              ) : isManagement && (
                 <button
                   onClick={() => closeMaintenanceWindow(selectedMaintenanceWindow)}
                   disabled={actionLoading !== null}
