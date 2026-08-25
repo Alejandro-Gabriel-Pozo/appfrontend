@@ -1,13 +1,12 @@
-'use client'
+﻿'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { reservationsApi, customersApi, ratePlansApi, customerAccountApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { useRouter } from 'next/navigation'
+import { customersApi, ratePlansApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import RoomCalendar, { todayUTCMidnightMs, VISIBLE_DAYS, MS_PER_DAY } from '@/components/RoomCalendar'
-import FacturarButton from '@/components/FacturarButton'
 import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
-import { useIsManagement } from '@/hooks/useAuthRole'
-import type { Reservation, ReservationStatus, RatePlan } from '@/lib/types'
+import type { ReservationStatus, RatePlan } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Primera pantalla migrada a Bastión (18/08/2026), ahora en ZULU. El scope
@@ -32,19 +31,6 @@ const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
 
 const ALL_STATUSES: ReservationStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']
 
-// Flujo de horario de check-in/check-out fuera del estándar (18/08/2026,
-// pendientes-2026-08-18.md punto N).
-const SCHEDULE_STATUS_LABEL: Record<'PENDING' | 'APPROVED' | 'REJECTED', string> = {
-  PENDING: 'Pendiente de aprobación',
-  APPROVED: 'Aprobado',
-  REJECTED: 'Rechazado',
-}
-const SCHEDULE_STATUS_BADGE_CLASS: Record<'PENDING' | 'APPROVED' | 'REJECTED', string> = {
-  PENDING: 'badge-pending',
-  APPROVED: 'badge-confirmed',
-  REJECTED: 'badge-cancelled',
-}
-
 // Reservas es 100% alojamiento (E1, 18/08/2026) — toda reserva acá es por
 // noche/día calendario, nunca por hora exacta. Se muestra y edita en UTC,
 // nunca en hora local: una reserva creada como "check-in 21/8" se guarda
@@ -66,7 +52,7 @@ const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: '
 
 export default function ReservasPage() {
   const { toast } = useToast()
-  const isManagement = useIsManagement()
+  const router = useRouter()
   const [view, setView] = useState<'list' | 'calendar'>('list')
   // K2 (23/08/2026) — acota el 'off' del calendario a la semana visible; sin
   // esto traería TODO el historial de alojamiento sin límite (mismo
@@ -93,7 +79,7 @@ export default function ReservasPage() {
   // `calendarRange`.
   const {
     loading,
-    createReservation, updateReservation, invalidate,
+    createReservation, updateReservation,
     resources, services,
     screenCategoryIds: lodgingCategoryIds,
     screenResources: lodgingResources,
@@ -101,8 +87,8 @@ export default function ReservasPage() {
     screenServices: lodgingServices,
     search, setSearch, filterStatus, setFilterStatus,
     page, setPage, totalPages, paginated, filtered, total,
-    actionLoading, setActionLoading, doAction: doScreenAction,
-    getResourceName, getServiceName,
+    actionLoading, doAction: doScreenAction,
+    getResourceName,
   } = useReservationsScreen(true, view === 'calendar' ? 'off' : 'server', view === 'calendar' ? calendarRange : undefined)
 
   // Modal nueva reserva
@@ -118,33 +104,6 @@ export default function ReservasPage() {
 
   // Turnos disponibles (servicios "slot" con horario configurado — Mi Negocio / recurso)
   const [slotDate, setSlotDate] = useState('')
-
-  // Modal detalle / edición
-  const [detailTarget, setDetailTarget] = useState<Reservation | null>(null)
-  const [editingDetail, setEditingDetail] = useState(false)
-  const [detailForm, setDetailForm] = useState({ startTime: '', endTime: '', adultos: 1, ninos: 0 })
-  const [detailFieldErrors, setDetailFieldErrors] = useState<Record<string, string>>({})
-  const [detailSubmitting, setDetailSubmitting] = useState(false)
-
-  // Ajuste de precio de una reserva CONFIRMED (19/08/2026, pendientes-2026-
-  // 08-18.md punto I) — preview de solo lectura, se pide cada vez que se
-  // abre el detalle de una reserva CONFIRMED o después de editarla.
-  const [priceAdjustment, setPriceAdjustment] = useState<{ currentTotalPrice: number; recalculatedTotalPrice: number; difference: number } | null>(null)
-  const [confirmingAdjustment, setConfirmingAdjustment] = useState(false)
-
-  // Cargo (CHARGE) de esta reserva, para el botón "Facturar" (pendientes-
-  // 2026-08-18.md punto T, "qué sigue") — mismo componente que Cuentas
-  // Corrientes, apuntando al mismo financialTransactionId. El CHARGE se
-  // crea de forma async (outbox, A10) al confirmar, así que puede no
-  // existir todavía la primera vez que se abre el detalle recién confirmado.
-  const [chargeTransactionId, setChargeTransactionId] = useState<string | null>(null)
-
-  // Horario especial (early check-in / late check-out) — pendientes-2026-08-18.md punto N.
-  const [scheduleRequestOpen, setScheduleRequestOpen] = useState(false)
-  const [scheduleRequestForm, setScheduleRequestForm] = useState({ requestedCheckInTime: '', requestedCheckOutTime: '' })
-  const [scheduleSubmitting, setScheduleSubmitting] = useState(false)
-  const [scheduleApproveOpen, setScheduleApproveOpen] = useState(false)
-  const [scheduleChargeAmount, setScheduleChargeAmount] = useState('')
 
   const selectedService = services.find(s => s.id === form.serviceId)
   const isSlotService = selectedService?.bookingMode === 'slot'
@@ -264,194 +223,16 @@ export default function ReservasPage() {
     setModalOpen(true)
   }
 
-  /** Drag-to-move/resize del calendario — llama al mismo PUT que "Editar
-   * horario" ya usa. Si falla (ej. 409 por conflicto contra el destino), no
+  /** Drag-to-move/resize del calendario — llama al mismo PUT que la ruta de
+   * detalle usa. Si falla (ej. 409 por conflicto contra el destino), no
    * hace falta revertir nada a mano: el calendario nunca mutó su propia
    * lista, solo mostraba un ghost temporal que ya desapareció al soltar. */
   async function handleCalendarUpdate(id: string, changes: { startTime?: string; endTime?: string; resourceId?: string }) {
     try {
-      const { data: updated } = await updateReservation({ resource: 'reservas', id, values: changes })
+      await updateReservation({ resource: 'reservas', id, values: changes })
       toast('Reserva actualizada', 'success')
-      // Si el detalle de ESTA reserva está abierto, refrescar el preview de
-      // ajuste de precio acá también — el drag no pasa por handleUpdateDetail.
-      if (detailTarget?.id === id) { refreshPriceAdjustment(updated); refreshChargeTransaction(updated) }
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
-    }
-  }
-
-  function openDetail(r: Reservation) {
-    setDetailTarget(r)
-    setEditingDetail(false)
-    // Fechas por día calendario UTC, no datetime-local — ver useDateOnlyFields.
-    setDetailForm({
-      startTime: toUTCDateInput(r.startTime), endTime: toUTCDateInput(r.endTime),
-      adultos: r.adultos ?? 1, ninos: r.ninos ?? 0,
-    })
-    setDetailFieldErrors({})
-    setScheduleRequestOpen(false)
-    setScheduleApproveOpen(false)
-    setScheduleRequestForm({
-      requestedCheckInTime: r.requestedCheckInTime?.slice(0, 5) ?? '',
-      requestedCheckOutTime: r.requestedCheckOutTime?.slice(0, 5) ?? '',
-    })
-    setScheduleChargeAmount('')
-    refreshPriceAdjustment(r)
-    refreshChargeTransaction(r)
-  }
-
-  // Se pide siempre que se abre/actualiza el detalle de una reserva
-  // CONFIRMED — cubre tanto la edición desde este modal como un drag del
-  // calendario hecho antes de abrir el detalle (handleCalendarUpdate no
-  // tiene el modal abierto, así que no puede refrescar esto solo).
-  async function refreshPriceAdjustment(r: Reservation) {
-    if (r.status !== 'CONFIRMED') { setPriceAdjustment(null); return }
-    try {
-      setPriceAdjustment(await reservationsApi.previewPriceAdjustment(r.id))
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    }
-  }
-
-  // No hay endpoint "financial-transactions?reservationId=" propio -- se
-  // reusa el estado de cuenta del cliente (ya trae reservationId por
-  // movimiento) en vez de sumar una ruta nueva solo para este botón.
-  // El CHARGE queda PENDING hasta el checkout (outbox.handlers.ts) -- eso
-  // no impide facturarlo, factura y cobro son cosas distintas acá.
-  async function refreshChargeTransaction(r: Reservation) {
-    if (r.status !== 'CONFIRMED' && r.status !== 'COMPLETED') { setChargeTransactionId(null); return }
-    try {
-      const statement = await customerAccountApi.getStatement(r.customer.id)
-      const charge = statement.transactions.find(
-        tx => tx.type === 'CHARGE' && tx.reservationId === r.id && tx.status !== 'VOIDED' && tx.status !== 'FAILED',
-      )
-      setChargeTransactionId(charge?.id ?? null)
-    } catch {
-      setChargeTransactionId(null)
-    }
-  }
-
-  async function handleConfirmPriceAdjustment() {
-    if (!detailTarget) return
-    setConfirmingAdjustment(true)
-    try {
-      const updated = await reservationsApi.confirmPriceAdjustment(detailTarget.id)
-      toast('Ajuste de precio confirmado', 'success')
-      setDetailTarget(updated)
-      setPriceAdjustment(null)
-      invalidate({ resource: 'reservas', invalidates: ['list'] })
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setConfirmingAdjustment(false)
-    }
-  }
-
-  async function handleUpdateDetail(e: React.FormEvent) {
-    e.preventDefault()
-    if (!detailTarget) return
-    setDetailSubmitting(true)
-    setDetailFieldErrors({})
-    try {
-      const { data: updated } = await updateReservation({
-        resource: 'reservas',
-        id: detailTarget.id,
-        values: {
-          startTime: new Date(detailForm.startTime).toISOString(),
-          endTime: new Date(detailForm.endTime).toISOString(),
-          adultos: detailForm.adultos,
-          ninos: detailForm.ninos,
-        },
-      })
-      toast('Reserva actualizada', 'success')
-      setDetailTarget(updated)
-      setEditingDetail(false)
-      refreshPriceAdjustment(updated)
-      refreshChargeTransaction(updated)
-    } catch (err) {
-      const fe = extractFieldErrors(err)
-      if (Object.keys(fe).length > 0) setDetailFieldErrors(fe)
-      else toast(extractErrorMessage(err), 'error')
-    } finally {
-      setDetailSubmitting(false)
-    }
-  }
-
-  async function doDetailAction(action: 'confirm' | 'cancel' | 'complete') {
-    if (!detailTarget) return
-    setActionLoading(`${detailTarget.id}-${action}`)
-    try {
-      const labels = { confirm: 'Reserva confirmada', cancel: 'Reserva cancelada', complete: 'Reserva completada' }
-      const updated = await reservationsApi[action](detailTarget.id)
-      toast(labels[action], 'success')
-      setDetailTarget(updated)
-      refreshPriceAdjustment(updated)
-      refreshChargeTransaction(updated)
-      invalidate({ resource: 'reservas', invalidates: ['list'] })
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  async function submitScheduleRequest(e: React.FormEvent) {
-    e.preventDefault()
-    if (!detailTarget) return
-    const { requestedCheckInTime, requestedCheckOutTime } = scheduleRequestForm
-    if (!requestedCheckInTime && !requestedCheckOutTime) {
-      toast('Pedí una hora de check-in o de check-out', 'error')
-      return
-    }
-    setScheduleSubmitting(true)
-    try {
-      const updated = await reservationsApi.requestScheduleChange(detailTarget.id, {
-        ...(requestedCheckInTime && { requestedCheckInTime }),
-        ...(requestedCheckOutTime && { requestedCheckOutTime }),
-      })
-      toast('Horario especial pedido — queda pendiente de aprobación', 'success')
-      setDetailTarget(updated)
-      setScheduleRequestOpen(false)
-      invalidate({ resource: 'reservas', invalidates: ['list'] })
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setScheduleSubmitting(false)
-    }
-  }
-
-  async function approveSchedule() {
-    if (!detailTarget) return
-    setActionLoading(`${detailTarget.id}-approve-schedule`)
-    try {
-      const amount = scheduleChargeAmount.trim() === '' ? undefined : parseFloat(scheduleChargeAmount)
-      const updated = await reservationsApi.approveScheduleChange(detailTarget.id, { chargeAmount: amount })
-      toast('Horario especial aprobado', 'success')
-      setDetailTarget(updated)
-      setScheduleApproveOpen(false)
-      invalidate({ resource: 'reservas', invalidates: ['list'] })
-    } catch (err) {
-      // NEXT_ARRIVAL_CONFLICT (409) llega acá con un mensaje ya en
-      // castellano ("Conflicto: próxima llegada a las HH:MM") — no hace
-      // falta traducirlo de nuevo, se muestra tal cual.
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  async function rejectSchedule() {
-    if (!detailTarget) return
-    setActionLoading(`${detailTarget.id}-reject-schedule`)
-    try {
-      const updated = await reservationsApi.rejectScheduleChange(detailTarget.id)
-      toast('Horario especial rechazado', 'success')
-      setDetailTarget(updated)
-      invalidate({ resource: 'reservas', invalidates: ['list'] })
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setActionLoading(null)
     }
   }
 
@@ -486,7 +267,7 @@ export default function ReservasPage() {
           resources={lodgingResources}
           reservations={filtered}
           services={services}
-          onReservationClick={openDetail}
+          onReservationClick={r => router.push(`/dashboard/reservas/${r.id}`)}
           onEmptySlotClick={openModalForSlot}
           onUpdated={handleCalendarUpdate}
           onWeekChange={handleWeekChange}
@@ -552,7 +333,7 @@ export default function ReservasPage() {
               </thead>
               <tbody>
                 {paginated.map(r => (
-                  <tr key={r.id} onClick={() => openDetail(r)} style={{ cursor: 'pointer' }}>
+                  <tr key={r.id} onClick={() => router.push(`/dashboard/reservas/${r.id}`)} style={{ cursor: 'pointer' }}>
                     <td>
                       <p className="table-cell-primary">{r.customer.fullName}</p>
                       <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{r.customer.email}</p>
@@ -865,348 +646,6 @@ export default function ReservasPage() {
           </div>
         </form>
       </Modal>
-
-      {/* Modal detalle / edición */}
-      {detailTarget && (
-        <Modal
-          open={detailTarget !== null}
-          onClose={() => setDetailTarget(null)}
-          title={editingDetail ? 'Editar reserva' : 'Detalle de reserva'}
-        >
-          {editingDetail ? (
-            <form onSubmit={handleUpdateDetail} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">Check-in</label>
-                  <input
-                    type="date"
-                    className="input"
-                    style={detailFieldErrors['startTime'] ? { borderColor: 'var(--danger)' } : undefined}
-                    value={detailForm.startTime}
-                    onChange={e => setDetailForm(f => ({ ...f, startTime: e.target.value }))}
-                    required
-                  />
-                  {detailFieldErrors['startTime'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['startTime']}</p>}
-                </div>
-                <div>
-                  <label className="label">Check-out</label>
-                  <input
-                    type="date"
-                    className="input"
-                    style={detailFieldErrors['endTime'] ? { borderColor: 'var(--danger)' } : undefined}
-                    value={detailForm.endTime}
-                    onChange={e => setDetailForm(f => ({ ...f, endTime: e.target.value }))}
-                    required
-                  />
-                  {detailFieldErrors['endTime'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['endTime']}</p>}
-                </div>
-                <div>
-                  <label className="label">Adultos</label>
-                  <input
-                    type="number"
-                    className="input"
-                    min={1}
-                    style={detailFieldErrors['adultos'] ? { borderColor: 'var(--danger)' } : undefined}
-                    value={detailForm.adultos}
-                    onChange={e => setDetailForm(f => ({ ...f, adultos: e.target.value === '' ? 1 : parseInt(e.target.value, 10) }))}
-                    required
-                  />
-                  {detailFieldErrors['adultos'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['adultos']}</p>}
-                </div>
-                <div>
-                  <label className="label">Niños</label>
-                  <input
-                    type="number"
-                    className="input"
-                    min={0}
-                    style={detailFieldErrors['ninos'] ? { borderColor: 'var(--danger)' } : undefined}
-                    value={detailForm.ninos}
-                    onChange={e => setDetailForm(f => ({ ...f, ninos: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }))}
-                  />
-                  {detailFieldErrors['ninos'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['ninos']}</p>}
-                </div>
-              </div>
-              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                Cliente, recurso y servicio no se pueden cambiar acá — cancelá esta reserva y creá una nueva si hace falta.
-              </p>
-              {detailTarget.status === 'CONFIRMED' && (
-                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  Esta reserva ya tiene un cobro emitido — el precio no se actualiza solo. Después de guardar
-                  vas a ver cuánto cambiaría y vas a tener que confirmarlo aparte.
-                </p>
-              )}
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setEditingDetail(false)} className="btn-secondary flex-1">Cancelar</button>
-                <button type="submit" disabled={detailSubmitting} className="btn-primary flex-1">
-                  {detailSubmitting ? <span className="spinner" /> : null}
-                  Guardar cambios
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Cliente</p>
-                  <p className="table-cell-primary" style={{ fontSize: 14 }}>{detailTarget.customer.fullName}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{detailTarget.customer.email}</p>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Estado</p>
-                  <span className={STATUS_BADGE_CLASS[detailTarget.status]}>
-                    {STATUS_LABEL[detailTarget.status]}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Recurso</p>
-                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{getResourceName(detailTarget.resourceId)}</p>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Servicio</p>
-                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{getServiceName(detailTarget.serviceId) ?? '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Check-in</p>
-                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmt(detailTarget.startTime)}</p>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Check-out</p>
-                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmt(detailTarget.endTime)}</p>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Precio</p>
-                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmtMoney(detailTarget.totalPrice)}</p>
-                </div>
-                {detailTarget.partySize != null && detailTarget.partySize > 1 && (
-                  <div>
-                    <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Personas</p>
-                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{detailTarget.partySize}</p>
-                  </div>
-                )}
-                {detailTarget.adultos != null && (
-                  <div>
-                    <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Huéspedes</p>
-                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      Adultos: {detailTarget.adultos} · Niños: {detailTarget.ninos ?? 0}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {detailTarget.notes && (
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Notas</p>
-                  <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{detailTarget.notes}</p>
-                </div>
-              )}
-
-              {/* Horario especial (early check-in / late check-out) — pendientes-2026-08-18.md punto N. */}
-              {detailTarget.scheduleApprovalStatus && (
-                <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Horario especial pedido</p>
-                    <span className={SCHEDULE_STATUS_BADGE_CLASS[detailTarget.scheduleApprovalStatus]}>
-                      {SCHEDULE_STATUS_LABEL[detailTarget.scheduleApprovalStatus]}
-                    </span>
-                  </div>
-                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>
-                    {detailTarget.requestedCheckInTime && `Check-in: ${detailTarget.requestedCheckInTime.slice(0, 5)}`}
-                    {detailTarget.requestedCheckInTime && detailTarget.requestedCheckOutTime && '  ·  '}
-                    {detailTarget.requestedCheckOutTime && `Check-out: ${detailTarget.requestedCheckOutTime.slice(0, 5)}`}
-                  </p>
-                  {detailTarget.scheduleApprovalStatus === 'APPROVED' && !!detailTarget.scheduleChargeAmount && (
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                      Cargo aplicado: {fmtMoney(detailTarget.scheduleChargeAmount)}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Facturar (pendientes-2026-08-18.md punto T, "qué sigue") —
-                  solo aparece si ya existe un CHARGE confirmado para esta
-                  reserva (se resuelve en refreshChargeTransaction, vía el
-                  estado de cuenta del cliente). Mismo componente que usa
-                  Cuentas Corrientes. */}
-              {chargeTransactionId && (
-                <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Comprobante AFIP</p>
-                  <FacturarButton financialTransactionId={chargeTransactionId} />
-                </div>
-              )}
-
-              {/* Ajuste de precio (19/08/2026, pendientes-2026-08-18.md punto I) —
-                  solo aparece si hay una diferencia real entre el precio congelado
-                  y lo que costaría hoy con las fechas/recurso actuales. Nunca se
-                  aplica solo: el empleado confirma a mano. */}
-              {priceAdjustment && (
-                <div
-                  className="pt-3"
-                  style={{ borderTop: '1px solid var(--border)' }}
-                >
-                  <div
-                    className="rounded-lg p-3"
-                    style={{ background: 'var(--warning-dim)', border: '1px solid var(--warning-border)' }}
-                  >
-                    <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                      Ajuste de precio pendiente
-                    </p>
-                    <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
-                      Con las fechas/recurso actuales, el precio sería{' '}
-                      <span className="mono">{fmtMoney(priceAdjustment.recalculatedTotalPrice)}</span>
-                      {' '}(cobrado: <span className="mono">{fmtMoney(priceAdjustment.currentTotalPrice)}</span>) —{' '}
-                      {priceAdjustment.difference > 0
-                        ? <>cargo extra de <span className="mono">{fmtMoney(priceAdjustment.difference)}</span></>
-                        : <>nota de crédito de <span className="mono">{fmtMoney(Math.abs(priceAdjustment.difference))}</span></>}
-                      .
-                    </p>
-                    {/* Roles.MANAGEMENT en el backend, no FRONT_DESK como el
-                        resto de esta pantalla a propósito — quien edita las
-                        fechas no debería ser también quien autoriza el
-                        cargo/nota de crédito resultante con un segundo click.
-                        Acá solo se evita mostrar un botón que el backend
-                        igual va a rechazar. */}
-                    {isManagement ? (
-                      <button
-                        onClick={handleConfirmPriceAdjustment}
-                        disabled={confirmingAdjustment}
-                        className="btn-mini btn-mini-sage"
-                      >
-                        {confirmingAdjustment ? '…' : 'Confirmar ajuste'}
-                      </button>
-                    ) : (
-                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        Solo un gerente/dueño puede confirmar este ajuste.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                {(detailTarget.status === 'PENDING' || detailTarget.status === 'CONFIRMED') && (
-                  <button
-                    onClick={() => setEditingDetail(true)}
-                    className="btn-mini btn-mini-neutral"
-                  >
-                    Editar horario
-                  </button>
-                )}
-                {(detailTarget.status === 'PENDING' || detailTarget.status === 'CONFIRMED') && (
-                  <button
-                    onClick={() => setScheduleRequestOpen(o => !o)}
-                    className="btn-mini btn-mini-neutral"
-                  >
-                    {detailTarget.scheduleApprovalStatus ? 'Volver a pedir horario' : 'Pedir horario especial'}
-                  </button>
-                )}
-                {detailTarget.scheduleApprovalStatus === 'PENDING' && (
-                  <>
-                    <button
-                      onClick={() => setScheduleApproveOpen(o => !o)}
-                      disabled={actionLoading !== null}
-                      className="btn-mini btn-mini-sage"
-                    >
-                      Aprobar horario
-                    </button>
-                    <button
-                      onClick={rejectSchedule}
-                      disabled={actionLoading !== null}
-                      className="btn-mini btn-mini-clay"
-                    >
-                      {actionLoading === `${detailTarget.id}-reject-schedule` ? '…' : 'Rechazar horario'}
-                    </button>
-                  </>
-                )}
-                {detailTarget.allowedTransitions?.includes('CONFIRMED') && (
-                  <button
-                    onClick={() => doDetailAction('confirm')}
-                    disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-sage"
-                  >
-                    Confirmar
-                  </button>
-                )}
-                {detailTarget.allowedTransitions?.includes('CANCELLED') && (
-                  <button
-                    onClick={() => doDetailAction('cancel')}
-                    disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-clay"
-                  >
-                    Cancelar reserva
-                  </button>
-                )}
-                {detailTarget.allowedTransitions?.includes('COMPLETED') && (
-                  <button
-                    onClick={() => doDetailAction('complete')}
-                    disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-neutral"
-                  >
-                    Completar
-                  </button>
-                )}
-              </div>
-
-              {scheduleRequestOpen && (
-                <form onSubmit={submitScheduleRequest} className="space-y-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                    Dejá el campo vacío para no pedir cambio en ese horario. El estándar del negocio se configura en Mi Negocio.
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="label">Check-in pedido</label>
-                      <input
-                        type="time" lang="es-AR" className="input"
-                        value={scheduleRequestForm.requestedCheckInTime}
-                        onChange={e => setScheduleRequestForm(f => ({ ...f, requestedCheckInTime: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="label">Check-out pedido</label>
-                      <input
-                        type="time" lang="es-AR" className="input"
-                        value={scheduleRequestForm.requestedCheckOutTime}
-                        onChange={e => setScheduleRequestForm(f => ({ ...f, requestedCheckOutTime: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <button type="button" onClick={() => setScheduleRequestOpen(false)} className="btn-secondary flex-1">Cancelar</button>
-                    <button type="submit" disabled={scheduleSubmitting} className="btn-primary flex-1">
-                      {scheduleSubmitting ? <span className="spinner" /> : null}
-                      Enviar pedido
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {scheduleApproveOpen && (
-                <div className="space-y-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                  <div>
-                    <label className="label">Cargo por el horario especial (opcional)</label>
-                    <input
-                      type="number" className="input" min={0} step="0.01"
-                      value={scheduleChargeAmount}
-                      onChange={e => setScheduleChargeAmount(e.target.value)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="flex gap-3">
-                    <button type="button" onClick={() => setScheduleApproveOpen(false)} className="btn-secondary flex-1">Cancelar</button>
-                    <button
-                      type="button" onClick={approveSchedule}
-                      disabled={actionLoading !== null}
-                      className="btn-primary flex-1"
-                    >
-                      {actionLoading === `${detailTarget.id}-approve-schedule` ? <span className="spinner" /> : null}
-                      Confirmar aprobación
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </Modal>
-      )}
     </div>
   )
 }

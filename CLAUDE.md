@@ -54,6 +54,46 @@ use la clase `.bastion` NO necesita volver a importar
 `Fraunces`/`IBM_Plex_Sans`/`IBM_Plex_Mono` — las variables CSS ya
 cascadean desde el layout.
 
+## Interacción — modal, panel o ruta dedicada (convención aplicada, no aspiracional)
+
+Estado real después de `docs/auditoria-modales.md` (auditoría UX,
+25/08/2026 — segunda opinión externa traída por el dueño, verificada
+contra el código real): el dashboard dependía demasiado de `<Modal>` para
+un ERP — 12 archivos lo usaban, incluyendo entidades con perfiles extensos
+(Clientes, Usuarios, Reservas, Estadías) comprimidas en un overlay de
+`max-w-md` sin URL propia, breadcrumbs, ni guardia de cambios sin guardar.
+El detalle completo — inventario, evidencia por dominio, orden de
+migración — vive en ese documento; acá solo la regla que un cambio nuevo
+tiene que respetar.
+
+**Tres niveles de interacción, elegí según el caso:**
+1. **Modal breve** — confirmaciones, alta mínima (2-4 campos), acciones
+   reversibles de una sola intención. Ejemplo vigente: "Nuevo cliente" en
+   `dashboard/clientes/page.tsx`.
+2. **Panel lateral o sheet** — inspección rápida desde una tabla, cuando
+   el contenido es acotado y no necesita navegación profunda. Sin caso
+   migrado todavía en el repo — no uses `<Modal>` por default para esto,
+   evaluar un sheet antes.
+3. **Ruta dedicada `/dashboard/{entidad}/[id]`** — detalle, edición
+   extensa, historial, relaciones, flujos de varios pasos. Página única
+   con secciones editables in-place (cards con su propio form + botón
+   "Guardar"), **sin ruta `/edit` separada** — patrón ya usado en
+   `ordenes/[id]/page.tsx` y `clientes/[id]/page.tsx` (breadcrumb
+   "← {Entidad}", estados `loading`/`notFound`, cards con
+   `.detail-card-header`/`.detail-card-body`). Seguí ese patrón para toda
+   entidad nueva, no inventes uno distinto.
+
+**Antes de agregar o extender un `<Modal>` que edite una entidad con más
+de ~4 campos, relaciones (tags, tarifas, sub-recursos) o historial** — no
+lo hagas. Migrala a ruta dedicada con el patrón de arriba, como parte del
+mismo cambio.
+
+**Backlog de migración pendiente** (orden sugerido por la auditoría, ver
+`docs/auditoria-modales.md` para el motivo de cada una): Usuarios,
+Reservas, Estadías, Recursos, Housekeeping, Productos (falta la página
+base `[id]/page.tsx` — hoy solo tiene `receta/` y `variantes/` adentro),
+Turnos.
+
 ## Refine — cuándo usarlo (aplicado, no aspiracional)
 
 **Toda pantalla nueva del dashboard que liste/cree/edite/borre un

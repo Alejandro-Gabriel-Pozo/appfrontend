@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ordersApi, customersApi, productsApi, extractErrorMessage } from '@/lib/api'
+import { isApiError } from '@/lib/apiErrors'
 import { useToast } from '@/context/ToastContext'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import type { Order, OrderItem, Customer, Product, OrderStatus } from '@/lib/types'
@@ -88,8 +89,7 @@ export default function OrderDetailPage() {
       const c = arr.find(c => c.id === ord.customerId) ?? null
       setCustomer(c)
     } catch (err: unknown) {
-      const e = err as { status?: number }
-      if (e?.status === 404) {
+      if (isApiError(err) && err.code === 'ORDER_NOT_FOUND') {
         setNotFound(true)
       } else {
         toast(extractErrorMessage(err), 'error')

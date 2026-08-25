@@ -1,9 +1,10 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
-import { rolesApi, invitationsApi, passwordResetApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { useTable, useCreate } from '@refinedev/core'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { rolesApi, invitationsApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
-import { useIsOwner } from '@/hooks/useAuthRole'
 import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import type { TeamMember, Role, UserInvitation } from '@/lib/types'
@@ -40,30 +41,17 @@ const EMPTY: FormState = { email: '', password: '', roleId: '', fullName: '', dn
 
 export default function UsuariosPage() {
   const { toast } = useToast()
-  const isOwner = useIsOwner()
+  const router = useRouter()
   const { result, tableQuery } = useTable<TeamMember>({ resource: 'usuarios', pagination: { mode: 'off' } })
   const members = result.data
   const loading = tableQuery.isLoading
   const { mutateAsync: createMember } = useCreate<TeamMember>()
-  const { mutateAsync: updateMember } = useUpdate<TeamMember>()
-  const { mutateAsync: deleteMemberMutation } = useDelete<TeamMember>()
 
   const [roles, setRoles] = useState<Role[]>([])
   const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing] = useState<TeamMember | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
-
-  const [deleteTarget, setDeleteTarget] = useState<TeamMember | null>(null)
-  const [deleting, setDeleting] = useState(false)
-
-  // K1 (23/08/2026, pendientes-2026-08-23.md) — el backend rechaza con 403
-  // ROLE_HIERARCHY_PROTECTED si un actor no-OWNER intenta fijar la
-  // contraseña de alguien OWNER_ONLY/MANAGEMENT directo por PUT. `isOwner`
-  // ya viene de useIsOwner() (no gatea nada por sí solo, es UI — el
-  // backend es quien de verdad rechaza).
-  const [sendingResetLink, setSendingResetLink] = useState(false)
 
   // ── Invitaciones (D2, pendientes-2026-08-19.md) ──────────────────────────
   // No migrado a Refine -- mismo criterio que "roles" arriba: es una lista
@@ -146,28 +134,6 @@ export default function UsuariosPage() {
   // de antes (14/08/2026).
   const assignableRoles = roles.filter(r => r.name !== 'OWNER' && r.active)
 
-  // K1 (23/08/2026) — el rol del usuario que se está editando, para saber
-  // si está protegido por jerarquía (OWNER_ONLY/MANAGEMENT). `editing.roleId`
-  // es la fuente real (roleName es solo para mostrar, no para autorizar —
-  // mismo criterio que el backend, ver platform.repository.ts).
-  const editingRole = editing ? roles.find(r => r.id === editing.roleId) : null
-  const editingIsProtected = editing?.roleName === 'OWNER'
-    || (editingRole?.permissionGroups.some(g => g === 'OWNER_ONLY' || g === 'MANAGEMENT') ?? false)
-  const canSetPasswordDirectly = !editing || !editingIsProtected || isOwner
-
-  async function handleSendResetLink() {
-    if (!editing) return
-    setSendingResetLink(true)
-    try {
-      await passwordResetApi.requestLink(editing.id)
-      toast(`Le mandamos un mail a ${editing.email} para restablecer su contraseña`, 'success')
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setSendingResetLink(false)
-    }
-  }
-
   // Roles no está migrado a esta pantalla — se sigue trayendo directo.
   useEffect(() => {
     queueMicrotask(() => {
@@ -181,24 +147,7 @@ export default function UsuariosPage() {
   }
 
   function openCreate() {
-    setEditing(null)
     setForm({ ...EMPTY, roleId: defaultAssignableRoleId() })
-    setFieldErrors({})
-    setModalOpen(true)
-  }
-
-  function openEdit(m: TeamMember) {
-    setEditing(m)
-    setForm({
-      email: m.email,
-      password: '',
-      roleId: m.roleName === 'OWNER' ? defaultAssignableRoleId() : m.roleId,
-      fullName: m.fullName ?? '',
-      dni: m.dni ?? '',
-      phone: m.phone ?? '',
-      employeeNumber: m.employeeNumber ?? '',
-      hiredAt: m.hiredAt ? m.hiredAt.slice(0, 10) : '',
-    })
     setFieldErrors({})
     setModalOpen(true)
   }
@@ -208,40 +157,20 @@ export default function UsuariosPage() {
     setSubmitting(true)
     setFieldErrors({})
     try {
-      if (editing) {
-        // El email no se puede editar acá — es de la identity, no de la
-        // membership. roleId solo se manda si esta membership no es OWNER
-        // (no tiene sentido pisar el rol de quien registró el negocio).
-        await updateMember({
-          resource: 'usuarios',
-          id: editing.id,
-          values: {
-            ...(editing.roleName !== 'OWNER' && { roleId: form.roleId }),
-            ...(form.password && { password: form.password }),
-            fullName: form.fullName || undefined,
-            dni: form.dni || undefined,
-            phone: form.phone || undefined,
-            employeeNumber: form.employeeNumber || undefined,
-            hiredAt: form.hiredAt || undefined,
-          },
-        })
-        toast('Usuario actualizado', 'success')
-      } else {
-        await createMember({
-          resource: 'usuarios',
-          values: {
-            email: form.email,
-            password: form.password,
-            roleId: form.roleId,
-            fullName: form.fullName || undefined,
-            dni: form.dni || undefined,
-            phone: form.phone || undefined,
-            employeeNumber: form.employeeNumber || undefined,
-            hiredAt: form.hiredAt || undefined,
-          },
-        })
-        toast('Usuario creado', 'success')
-      }
+      await createMember({
+        resource: 'usuarios',
+        values: {
+          email: form.email,
+          password: form.password,
+          roleId: form.roleId,
+          fullName: form.fullName || undefined,
+          dni: form.dni || undefined,
+          phone: form.phone || undefined,
+          employeeNumber: form.employeeNumber || undefined,
+          hiredAt: form.hiredAt || undefined,
+        },
+      })
+      toast('Usuario creado', 'success')
       setModalOpen(false)
     } catch (err) {
       const fe = extractFieldErrors(err)
@@ -249,20 +178,6 @@ export default function UsuariosPage() {
       else toast(extractErrorMessage(err), 'error')
     } finally {
       setSubmitting(false)
-    }
-  }
-
-  async function handleDelete() {
-    if (!deleteTarget) return
-    setDeleting(true)
-    try {
-      await deleteMemberMutation({ resource: 'usuarios', id: deleteTarget.id })
-      toast('Usuario desactivado', 'success')
-      setDeleteTarget(null)
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setDeleting(false)
     }
   }
 
@@ -288,12 +203,6 @@ export default function UsuariosPage() {
           </button>
         </div>
       </div>
-
-      {!isOwner && (
-        <div className="mb-4 px-4 py-3 rounded-lg text-xs badge-completed" style={{ display: 'block' }}>
-          Solo el propietario del negocio puede desactivar usuarios. Vos podés crear y editar.
-        </div>
-      )}
 
       {!invitationsLoading && invitations.length > 0 && (
         <div className="card table-wrapper mb-4" style={{ overflow: 'hidden' }}>
@@ -364,20 +273,14 @@ export default function UsuariosPage() {
             </thead>
             <tbody>
               {members.map(m => (
-                <tr key={m.id}>
+                <tr key={m.id} style={{ cursor: 'pointer' }} onClick={() => router.push(`/dashboard/usuarios/${m.id}`)}>
                   <td className="table-cell-primary">{m.fullName ?? '—'}</td>
                   <td>{m.email}</td>
                   <td className="mono" style={{ fontSize: 12 }}>{m.employeeNumber ?? '—'}</td>
                   <td><span className="badge-completed">{ROLE_LABEL[m.roleName] ?? m.roleName}</span></td>
                   <td><span className={m.active ? 'badge-confirmed' : 'badge-completed'}>{m.active ? 'Activo' : 'Inactivo'}</span></td>
-                  <td>
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button onClick={() => openEdit(m)} className="btn-mini btn-mini-neutral">Editar</button>
-                      {/* El propietario nunca se borra desde acá, y solo el propietario puede borrar */}
-                      {isOwner && m.roleName !== 'OWNER' && (
-                        <button onClick={() => setDeleteTarget(m)} className="btn-mini btn-mini-clay">Desactivar</button>
-                      )}
-                    </div>
+                  <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                    <Link href={`/dashboard/usuarios/${m.id}`} className="btn-mini btn-mini-neutral" style={{ textDecoration: 'none' }}>Ver detalle</Link>
                   </td>
                 </tr>
               ))}
@@ -386,8 +289,10 @@ export default function UsuariosPage() {
         </div>
       )}
 
-      {/* Modal crear/editar */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Editar usuario' : 'Nuevo usuario'}>
+      {/* Modal nuevo usuario — edición completa (perfil, rol, contraseña,
+          desactivar) vive en /dashboard/usuarios/[id] desde la migración
+          de la auditoría de modales (25/08/2026). */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nuevo usuario">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="label">Email</label>
@@ -398,10 +303,8 @@ export default function UsuariosPage() {
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
               placeholder="empleado@negocio.com"
-              disabled={!!editing}
               required
             />
-            {editing && <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>El email no se puede cambiar desde acá.</p>}
             {fieldErrors['email'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['email']}</p>}
           </div>
 
@@ -457,74 +360,43 @@ export default function UsuariosPage() {
             </div>
           </div>
 
-          {editing?.roleName !== 'OWNER' && (
-            <div>
-              <label className="label">Rol</label>
-              <select
-                className="input"
-                value={form.roleId}
-                onChange={e => setForm(f => ({ ...f, roleId: e.target.value }))}
-              >
-                {assignableRoles.map(r => (
-                  <option key={r.id} value={r.id}>{ROLE_LABEL[r.name] ?? r.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <label className="label">Rol</label>
+            <select
+              className="input"
+              value={form.roleId}
+              onChange={e => setForm(f => ({ ...f, roleId: e.target.value }))}
+            >
+              {assignableRoles.map(r => (
+                <option key={r.id} value={r.id}>{ROLE_LABEL[r.name] ?? r.name}</option>
+              ))}
+            </select>
+          </div>
 
-          {canSetPasswordDirectly ? (
-            <div>
-              <label className="label">{editing ? 'Nueva contraseña (opcional)' : 'Contraseña'}</label>
-              <input
-                type="password"
-                className="input"
-                style={fieldErrors['password'] ? { borderColor: 'var(--danger)' } : undefined}
-                value={form.password}
-                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                placeholder={editing ? 'Dejar vacío para no cambiarla' : '••••••••'}
-                minLength={8}
-                required={!editing}
-              />
-              {editing && (
-                <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  Si esta persona trabaja en más de un negocio, no vas a poder cambiarle la contraseña desde acá.
-                </p>
-              )}
-              {fieldErrors['password'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['password']}</p>}
-            </div>
-          ) : (
-            <div>
-              <label className="label">Contraseña</label>
-              <p className="mt-1 mb-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                Por el rol de esta persona, no se puede fijar la contraseña directo desde acá — mandale un link para que la elija ella misma.
-              </p>
-              <button type="button" onClick={handleSendResetLink} disabled={sendingResetLink} className="btn-secondary">
-                {sendingResetLink ? <span className="spinner" /> : null}
-                Enviar link para restablecer contraseña
-              </button>
-            </div>
-          )}
+          <div>
+            <label className="label">Contraseña</label>
+            <input
+              type="password"
+              className="input"
+              style={fieldErrors['password'] ? { borderColor: 'var(--danger)' } : undefined}
+              value={form.password}
+              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              placeholder="••••••••"
+              minLength={8}
+              required
+            />
+            {fieldErrors['password'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['password']}</p>}
+          </div>
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancelar</button>
             <button type="submit" disabled={submitting} className="btn-primary flex-1">
               {submitting ? <span className="spinner" /> : null}
-              {editing ? 'Guardar cambios' : 'Crear usuario'}
+              Crear usuario
             </button>
           </div>
         </form>
       </Modal>
-
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="¿Desactivar usuario?"
-        description={`"${deleteTarget?.email}" pierde acceso al panel. No se borra su historial.`}
-        confirmLabel="Desactivar"
-        variant="danger"
-        loading={deleting}
-      />
 
       {/* Modal invitar */}
       <Modal open={inviteModalOpen} onClose={() => setInviteModalOpen(false)} title="Invitar por mail">

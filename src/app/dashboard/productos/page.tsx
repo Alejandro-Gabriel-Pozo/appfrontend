@@ -1,9 +1,10 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useTable, useCreate, useUpdate, useDelete, useInvalidate } from '@refinedev/core'
-import { extractErrorMessage, productsApi, wasteReasonsApi, companiesApi } from '@/lib/api'
-import type { Product, CreateProductInput, UpdateProductInput, WasteReason, ProductType, CompanyLink } from '@/lib/types'
+import { useRouter } from 'next/navigation'
+import { useTable, useCreate, useInvalidate } from '@refinedev/core'
+import { extractErrorMessage, productsApi, wasteReasonsApi } from '@/lib/api'
+import type { Product, CreateProductInput, WasteReason, ProductType } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
@@ -40,38 +41,16 @@ const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
   COMPOSITE:    'Compuesto (tiene receta)',
 }
 
-// ─── Modal Crear / Editar ─────────────────────────────────────────────────────
+// ─── Modal Crear ──────────────────────────────────────────────────────────────
+// Edición completa (nombre/precio/stock/tipo, vínculo de empresa, eliminar)
+// vive en /dashboard/productos/[id] desde la migración de la auditoría de
+// modales (25/08/2026) — este modal quedó solo para el alta.
 
-type ModalMode = { kind: 'create' } | { kind: 'edit'; product: Product }
-
-function ProductModal({
-  mode,
-  onClose,
-}: {
-  mode: ModalMode
-  onClose: () => void
-}) {
+function ProductModal({ onClose }: { onClose: () => void }) {
   const { toast } = useToast()
-  const isEdit = mode.kind === 'edit'
   const { mutateAsync: createProduct } = useCreate<Product>()
-  const { mutateAsync: updateProduct } = useUpdate<Product>()
 
-  const [form, setForm] = useState<ProductFormState>(
-    isEdit
-      ? {
-          name: mode.product.name,
-          basePrice: mode.product.basePrice,
-          description: mode.product.description,
-          sku: mode.product.sku,
-          categoryId: mode.product.categoryId,
-          hasVariants: mode.product.hasVariants,
-          stockQuantity: mode.product.stockQuantity,
-          stockMinAlert: mode.product.stockMinAlert,
-          productType: mode.product.productType,
-          assembleOnDemand: mode.product.assembleOnDemand,
-        }
-      : { ...EMPTY_CREATE },
-  )
+  const [form, setForm] = useState<ProductFormState>({ ...EMPTY_CREATE })
   const [loading, setLoading] = useState(false)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
@@ -95,13 +74,8 @@ function ProductModal({
       // basePrice puede haber quedado '' (campo vacío) -- se coerciona a
       // number recién acá, no en cada tecleo (ver ProductFormState).
       const values: CreateProductInput = { ...form, basePrice: Number(form.basePrice) || 0 }
-      if (isEdit) {
-        const body: UpdateProductInput = values
-        await updateProduct({ resource: 'productos', id: mode.product.id, values: body })
-      } else {
-        await createProduct({ resource: 'productos', values })
-      }
-      toast(isEdit ? 'Producto actualizado' : 'Producto creado', 'success')
+      await createProduct({ resource: 'productos', values })
+      toast('Producto creado', 'success')
       onClose()
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
@@ -134,9 +108,7 @@ function ProductModal({
     >
       <div className="card" style={{ width: '100%', maxWidth: 480, padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>
-            {isEdit ? 'Editar producto' : 'Nuevo producto'}
-          </h2>
+          <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Nuevo producto</h2>
           <button onClick={onClose} style={{ color: 'var(--text-tertiary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
         </div>
 
@@ -213,7 +185,7 @@ function ProductModal({
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={loading || !form.name || Number(form.basePrice) < 0} className="btn-primary">
-              {loading ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear producto'}
+              {loading ? 'Guardando…' : 'Crear producto'}
             </button>
           </div>
         </form>
@@ -391,215 +363,24 @@ function ProductionModal({ product, onClose, onDone }: { product: Product; onClo
   )
 }
 
-// Sección de un override (precio o receta) dentro del modal de vínculo —
-// componente propio (no anidado) porque un componente creado en cada render
-// del padre pierde su identidad y ESLint (react-hooks/static-components) lo
-// marca error: React lo desmontaría/remontaría en cada re-render.
-function OverrideSection({
-  label, status, pendingLabel, activateLabel, busy, onActivate, onDeactivate, onAccept, onReject,
-}: {
-  label: string
-  status: Product['priceOverrideStatus']
-  pendingLabel: React.ReactNode
-  activateLabel: string
-  busy: string | null
-  onActivate: () => void
-  onDeactivate: () => void
-  onAccept: () => void
-  onReject: () => void
-}) {
-  return (
-    <div className="p-3 rounded-lg" style={{ background: 'var(--surface-4)' }}>
-      <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>{label}</p>
-      {status === 'PENDIENTE_DE_REVISION' ? (
-        <>
-          <p className="text-xs mb-2" style={{ color: 'var(--warning)' }}>
-            La empresa actualizó el maestro mientras tu valor local estaba activo: {pendingLabel}
-          </p>
-          <div className="flex gap-2">
-            <button onClick={onAccept} disabled={busy !== null} className="btn-mini btn-mini-sage">
-              {busy === 'accept' ? '…' : 'Aceptar (usar el de la empresa)'}
-            </button>
-            <button onClick={onReject} disabled={busy !== null} className="btn-mini btn-mini-neutral">
-              {busy === 'reject' ? '…' : 'Rechazar (quedarme con el mío)'}
-            </button>
-          </div>
-        </>
-      ) : status === 'ACTIVO' ? (
-        <>
-          <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>Usás un valor propio en esta sucursal, distinto del maestro.</p>
-          <button onClick={onDeactivate} disabled={busy !== null} className="btn-mini btn-mini-neutral">
-            {busy === 'deactivate' ? '…' : 'Volver a seguir a la empresa'}
-          </button>
-        </>
-      ) : (
-        <>
-          <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>Sigue el valor que define la empresa.</p>
-          <button onClick={onActivate} disabled={busy !== null} className="btn-mini btn-mini-neutral">
-            {busy === 'activate' ? '…' : activateLabel}
-          </button>
-        </>
-      )}
-    </div>
-  )
-}
-
-// ─── Modal Vínculo de empresa ──────────────────────────────────────────────────
-// Gestiona el override de precio Y de receta de un producto ya compartido
-// (companyProductId !== null) — activar/desactivar override local, aceptar/
-// rechazar una revisión pendiente (el maestro cambió mientras el override
-// local estaba activo), y publicar el estado local actual como nuevo maestro.
-function CompanyLinkModal({ product, onClose, onDone }: { product: Product; onClose: () => void; onDone: () => void }) {
-  const { toast } = useToast()
-  const [current, setCurrent] = useState(product)
-  const [components, setComponents] = useState<Product[]>([])
-  const [busy, setBusy] = useState<string | null>(null)
-
-  useEffect(() => {
-    queueMicrotask(async () => {
-      try { setComponents(await productsApi.list()) } catch { /* solo se usa para mostrar nombres, no bloquea */ }
-    })
-  }, [])
-
-  function componentName(id: string) {
-    return components.find(c => c.id === id)?.name ?? id
-  }
-
-  async function run(action: string, fn: () => Promise<Product | void>) {
-    setBusy(action)
-    try {
-      const updated = await fn()
-      if (updated) setCurrent(updated)
-      onDone()
-      toast('Listo', 'success')
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  async function handlePublish() {
-    setBusy('publish')
-    try {
-      await productsApi.companyPublish(current.id)
-      toast('Publicado como nuevo maestro de la empresa', 'success')
-      onDone()
-      onClose()
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="card" style={{ width: '100%', maxWidth: 480, padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Vínculo de empresa — {current.name}</h2>
-          <button onClick={onClose} style={{ color: 'var(--text-tertiary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
-        </div>
-
-        <OverrideSection
-          label="Precio"
-          status={current.priceOverrideStatus}
-          activateLabel="Fijar precio propio"
-          pendingLabel={current.pricePendingMasterValue !== null ? fmt(current.pricePendingMasterValue) : '—'}
-          busy={busy}
-          onActivate={() => run('activate', () => productsApi.priceOverride.activate(current.id))}
-          onDeactivate={() => run('deactivate', () => productsApi.priceOverride.deactivate(current.id))}
-          onAccept={() => run('accept', () => productsApi.priceOverride.accept(current.id))}
-          onReject={() => run('reject', () => productsApi.priceOverride.reject(current.id))}
-        />
-
-        {current.productType === 'COMPOSITE' && (
-          <OverrideSection
-            label="Receta"
-            status={current.recipeOverrideStatus}
-            activateLabel="Fijar receta propia"
-            pendingLabel={
-              current.recipePendingMasterSnapshot?.length
-                ? current.recipePendingMasterSnapshot.map(i => `${componentName(i.componentProductId)} × ${i.quantityPerUnit}`).join(', ')
-                : '—'
-            }
-            busy={busy}
-            onActivate={() => run('activate', () => productsApi.recipeOverride.activate(current.id))}
-            onDeactivate={() => run('deactivate', () => productsApi.recipeOverride.deactivate(current.id))}
-            onAccept={() => run('accept', () => productsApi.recipeOverride.accept(current.id))}
-            onReject={() => run('reject', () => productsApi.recipeOverride.reject(current.id))}
-          />
-        )}
-
-        <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-          <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
-            Publicar sube el nombre/SKU actuales (y el precio, si no tenés override propio activo) como el nuevo maestro para todas las sucursales.
-          </p>
-          <button onClick={handlePublish} disabled={busy !== null} className="btn-secondary">
-            {busy === 'publish' ? <span className="spinner" /> : null}
-            Publicar cambios como maestro
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProductosPage() {
-  const { toast } = useToast()
+  const router = useRouter()
   // Sin paginación server-side todavía (ver lib/refine/dataProvider.ts) —
   // pagination: { mode: 'off' } trae la lista completa tal cual la devuelve
   // productsApi.list(), sin que useTable intente paginarla por su cuenta.
   const { result, tableQuery } = useTable<Product>({ resource: 'productos', pagination: { mode: 'off' } })
   const products = result.data
   const loading = tableQuery.isLoading
-  const { mutateAsync: deleteProductMutation } = useDelete<Product>()
-  // recordWaste no pasa por el data provider (es una acción con nombre) —
-  // invalidate() fuerza el refetch del stock después de registrar una merma.
+  // recordWaste/recordProduction no pasan por el data provider (son
+  // acciones con nombre) — invalidate() fuerza el refetch del stock después.
   const invalidate = useInvalidate()
 
-  const [modal, setModal] = useState<ModalMode | null>(null)
+  const [modal, setModal] = useState(false)
   const [wasteTarget, setWasteTarget] = useState<Product | null>(null)
   const [productionTarget, setProductionTarget] = useState<Product | null>(null)
-  const [companyLinkTarget, setCompanyLinkTarget] = useState<Product | null>(null)
-  const [companyLink, setCompanyLink] = useState<CompanyLink | null>(null)
-  const [sharingId, setSharingId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-
-  useEffect(() => {
-    queueMicrotask(async () => {
-      try { setCompanyLink(await companiesApi.me()) } catch { /* no bloquea el resto de la pantalla */ }
-    })
-  }, [])
-
-  async function handleDelete(p: Product) {
-    if (!confirm(`¿Eliminar "${p.name}"?`)) return
-    try {
-      await deleteProductMutation({ resource: 'productos', id: p.id })
-      toast('Producto eliminado', 'success')
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    }
-  }
-
-  async function handleShare(p: Product) {
-    setSharingId(p.id)
-    try {
-      await productsApi.companyShare(p.id)
-      toast('Producto compartido con la empresa', 'success')
-      invalidate({ resource: 'productos', invalidates: ['list'] })
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setSharingId(null)
-    }
-  }
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -624,7 +405,7 @@ export default function ProductosPage() {
             onChange={e => setSearch(e.target.value)}
             style={{ width: 220 }}
           />
-          <button onClick={() => setModal({ kind: 'create' })} className="btn-primary flex items-center gap-2">
+          <button onClick={() => setModal(true)} className="btn-primary flex items-center gap-2">
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
@@ -659,14 +440,14 @@ export default function ProductosPage() {
             </thead>
             <tbody>
               {filtered.map(p => (
-                <tr key={p.id}>
+                <tr key={p.id} onClick={() => router.push(`/dashboard/productos/${p.id}`)} style={{ cursor: 'pointer' }}>
                   <td className="table-cell-primary">{p.name}</td>
                   <td className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{p.sku ?? '—'}</td>
                   <td className="mono" style={{ fontWeight: 600, color: 'var(--success)' }}>{fmt(p.basePrice)}</td>
                   <td className="mono" style={{ color: p.stockQuantity <= p.stockMinAlert ? 'var(--warning)' : 'var(--text-secondary)' }}>
                     {p.hasVariants ? '—' : p.stockQuantity}
                   </td>
-                  <td>
+                  <td onClick={e => e.stopPropagation()}>
                     {p.hasVariants ? (
                       <Link href={`/dashboard/productos/${p.id}/variantes`} className="btn-mini btn-mini-neutral" style={{ textDecoration: 'none' }}>
                         Ver variantes →
@@ -675,7 +456,7 @@ export default function ProductosPage() {
                       <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Sin variantes</span>
                     )}
                   </td>
-                  <td>
+                  <td onClick={e => e.stopPropagation()}>
                     {p.productType === 'COMPOSITE' ? (
                       <Link href={`/dashboard/productos/${p.id}/receta`} className="btn-mini btn-mini-neutral" style={{ textDecoration: 'none' }}>
                         Ver receta →
@@ -684,8 +465,13 @@ export default function ProductosPage() {
                       <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>—</span>
                     )}
                   </td>
-                  <td><span className={p.active ? 'badge-confirmed' : 'badge-completed'}>{p.active ? 'Activo' : 'Inactivo'}</span></td>
                   <td>
+                    <span className={p.active ? 'badge-confirmed' : 'badge-completed'}>{p.active ? 'Activo' : 'Inactivo'}</span>
+                    {(p.priceOverrideStatus === 'PENDIENTE_DE_REVISION' || p.recipeOverrideStatus === 'PENDIENTE_DE_REVISION') && (
+                      <span title="Hay una revisión de vínculo de empresa pendiente" style={{ marginLeft: 6, color: 'var(--warning)' }}>●</span>
+                    )}
+                  </td>
+                  <td onClick={e => e.stopPropagation()}>
                     <div className="flex gap-1.5">
                       {!p.hasVariants && (
                         <button onClick={() => setWasteTarget(p)} title="Registrar merma" className="btn-mini btn-mini-neutral">Merma</button>
@@ -693,21 +479,7 @@ export default function ProductosPage() {
                       {p.productType === 'COMPOSITE' && !p.assembleOnDemand && (
                         <button onClick={() => setProductionTarget(p)} title="Registrar producción" className="btn-mini btn-mini-sage">Producir</button>
                       )}
-                      {companyLink?.companyId && !p.companyProductId && (
-                        <button onClick={() => handleShare(p)} disabled={sharingId === p.id} title="Compartir con la empresa" className="btn-mini btn-mini-neutral">
-                          {sharingId === p.id ? '…' : 'Compartir'}
-                        </button>
-                      )}
-                      {p.companyProductId && (
-                        <button onClick={() => setCompanyLinkTarget(p)} title="Vínculo de empresa" className="btn-mini btn-mini-neutral">
-                          Vínculo
-                          {(p.priceOverrideStatus === 'PENDIENTE_DE_REVISION' || p.recipeOverrideStatus === 'PENDIENTE_DE_REVISION') && (
-                            <span title="Hay una revisión pendiente" style={{ marginLeft: 4, color: 'var(--warning)' }}>●</span>
-                          )}
-                        </button>
-                      )}
-                      <button onClick={() => setModal({ kind: 'edit', product: p })} title="Editar" className="btn-mini btn-mini-neutral">Editar</button>
-                      <button onClick={() => handleDelete(p)} title="Eliminar" className="btn-mini btn-mini-clay">Eliminar</button>
+                      <Link href={`/dashboard/productos/${p.id}`} className="btn-mini btn-mini-neutral" style={{ textDecoration: 'none' }}>Ver detalle</Link>
                     </div>
                   </td>
                 </tr>
@@ -718,12 +490,7 @@ export default function ProductosPage() {
       )}
 
       {/* Modal */}
-      {modal && (
-        <ProductModal
-          mode={modal}
-          onClose={() => setModal(null)}
-        />
-      )}
+      {modal && <ProductModal onClose={() => setModal(false)} />}
 
       {/* Modal merma */}
       {wasteTarget && (
@@ -743,14 +510,6 @@ export default function ProductosPage() {
         />
       )}
 
-      {/* Modal vínculo de empresa */}
-      {companyLinkTarget && (
-        <CompanyLinkModal
-          product={companyLinkTarget}
-          onClose={() => setCompanyLinkTarget(null)}
-          onDone={() => invalidate({ resource: 'productos', invalidates: ['list'] })}
-        />
-      )}
     </div>
   )
 }

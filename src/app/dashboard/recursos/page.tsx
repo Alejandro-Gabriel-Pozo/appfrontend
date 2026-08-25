@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useTable, useCreate, useUpdate, useDelete } from '@refinedev/core'
-import { categoriesApi, resourceHoursApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { useTable, useCreate } from '@refinedev/core'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
-import type { Resource, Category, OperatingWindow } from '@/lib/types'
+import type { Resource, Category } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento brass (core, sin gate de módulo).
@@ -14,31 +16,21 @@ type ResourceFormState = Omit<Resource, 'id' | 'basePrice'> & { basePrice: numbe
 
 const EMPTY: ResourceFormState = { name: '', categoryId: '', basePrice: '', active: true }
 
-const DAY_LABEL = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-
 export default function RecursosPage() {
   const { toast } = useToast()
+  const router = useRouter()
   // Sin paginación server-side todavía (ver lib/refine/dataProvider.ts) —
   // pagination: { mode: 'off' } trae la lista completa.
   const { result, tableQuery } = useTable<Resource>({ resource: 'recursos', pagination: { mode: 'off' } })
   const resources = result.data
   const loading = tableQuery.isLoading
   const { mutateAsync: createResource } = useCreate<Resource>()
-  const { mutateAsync: updateResource } = useUpdate<Resource>()
-  const { mutateAsync: deleteResourceMutation } = useDelete<Resource>()
 
   const [categories, setCategories] = useState<Category[]>([])
   const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing] = useState<Resource | null>(null)
   const [form, setForm] = useState<ResourceFormState>(EMPTY)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<Resource | null>(null)
-
-  // Horario propio del recurso (override opcional del horario del negocio)
-  const [ownHours, setOwnHours] = useState<OperatingWindow[]>([])
-  const [hourForm, setHourForm] = useState({ dayOfWeek: 0, startTime: '09:00', endTime: '18:00' })
-  const [addingHour, setAddingHour] = useState(false)
 
   // Categorías no está migrado a esta pantalla (es su propio recurso Refine)
   // — se sigue trayendo directo para el <select>, igual que antes.
@@ -49,46 +41,9 @@ export default function RecursosPage() {
   }, [toast])
 
   function openCreate() {
-    setEditing(null)
     setForm(EMPTY)
     setFieldErrors({})
-    setOwnHours([])
     setModalOpen(true)
-  }
-
-  async function openEdit(r: Resource) {
-    setEditing(r)
-    setForm({ name: r.name, categoryId: r.categoryId, basePrice: r.basePrice, active: r.active })
-    setFieldErrors({})
-    setModalOpen(true)
-    try {
-      setOwnHours(await resourceHoursApi.list(r.id))
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    }
-  }
-
-  async function handleAddHour() {
-    if (!editing) return
-    setAddingHour(true)
-    try {
-      const window = await resourceHoursApi.create(editing.id, hourForm)
-      setOwnHours(h => [...h, window])
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setAddingHour(false)
-    }
-  }
-
-  async function handleRemoveHour(hourId: string) {
-    if (!editing) return
-    try {
-      await resourceHoursApi.remove(editing.id, hourId)
-      setOwnHours(h => h.filter(w => w.id !== hourId))
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -99,13 +54,8 @@ export default function RecursosPage() {
       // basePrice puede haber quedado '' (campo vacío) -- se coerciona a
       // number recién acá, no en cada tecleo (ver ResourceFormState).
       const values = { ...form, basePrice: Number(form.basePrice) || 0 }
-      if (editing) {
-        await updateResource({ resource: 'recursos', id: editing.id, values })
-        toast('Recurso actualizado', 'success')
-      } else {
-        await createResource({ resource: 'recursos', values })
-        toast('Recurso creado', 'success')
-      }
+      await createResource({ resource: 'recursos', values })
+      toast('Recurso creado', 'success')
       setModalOpen(false)
     } catch (err) {
       const fe = extractFieldErrors(err)
@@ -116,17 +66,6 @@ export default function RecursosPage() {
       }
     } finally {
       setSubmitting(false)
-    }
-  }
-
-  async function handleDelete() {
-    if (!deleteTarget) return
-    try {
-      await deleteResourceMutation({ resource: 'recursos', id: deleteTarget.id })
-      toast('Recurso eliminado', 'success')
-      setDeleteTarget(null)
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
     }
   }
 
@@ -176,15 +115,12 @@ export default function RecursosPage() {
             </thead>
             <tbody>
               {resources.map(r => (
-                <tr key={r.id}>
+                <tr key={r.id} onClick={() => router.push(`/dashboard/recursos/${r.id}`)} style={{ cursor: 'pointer' }}>
                   <td className="table-cell-primary">{r.name}</td>
                   <td><span className="badge-completed">{getCatName(r.categoryId)}</span></td>
                   <td className="mono">${r.basePrice.toLocaleString('es-AR')}</td>
-                  <td>
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button onClick={() => openEdit(r)} className="btn-mini btn-mini-neutral">Editar</button>
-                      <button onClick={() => setDeleteTarget(r)} className="btn-mini btn-mini-clay">Eliminar</button>
-                    </div>
+                  <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                    <Link href={`/dashboard/recursos/${r.id}`} className="btn-mini btn-mini-neutral" style={{ textDecoration: 'none' }}>Ver detalle</Link>
                   </td>
                 </tr>
               ))}
@@ -193,12 +129,12 @@ export default function RecursosPage() {
         </div>
       )}
 
-      {/* Modal crear/editar */}
+      {/* Modal crear */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}>
           <div className="card" style={{ width: '100%', maxWidth: 480, maxHeight: '90dvh', overflowY: 'auto' }}>
             <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-              <h2 style={{ fontWeight: 600, fontSize: 15 }}>{editing ? 'Editar recurso' : 'Nuevo recurso'}</h2>
+              <h2 style={{ fontWeight: 600, fontSize: 15 }}>Nuevo recurso</h2>
               <button onClick={() => setModalOpen(false)} className="p-1 rounded" style={{ color: 'var(--text-tertiary)' }} aria-label="Cerrar">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -244,7 +180,7 @@ export default function RecursosPage() {
               <details
                 className="rounded-lg"
                 style={{ border: '1px solid var(--border)' }}
-                open={!!(editing && editing.basePrice > 0)}
+                open={false}
               >
                 <summary
                   className="label"
@@ -271,61 +207,14 @@ export default function RecursosPage() {
                 </div>
               </details>
 
-              {editing && (
-                <div>
-                  <label className="label">Horario propio (opcional)</label>
-                  <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
-                    Si no cargás nada, este recurso usa el horario de &quot;Mi Negocio&quot;. Útil para
-                    un empleado con horario distinto al del negocio (ej. un barbero part-time).
-                  </p>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {ownHours.length === 0 && (
-                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Sin horario propio — hereda el del negocio.</p>
-                    )}
-                    {ownHours.map(w => (
-                      <span key={w.id} className="badge-confirmed" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        {DAY_LABEL[w.dayOfWeek]} {w.startTime.slice(0, 5)}–{w.endTime.slice(0, 5)}
-                        <button type="button" onClick={() => handleRemoveHour(w.id)} aria-label="Quitar franja">×</button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 items-end">
-                    <select className="input" value={hourForm.dayOfWeek} onChange={e => setHourForm(f => ({ ...f, dayOfWeek: Number(e.target.value) }))}>
-                      {DAY_LABEL.map((d, i) => <option key={i} value={i}>{d}</option>)}
-                    </select>
-                    <input type="time" lang="es-AR" className="input" value={hourForm.startTime} onChange={e => setHourForm(f => ({ ...f, startTime: e.target.value }))} />
-                    <input type="time" lang="es-AR" className="input" value={hourForm.endTime} onChange={e => setHourForm(f => ({ ...f, endTime: e.target.value }))} />
-                    <button type="button" onClick={handleAddHour} disabled={addingHour} className="btn-secondary shrink-0">
-                      {addingHour ? <span className="spinner" /> : '+ Agregar'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancelar</button>
                 <button type="submit" disabled={submitting} className="btn-primary flex-1">
                   {submitting ? <span className="spinner" /> : null}
-                  {editing ? 'Guardar cambios' : 'Crear recurso'}
+                  Crear recurso
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal confirmar borrado */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}>
-          <div className="card p-6" style={{ width: '100%', maxWidth: 400 }}>
-            <h2 style={{ fontWeight: 600, marginBottom: 8 }}>¿Eliminar recurso?</h2>
-            <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-              Vas a eliminar <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{deleteTarget.name}</span>. Esta acción no se puede deshacer.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteTarget(null)} className="btn-secondary flex-1">Cancelar</button>
-              <button onClick={handleDelete} className="btn-danger flex-1">Eliminar</button>
-            </div>
           </div>
         </div>
       )}

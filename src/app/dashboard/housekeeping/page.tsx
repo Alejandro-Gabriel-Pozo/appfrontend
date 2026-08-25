@@ -1,6 +1,7 @@
-'use client'
+﻿'use client'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
+import { useRouter } from 'next/navigation'
 import { housekeepingApi, maintenanceWindowsApi, resourcesApi, usersApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import { useIsManagement } from '@/hooks/useAuthRole'
@@ -21,19 +22,10 @@ const STATUS_LABEL: Record<HousekeepingStatus, string> = {
   OUT_OF_SERVICE: 'Fuera de servicio',
 }
 
-// Semáforo Bastión (sección 5 del doc, mismo criterio que Reservas):
-// pending=brass, en curso/asignada=gris neutro, terminada/inspeccionada=sage,
-// fuera de servicio=clay. badge-* ya vive en globals.css con esa paleta.
-const STATUS_BADGE_CLASS: Record<HousekeepingStatus, string> = {
-  PENDING: 'badge-pending',
-  ASSIGNED: 'badge-completed',
-  IN_PROGRESS: 'badge-completed',
-  DONE: 'badge-confirmed',
-  INSPECTED: 'badge-confirmed',
-  OUT_OF_SERVICE: 'badge-cancelled',
-}
-
-// Ficha del rack — fondo/borde/punto por estado, mismo semáforo de arriba
+// Ficha del rack — fondo/borde/punto por estado (principio 4 del doc:
+// escaneable como bloque desde lejos, clave en operación de mostrador).
+// STATUS_BADGE_CLASS (la versión pill) migró a housekeeping/[id]/page.tsx
+// con el detalle de la ficha, que es lo único que la usaba.
 // pero en versión "bloque de color" en vez de pill (principio 4 del doc:
 // escaneable como bloque desde lejos, clave en operación de mostrador).
 const STATUS_TILE: Record<HousekeepingStatus, { bg: string; border: string; dot: string }> = {
@@ -62,14 +54,15 @@ function todayStr() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+// Asignar/completar (mismo mini-modal de siempre) siguen viviendo acá
+// porque "Mis tareas" (más abajo) las dispara para tareas de CUALQUIER
+// recurso/fecha, no solo de la ficha seleccionada en el rack -- no tiene
+// una página de detalle propia a la que navegar. La ficha del rack
+// (marcar fuera de servicio, planificar tarea) migró a
+// dashboard/housekeeping/[id]/page.tsx (auditoría UX de modales, 25/08/2026).
 type PendingAction =
   | { type: 'assign'; task: HousekeepingTask }
   | { type: 'complete'; task: HousekeepingTask }
-  // 24/08/2026 -- reemplaza a { type: 'outOfService'; task }: el mecanismo de
-  // bloqueo ahora es una ventana de mantenimiento por RECURSO, no un status
-  // de HousekeepingTask -- no depende de que exista una tarea planificada
-  // para la fecha elegida.
-  | { type: 'maintenanceWindow'; resource: Resource }
   | null
 
 /** Tile "en mantenimiento" -- mismos colores que OUT_OF_SERVICE, pero por ventana de recurso, no por status de tarea. */
@@ -87,6 +80,7 @@ type ViewMode = 'tablero' | 'mis-tareas'
 
 export default function HousekeepingPage() {
   const { toast } = useToast()
+  const router = useRouter()
   const isManagement = useIsManagement()
 
   const [viewMode, setViewMode] = useState<ViewMode>('tablero')
@@ -123,11 +117,6 @@ export default function HousekeepingPage() {
 
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [actionValue, setActionValue] = useState('')
-  const [mwForm, setMwForm] = useState({ startDate: todayStr(), endDate: '', reason: '' })
-
-  // Ficha del rack seleccionada — con tarea (detalle + acciones) o sin ella
-  // (atajo directo a "Planificar tarea" para ese recurso).
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
 
   // Recursos/usuarios no están migrados a esta pantalla — se siguen
   // trayendo directo, igual que antes.
@@ -204,10 +193,9 @@ export default function HousekeepingPage() {
   const getMemberEmail = (id: string | null) => id ? members.find(m => m.identityId === id || m.id === id)?.email ?? id.slice(0, 8) + '…' : '—'
   const getTaskForResource = (resourceId: string) => tasks.find(t => t.resourceId === resourceId) ?? null
 
-  function openCreateFor(resourceId?: string) {
-    setCreateForm({ resourceId: resourceId ?? '', shift: 'MORNING', notes: '' })
+  function openCreateFor() {
+    setCreateForm({ resourceId: '', shift: 'MORNING', notes: '' })
     setFieldErrors({})
-    setSelectedResource(null)
     setCreateOpen(true)
   }
 
@@ -265,37 +253,10 @@ export default function HousekeepingPage() {
   function openAction(type: 'assign' | 'complete', task: HousekeepingTask) {
     setPendingAction({ type, task })
     setActionValue('')
-    setSelectedResource(null)
-  }
-
-  function openMaintenanceWindowModal(resource: Resource) {
-    setPendingAction({ type: 'maintenanceWindow', resource })
-    setMwForm({ startDate: todayStr(), endDate: '', reason: '' })
   }
 
   async function submitAction() {
     if (!pendingAction) return
-    if (pendingAction.type === 'maintenanceWindow') {
-      const { resource } = pendingAction
-      setActionLoading(`${resource.id}-maintenanceWindow`)
-      try {
-        await maintenanceWindowsApi.create({
-          resourceId: resource.id,
-          startDate: mwForm.startDate,
-          ...(mwForm.endDate && { endDate: mwForm.endDate }),
-          ...(mwForm.reason && { reason: mwForm.reason }),
-        })
-        toast('Recurso marcado fuera de servicio', 'success')
-        setPendingAction(null)
-        await refreshMaintenanceWindows()
-      } catch (err) {
-        toast(extractErrorMessage(err), 'error')
-      } finally {
-        setActionLoading(null)
-      }
-      return
-    }
-
     const { type, task } = pendingAction
     setActionLoading(`${task.id}-${type}`)
     try {
@@ -316,23 +277,6 @@ export default function HousekeepingPage() {
       setActionLoading(null)
     }
   }
-
-  /** Reactivar -- cierra la ventana de mantenimiento vigente del recurso (única forma de liberarlo). */
-  async function closeMaintenanceWindow(window: MaintenanceWindow) {
-    setActionLoading(`${window.resourceId}-closeMaintenanceWindow`)
-    try {
-      await maintenanceWindowsApi.close(window.id)
-      toast('Recurso reactivado', 'success')
-      await refreshMaintenanceWindows()
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  const selectedTask = selectedResource ? getTaskForResource(selectedResource.id) : null
-  const selectedMaintenanceWindow = selectedResource ? activeWindowByResource.get(selectedResource.id) ?? null : null
 
   return (
     <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
@@ -418,7 +362,7 @@ export default function HousekeepingPage() {
             return (
               <button
                 key={r.id}
-                onClick={() => setSelectedResource(r)}
+                onClick={() => router.push(`/dashboard/housekeeping/${r.id}?date=${date}`)}
                 style={{
                   position: 'relative',
                   textAlign: 'left',
@@ -545,132 +489,6 @@ export default function HousekeepingPage() {
         </>
       )}
 
-      {/* Modal detalle de ficha — con tarea: estado + acciones; sin tarea: atajo a planificar */}
-      {selectedResource && (
-        <Modal open={selectedResource !== null} onClose={() => setSelectedResource(null)} title={selectedResource.name}>
-          {getLateCheckout(selectedResource.id) && (
-            <div
-              className="mb-4"
-              style={{
-                padding: '10px 12px', borderRadius: 10,
-                background: 'var(--danger-dim)', border: '1px solid var(--danger)',
-                fontSize: 13, color: 'var(--danger)',
-              }}
-            >
-              ⏰ Late check-out aprobado — no limpiar antes de las{' '}
-              <strong>{getLateCheckout(selectedResource.id)!.approvedCheckOutTime?.slice(0, 5) ?? '—'}</strong>.
-            </div>
-          )}
-          {/* Ventana de mantenimiento (24/08/2026) -- independiente de la tarea
-              del día: un recurso puede estar en mantenimiento sin tarea
-              planificada hoy, o con una tarea en curso a la vez. */}
-          {selectedMaintenanceWindow ? (
-            <div
-              className="mb-4"
-              style={{
-                padding: '10px 12px', borderRadius: 10,
-                background: 'var(--danger-dim)', border: '1px solid var(--danger)',
-                fontSize: 13, color: 'var(--danger)',
-              }}
-            >
-              <p>
-                🔧 En mantenimiento desde <strong>{selectedMaintenanceWindow.startDate}</strong>
-                {selectedMaintenanceWindow.endDate ? <> hasta <strong>{selectedMaintenanceWindow.endDate}</strong></> : ' (sin fecha de fin)'}.
-              </p>
-              {selectedMaintenanceWindow.reason && <p className="mt-1">{selectedMaintenanceWindow.reason}</p>}
-              {/* 25/08/2026 (pendientes-2026-08-25.md) -- una ventana ya
-                  reactivada sigue apareciendo acá (listActive() la sigue
-                  devolviendo hasta que pase su endDate: bloquea el resto
-                  del día en que se cerró, por diseño de close()). Antes
-                  "Reactivar" seguía visible y clickeable ahí, y tocarlo de
-                  nuevo daba un 409 confuso ("MaintenanceWindowAlreadyClosedError")
-                  sin explicar nada al staff. */}
-              {selectedMaintenanceWindow.closedAt ? (
-                <p className="mt-2" style={{ opacity: 0.8 }}>
-                  Ya se reactivó — sigue bloqueado hasta el final de{' '}
-                  <strong>{selectedMaintenanceWindow.endDate}</strong>, se libera solo después.
-                </p>
-              ) : isManagement && (
-                <button
-                  onClick={() => closeMaintenanceWindow(selectedMaintenanceWindow)}
-                  disabled={actionLoading !== null}
-                  className="btn-mini btn-mini-neutral mt-2"
-                >
-                  {actionLoading === `${selectedResource.id}-closeMaintenanceWindow` ? '…' : 'Reactivar'}
-                </button>
-              )}
-            </div>
-          ) : isManagement && (
-            <div className="mb-4 flex justify-end">
-              <button onClick={() => openMaintenanceWindowModal(selectedResource)} className="btn-mini btn-mini-clay">
-                Marcar fuera de servicio
-              </button>
-            </div>
-          )}
-          {selectedTask ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className={STATUS_BADGE_CLASS[selectedTask.status]}>{STATUS_LABEL[selectedTask.status]}</span>
-                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{SHIFT_LABEL[selectedTask.shift]}</span>
-              </div>
-              <div>
-                <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Asignado a</p>
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{getMemberEmail(selectedTask.assignedTo)}</p>
-              </div>
-              {selectedTask.notes && (
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Notas</p>
-                  <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedTask.notes}</p>
-                </div>
-              )}
-              {/* Mismo criterio que la versión en tabla: "Asignar" solo desde
-                  PENDING a propósito — ver comentario original más abajo. */}
-              <div className="flex flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                {selectedTask.status === 'PENDING' && isManagement && (
-                  <button onClick={() => openAction('assign', selectedTask)} className="btn-mini btn-mini-neutral">Asignar</button>
-                )}
-                {selectedTask.allowedTransitions?.includes('IN_PROGRESS') && (
-                  <button
-                    onClick={() => doSimpleAction(selectedTask, 'start')}
-                    disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-neutral"
-                  >
-                    {actionLoading === `${selectedTask.id}-start` ? '…' : 'Iniciar'}
-                  </button>
-                )}
-                {selectedTask.allowedTransitions?.includes('DONE') && (
-                  <button onClick={() => openAction('complete', selectedTask)} className="btn-mini btn-mini-sage">Completar</button>
-                )}
-                {selectedTask.allowedTransitions?.includes('INSPECTED') && (
-                  <button
-                    onClick={() => doSimpleAction(selectedTask, 'inspect')}
-                    disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-sage"
-                  >
-                    {actionLoading === `${selectedTask.id}-inspect` ? '…' : 'Inspeccionar'}
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Sin tarea planificada para esta fecha.
-              </p>
-              {isManagement ? (
-                <button onClick={() => openCreateFor(selectedResource.id)} className="btn-primary w-full">
-                  Planificar tarea para {selectedResource.name}
-                </button>
-              ) : (
-                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  Solo un gerente/dueño puede planificar tareas.
-                </p>
-              )}
-            </div>
-          )}
-        </Modal>
-      )}
-
       {/* Modal planificar tarea */}
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Planificar tarea">
         <form onSubmit={handleCreate} className="space-y-4">
@@ -713,16 +531,13 @@ export default function HousekeepingPage() {
         </form>
       </Modal>
 
-      {/* Modal acción (asignar / completar / marcar fuera de servicio) */}
+      {/* Modal acción (asignar / completar) — solo para "Mis tareas"; ver
+          comentario de PendingAction arriba. */}
       {pendingAction && (
         <Modal
           open={pendingAction !== null}
           onClose={() => setPendingAction(null)}
-          title={
-            pendingAction.type === 'assign' ? 'Asignar tarea' :
-            pendingAction.type === 'complete' ? 'Completar tarea' :
-            `Marcar fuera de servicio — ${pendingAction.resource.name}`
-          }
+          title={pendingAction.type === 'assign' ? 'Asignar tarea' : 'Completar tarea'}
         >
           <div className="space-y-4">
             {pendingAction.type === 'assign' ? (
@@ -740,39 +555,11 @@ export default function HousekeepingPage() {
                   </p>
                 )}
               </div>
-            ) : pendingAction.type === 'complete' ? (
+            ) : (
               <div>
                 <label className="label">Notas (opcional)</label>
                 <textarea className="input" rows={3} value={actionValue} onChange={e => setActionValue(e.target.value)} />
               </div>
-            ) : (
-              <>
-                <div>
-                  <label className="label">Desde</label>
-                  <input
-                    type="date" className="input"
-                    value={mwForm.startDate}
-                    onChange={e => setMwForm(f => ({ ...f, startDate: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label">Hasta (opcional)</label>
-                  <input
-                    type="date" className="input"
-                    value={mwForm.endDate}
-                    min={mwForm.startDate}
-                    onChange={e => setMwForm(f => ({ ...f, endDate: e.target.value }))}
-                  />
-                  <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                    Sin fecha de fin, el recurso queda fuera de servicio hasta que lo reactivés a mano.
-                  </p>
-                </div>
-                <div>
-                  <label className="label">Motivo (opcional)</label>
-                  <textarea className="input" rows={3} value={mwForm.reason} onChange={e => setMwForm(f => ({ ...f, reason: e.target.value }))} />
-                </div>
-              </>
             )}
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setPendingAction(null)} className="btn-secondary flex-1">Cancelar</button>

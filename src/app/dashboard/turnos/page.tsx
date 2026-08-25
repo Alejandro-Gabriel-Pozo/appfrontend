@@ -1,10 +1,11 @@
-'use client'
+﻿'use client'
 import { useState } from 'react'
-import { reservationsApi, customersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { useRouter } from 'next/navigation'
+import { customersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
-import type { Reservation, ReservationStatus } from '@/lib/types'
+import type { ReservationStatus } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Backlog E1 (13/08/2026, alcance completo 18/08) — separa el panel de
@@ -36,6 +37,7 @@ const fmtMoney = new Intl.NumberFormat('es-AR', { style: 'currency', currency: '
 
 export default function TurnosPage() {
   const { toast } = useToast()
+  const router = useRouter()
   // Motor compartido con Reservas (Fase 4, auditoria-modularidad.md F4) —
   // trae recursos/servicios/categorías, filtra por isLodging (acá
   // invertido: false), lista/busca/pagina reservas, y las acciones de
@@ -45,14 +47,14 @@ export default function TurnosPage() {
   // existe tal cosa: es la misma entidad Reservation para ambos paneles).
   const {
     loading,
-    createReservation, updateReservation, invalidate,
+    createReservation,
     resources, services,
     screenResourceIds: serviceResourceIds,
     screenServices: serviceServices,
     search, setSearch, filterStatus, setFilterStatus,
     page, setPage, totalPages, paginated, filtered, total,
-    actionLoading, setActionLoading, doAction: doScreenAction,
-    getResourceName, getServiceName,
+    actionLoading, doAction: doScreenAction,
+    getResourceName,
   } = useReservationsScreen(false)
 
   // Modal nuevo turno
@@ -63,13 +65,6 @@ export default function TurnosPage() {
 
   // Turnos disponibles (servicios "slot" con horario configurado — Mi Negocio / recurso)
   const [slotDate, setSlotDate] = useState('')
-
-  // Modal detalle / edición
-  const [detailTarget, setDetailTarget] = useState<Reservation | null>(null)
-  const [editingDetail, setEditingDetail] = useState(false)
-  const [detailForm, setDetailForm] = useState({ startTime: '', endTime: '' })
-  const [detailFieldErrors, setDetailFieldErrors] = useState<Record<string, string>>({})
-  const [detailSubmitting, setDetailSubmitting] = useState(false)
 
   const selectedService = services.find(s => s.id === form.serviceId)
   // bookingMode del servicio elegido — un servicio no-alojamiento también
@@ -145,55 +140,6 @@ export default function TurnosPage() {
     setModalOpen(true)
   }
 
-  function openDetail(r: Reservation) {
-    setDetailTarget(r)
-    setEditingDetail(false)
-    setDetailForm({ startTime: toLocalInput(r.startTime), endTime: toLocalInput(r.endTime) })
-    setDetailFieldErrors({})
-  }
-
-  async function handleUpdateDetail(e: React.FormEvent) {
-    e.preventDefault()
-    if (!detailTarget) return
-    setDetailSubmitting(true)
-    setDetailFieldErrors({})
-    try {
-      const { data: updated } = await updateReservation({
-        resource: 'reservas',
-        id: detailTarget.id,
-        values: {
-          startTime: new Date(detailForm.startTime).toISOString(),
-          endTime: new Date(detailForm.endTime).toISOString(),
-        },
-      })
-      toast('Turno actualizado', 'success')
-      setDetailTarget(updated)
-      setEditingDetail(false)
-    } catch (err) {
-      const fe = extractFieldErrors(err)
-      if (Object.keys(fe).length > 0) setDetailFieldErrors(fe)
-      else toast(extractErrorMessage(err), 'error')
-    } finally {
-      setDetailSubmitting(false)
-    }
-  }
-
-  async function doDetailAction(action: 'confirm' | 'cancel' | 'complete') {
-    if (!detailTarget) return
-    setActionLoading(`${detailTarget.id}-${action}`)
-    try {
-      const labels = { confirm: 'Turno confirmado', cancel: 'Turno cancelado', complete: 'Turno completado' }
-      const updated = await reservationsApi[action](detailTarget.id)
-      toast(labels[action], 'success')
-      setDetailTarget(updated)
-      invalidate({ resource: 'reservas', invalidates: ['list'] })
-    } catch (err) {
-      toast(extractErrorMessage(err), 'error')
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
   return (
     <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
       {/* Header */}
@@ -263,7 +209,7 @@ export default function TurnosPage() {
               </thead>
               <tbody>
                 {paginated.map(r => (
-                  <tr key={r.id} onClick={() => openDetail(r)} style={{ cursor: 'pointer' }}>
+                  <tr key={r.id} onClick={() => router.push(`/dashboard/turnos/${r.id}`)} style={{ cursor: 'pointer' }}>
                     <td>
                       <p className="table-cell-primary">{r.customer.fullName}</p>
                       <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{r.customer.email}</p>
@@ -560,143 +506,6 @@ export default function TurnosPage() {
           </div>
         </form>
       </Modal>
-
-      {/* Modal detalle / edición */}
-      {detailTarget && (
-        <Modal
-          open={detailTarget !== null}
-          onClose={() => setDetailTarget(null)}
-          title={editingDetail ? 'Editar turno' : 'Detalle de turno'}
-        >
-          {editingDetail ? (
-            <form onSubmit={handleUpdateDetail} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">Inicio</label>
-                  <input
-                    type="datetime-local"
-                    className="input"
-                    style={detailFieldErrors['startTime'] ? { borderColor: 'var(--danger)' } : undefined}
-                    value={detailForm.startTime}
-                    onChange={e => setDetailForm(f => ({ ...f, startTime: e.target.value }))}
-                    required
-                  />
-                  {detailFieldErrors['startTime'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['startTime']}</p>}
-                </div>
-                <div>
-                  <label className="label">Fin</label>
-                  <input
-                    type="datetime-local"
-                    className="input"
-                    style={detailFieldErrors['endTime'] ? { borderColor: 'var(--danger)' } : undefined}
-                    value={detailForm.endTime}
-                    onChange={e => setDetailForm(f => ({ ...f, endTime: e.target.value }))}
-                    required
-                  />
-                  {detailFieldErrors['endTime'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{detailFieldErrors['endTime']}</p>}
-                </div>
-              </div>
-              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                Cliente, recurso y servicio no se pueden cambiar acá — cancelá este turno y creá uno nuevo si hace falta.
-              </p>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setEditingDetail(false)} className="btn-secondary flex-1">Cancelar</button>
-                <button type="submit" disabled={detailSubmitting} className="btn-primary flex-1">
-                  {detailSubmitting ? <span className="spinner" /> : null}
-                  Guardar cambios
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Cliente</p>
-                  <p className="table-cell-primary" style={{ fontSize: 14 }}>{detailTarget.customer.fullName}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{detailTarget.customer.email}</p>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Estado</p>
-                  <span className={STATUS_BADGE_CLASS[detailTarget.status]}>
-                    {STATUS_LABEL[detailTarget.status]}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Recurso</p>
-                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{getResourceName(detailTarget.resourceId)}</p>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Servicio</p>
-                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{getServiceName(detailTarget.serviceId) ?? '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Inicio</p>
-                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmt(detailTarget.startTime)}</p>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Fin</p>
-                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmt(detailTarget.endTime)}</p>
-                </div>
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Precio</p>
-                  <p className="text-sm mono" style={{ color: 'var(--text-secondary)' }}>{fmtMoney(detailTarget.totalPrice)}</p>
-                </div>
-                {detailTarget.partySize != null && detailTarget.partySize > 1 && (
-                  <div>
-                    <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Personas</p>
-                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{detailTarget.partySize}</p>
-                  </div>
-                )}
-              </div>
-
-              {detailTarget.notes && (
-                <div>
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Notas</p>
-                  <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{detailTarget.notes}</p>
-                </div>
-              )}
-
-              <div className="flex flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                {detailTarget.status === 'PENDING' && (
-                  <button
-                    onClick={() => setEditingDetail(true)}
-                    className="btn-mini btn-mini-neutral"
-                  >
-                    Editar horario
-                  </button>
-                )}
-                {detailTarget.allowedTransitions?.includes('CONFIRMED') && (
-                  <button
-                    onClick={() => doDetailAction('confirm')}
-                    disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-sage"
-                  >
-                    Confirmar
-                  </button>
-                )}
-                {detailTarget.allowedTransitions?.includes('CANCELLED') && (
-                  <button
-                    onClick={() => doDetailAction('cancel')}
-                    disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-clay"
-                  >
-                    Cancelar turno
-                  </button>
-                )}
-                {detailTarget.allowedTransitions?.includes('COMPLETED') && (
-                  <button
-                    onClick={() => doDetailAction('complete')}
-                    disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-neutral"
-                  >
-                    Completar
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </Modal>
-      )}
     </div>
   )
 }
