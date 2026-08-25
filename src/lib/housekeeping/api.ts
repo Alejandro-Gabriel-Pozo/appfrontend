@@ -14,9 +14,9 @@ export const housekeepingApi = {
   complete: (id: string, notes?: string) =>
     apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/complete`, { method: 'POST', body: JSON.stringify({ notes }) }),
   inspect: (id: string) => apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/inspect`, { method: 'POST' }),
-  outOfService: (id: string, reason?: string) =>
-    apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/out-of-service`, { method: 'POST', body: JSON.stringify({ reason }) }),
-  reset: (id: string) => apiFetch<HousekeepingTask>(`/api/housekeeping/${id}/reset`, { method: 'POST' }),
+  // outOfService/reset se sacaron (25/08/2026) -- las rutas del backend que
+  // llamaban se borraron por huérfanas (maintenance_window las reemplazó
+  // el 24/08/2026); acá ya no las llamaba nadie tampoco.
   /**
    * Badge de solo lectura (18/08/2026, pendientes-2026-08-18.md punto N):
    * reservas con late check-out APROBADO cuyo checkout cae en `date`.
