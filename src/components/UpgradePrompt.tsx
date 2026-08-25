@@ -57,12 +57,14 @@ const UpgradePrompt: FC<UpgradePromptProps> = ({ plan, limit, resource, onDismis
           <strong className="font-semibold">{limit}</strong>{' '}
           {resource}.
         </p>
-        <a
-          href="/settings/billing"
-          className="mt-2 inline-block font-medium underline underline-offset-2 hover:text-yellow-700"
-        >
-          Actualizá tu plan →
-        </a>
+        {/* L (24/08/2026, pendientes-2026-08-24.md) -- antes linkeaba a
+            /settings/billing, una ruta que no existe (no hay self-serve
+            billing todavía). Sin una página real a la que mandar, se
+            reemplaza el CTA roto por texto -- no prometer una acción que
+            no lleva a ningún lado. */}
+        <p className="mt-2 text-yellow-800">
+          Para ampliarlo, contactá a quien administra tu cuenta.
+        </p>
       </div>
 
       {onDismiss && (
