@@ -32,6 +32,7 @@ export type {
 } from './servicios/types'
 export type { ReservationStatus, Reservation } from './reservas/types'
 export type { HousekeepingStatus, Shift, HousekeepingTask, LateCheckout, CreateHousekeepingTaskInput } from './housekeeping/types'
+export type { MaintenanceWindow, CreateMaintenanceWindowInput } from './maintenance-windows/types'
 export type { StayStatus, Stay, CheckInInput, CheckOutInput, StayFolio } from './estadias/types'
 export type {
   ProductType, OverrideStatus, Product, ProductVariant,
