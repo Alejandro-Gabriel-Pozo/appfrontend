@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import type { Resource, Reservation, ReservationStatus, BookableService } from '@/lib/types'
-import { housekeepingApi } from '@/lib/api'
+import { maintenanceWindowsApi } from '@/lib/maintenance-windows/api'
+import type { MaintenanceWindow } from '@/lib/maintenance-windows/types'
 
 // ─── Calendario de PMS (tape chart) — construido a medida, sin librería ─────
 // Filas = habitaciones (recursos de alojamiento), columnas = días, barras =
@@ -135,21 +136,58 @@ export default function RoomCalendar({
     onWeekChangeRef.current(weekStartMs, weekStartMs + VISIBLE_DAYS * MS_PER_DAY)
   }, [weekStartMs])
 
-  // Habitaciones fuera de servicio (Housekeeping) — el backend ya bloquea
-  // reservar sobre estas (reservation-availability.service.ts::
-  // isOutOfService()), pero el calendario las mostraba como libres, sin
-  // ninguna pista de por qué un intento de reservar iba a fallar
-  // (auditoría de producto, 19/08/2026). `isOutOfService()` no depende de
-  // fecha -- es un estado del recurso, no de un día puntual -- así que
-  // alcanza con traerlo una vez al montar, no por semana visible.
-  const [outOfServiceIds, setOutOfServiceIds] = useState<Set<string>>(new Set())
+  // Habitaciones en mantenimiento — el backend ya bloquea reservar sobre
+  // estas (reservation-availability.service.ts::evaluateMaintenanceWindows()),
+  // pero el calendario las mostraba como libres, sin ninguna pista de por
+  // qué un intento de reservar iba a fallar (auditoría de producto,
+  // 19/08/2026).
+  //
+  // 24/08/2026 -- reescrito de `housekeepingApi.byStatus('OUT_OF_SERVICE')`
+  // (el status viejo de HousekeepingTask) a `maintenanceWindowsApi.listActive()`
+  // -- el mecanismo real desde que housekeeping/page.tsx se rewireó a
+  // ventanas de mantenimiento por RECURSO hoy mismo. Bug real encontrado en
+  // producción: este componente había quedado sin actualizar, así que
+  // "Reactivar" en Housekeeping (que cierra la maintenance_window) no tenía
+  // NINGÚN efecto acá -- este calendario seguía leyendo una tarea vieja con
+  // status OUT_OF_SERVICE que la pantalla de Housekeeping ya no toca, y una
+  // habitación quedaba bloqueada para siempre en Reservas sin forma de
+  // liberarla desde la UI.
+  //
+  // A diferencia del flag viejo (booleano por recurso, sin fecha), una
+  // ventana SÍ tiene fecha -- el bloqueo ahora es por día real, no por toda
+  // la fila: una ventana con `endDate` bloquea solo ese rango; una abierta
+  // (`endDate: null`, "hasta nuevo aviso") bloquea desde `startDate` en
+  // adelante. `listActive()` ya filtra a "todavía relevantes" (abiertas o
+  // con fin futuro) -- alcanza con traerlas una vez al montar.
+  const [maintenanceWindows, setMaintenanceWindows] = useState<MaintenanceWindow[]>([])
   useEffect(() => {
     let cancelled = false
-    housekeepingApi.byStatus('OUT_OF_SERVICE')
-      .then(tasks => { if (!cancelled) setOutOfServiceIds(new Set(tasks.map(t => t.resourceId))) })
+    maintenanceWindowsApi.listActive()
+      .then(windows => { if (!cancelled) setMaintenanceWindows(windows) })
       .catch(() => { /* no bloquear el calendario si esto falla -- es una ayuda visual, no la fuente de verdad */ })
     return () => { cancelled = true }
   }, [])
+
+  const maintenanceWindowsByResource = useMemo(() => {
+    const map = new Map<string, MaintenanceWindow[]>()
+    for (const w of maintenanceWindows) {
+      const list = map.get(w.resourceId) ?? []
+      list.push(w)
+      map.set(w.resourceId, list)
+    }
+    return map
+  }, [maintenanceWindows])
+
+  function isUnderMaintenance(resourceId: string, dayMs: number): boolean {
+    const windows = maintenanceWindowsByResource.get(resourceId)
+    if (!windows) return false
+    return windows.some(w => {
+      const startMs = utcMidnightMs(w.startDate)
+      if (dayMs < startMs) return false
+      if (w.endDate === null) return true // ventana abierta -- bloquea desde startDate en adelante
+      return dayMs <= utcMidnightMs(w.endDate)
+    })
+  }
 
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null)
   const dragSessionRef = useRef<DragSession | null>(null)
@@ -326,7 +364,7 @@ export default function RoomCalendar({
                 if (dragPreview?.reservationId === r.id) return false
                 return r.resourceId === resource.id
               })
-              const outOfService = outOfServiceIds.has(resource.id)
+              const hasMaintenanceWindow = maintenanceWindowsByResource.has(resource.id)
 
               return (
                 <div key={resource.id} className="flex" style={{ borderBottom: '1px solid var(--border)', position: 'relative' }}>
@@ -339,31 +377,36 @@ export default function RoomCalendar({
                     }}
                   >
                     {resource.name}
-                    {outOfService && (
+                    {hasMaintenanceWindow && (
                       <span className="text-xs" style={{ color: 'var(--danger)', fontWeight: 600 }}>Fuera de servicio</span>
                     )}
                   </div>
 
                   <div style={{ position: 'relative', width: gridWidth, height: ROW_HEIGHT, flexShrink: 0 }}>
-                    {/* Celdas clickeables (fondo) — una por día. Fuera de
-                        servicio: sin onClick (el backend igual lo rechazaría,
-                        reservation-availability.service.ts::isOutOfService())
-                        + rayado visual, para no dejar al staff intentar sin
-                        saber por qué va a fallar. */}
-                    {days.map((ms, i) => (
+                    {/* Celdas clickeables (fondo) — una por día. En
+                        mantenimiento ESE día: sin onClick (el backend igual
+                        lo rechazaría, reservation-availability.service.ts::
+                        evaluateMaintenanceWindows()) + rayado visual, para
+                        no dejar al staff intentar sin saber por qué va a
+                        fallar. Por día, no por toda la fila -- una ventana
+                        con fin real no bloquea los días fuera de su rango. */}
+                    {days.map((ms, i) => {
+                      const blocked = isUnderMaintenance(resource.id, ms)
+                      return (
                       <div
                         key={ms}
-                        onClick={outOfService ? undefined : () => onEmptySlotClick(resource.id, msToDate(ms))}
+                        onClick={blocked ? undefined : () => onEmptySlotClick(resource.id, msToDate(ms))}
                         style={{
                           position: 'absolute', left: i * DAY_WIDTH, top: 0, width: DAY_WIDTH, height: ROW_HEIGHT,
                           borderLeft: i > 0 ? '1px solid var(--border)' : undefined,
-                          cursor: outOfService ? 'not-allowed' : 'pointer',
-                          background: outOfService
+                          cursor: blocked ? 'not-allowed' : 'pointer',
+                          background: blocked
                             ? 'repeating-linear-gradient(45deg, var(--surface-3), var(--surface-3) 8px, var(--surface-2) 8px, var(--surface-2) 16px)'
                             : undefined,
                         }}
                       />
-                    ))}
+                      )
+                    })}
 
                     {/* Barras de reserva de esta fila */}
                     {rowReservations.map(r => {
