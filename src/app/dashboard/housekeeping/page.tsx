@@ -221,7 +221,16 @@ export default function HousekeepingPage() {
         values: {
           resourceId: createForm.resourceId,
           shift: createForm.shift,
-          scheduledFor: new Date(date).toISOString(),
+          // `date` es "YYYY-MM-DD" (date-only) -- new Date(date) a secas lo
+          // parsea como medianoche UTC, no local (mismo bug ya documentado
+          // arriba en todayStr()). Con huso detrás de UTC (Argentina, UTC-3)
+          // eso corre la tarea un día atrás apenas el server la interpreta en
+          // el huso del negocio. Agregar "T00:00" fuerza el parseo en hora
+          // LOCAL del navegador -- scheduledFor sí necesita datetime completo
+          // (housekeeping.schemas.ts exige z.string().datetime()), así que a
+          // diferencia de startDate de maintenance windows no alcanza con
+          // mandar el string crudo.
+          scheduledFor: new Date(`${date}T00:00`).toISOString(),
           ...(createForm.notes && { notes: createForm.notes }),
         },
       })
