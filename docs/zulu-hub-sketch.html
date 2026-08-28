@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZULU Hub — boceto de referencia</title>
+<!--
+  ============================================================================
+  ZULU Hub — boceto de referencia visual
+  ============================================================================
+  Fecha: 2026-08-28
+  Fuente: docs/sistema-diseno-zulu-hub.md (especificación normativa)
+
+  QUÉ ES ESTO
+  Una traducción de la especificación a HTML autocontenido, para que la
+  reconstrucción visual sea verificable: el criterio de aceptación 1 pide que
+  "el boceto se traduzca a componentes reales del frontend", y sin boceto no
+  hay contra qué comparar.
+
+  QUÉ NO ES
+  No es el boceto original del dueño. Ese archivo no estaba en ninguno de los
+  dos repos al 28/08/2026 (búsqueda por nombre y por extensión). Si aparece,
+  este archivo lo reemplaza, no al revés.
+
+  Todos los valores de color salen de la especificación §4 y todos los
+  contrastes están medidos (§4.3), no estimados. Sin dependencias externas:
+  se abre con doble click.
+  ============================================================================
+-->
+<style>
+:root{
+  /* Base — §4.1 */
+  --zulu-black:#111111; --zulu-graphite:#242424; --zulu-gray:#6B6B6B;
+  --zulu-line:#D8D8D3;  --zulu-white:#FFFFFF;    --zulu-warm-white:#F5F4EF;
+
+  /* Semánticos — §4.2. Tres niveles: señal / texto / superficie */
+  --zulu-brass:#B8892E;  --zulu-brass-strong:#805F19;  --zulu-brass-soft:#F2E7C8;
+  --zulu-clay:#B96145;   --zulu-clay-strong:#944E37;   --zulu-clay-soft:#F2DDD5;
+  --zulu-sage:#6E927B;   --zulu-sage-strong:#4F765F;   --zulu-sage-soft:#E1ECE4;
+  --zulu-danger:#B42318; --zulu-danger-strong:#B42318; --zulu-danger-soft:#FBE9E7;
+  --zulu-cyan-technical:#39C6D8;  /* SOLO sobre superficie oscura */
+  --zulu-cyan-deep:#1F6D77;       /* la variante para superficie clara */
+
+  --radius:10px; --radius-sm:8px;
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--zulu-warm-white);color:var(--zulu-black);
+     font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* ── Tipografía — §5 ─────────────────────────────────────────────────── */
+.page-title{font-size:24px;font-weight:650;letter-spacing:-.02em}
+.section-title{font-size:11px;font-weight:650;letter-spacing:.09em;text-transform:uppercase;color:var(--zulu-gray)}
+.card-title{font-size:15px;font-weight:600}
+.metadata{font-size:12px;color:var(--zulu-gray)}
+.label{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--zulu-gray)}
+.metric{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:-.02em}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ── Shell — §6 ──────────────────────────────────────────────────────── */
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.sidebar{background:var(--zulu-black);color:#fff;padding:20px 0;display:flex;flex-direction:column}
+.brand{padding:0 20px 20px;border-bottom:1px solid rgba(255,255,255,.10);margin-bottom:14px}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:.14em}
+.brand-sub{font-size:10px;letter-spacing:.16em;color:rgba(255,255,255,.42);margin-top:3px}
+.nav-group{padding:0 12px;margin-bottom:16px}
+.nav-group > .section-title{padding:0 8px;margin-bottom:6px;color:rgba(255,255,255,.38)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);
+          color:rgba(255,255,255,.74);cursor:pointer;font-size:13.5px;position:relative}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.09);color:#fff;font-weight:550}
+/* El módulo activo lleva la señal de color del contexto, no se pinta todo el nav */
+.nav-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:3px;
+                         border-radius:0 2px 2px 0;background:var(--ctx,var(--zulu-brass))}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.5;flex:none}
+.main{background:var(--zulu-warm-white);min-width:0}
+.topbar{background:var(--zulu-white);border-bottom:1px solid var(--zulu-line);
+        padding:12px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.tenant{display:flex;align-items:center;gap:10px}
+.tenant-avatar{width:28px;height:28px;border-radius:var(--radius-sm);background:var(--zulu-black);
+               color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+.content{padding:24px 28px 56px}
+.breadcrumbs{font-size:12px;color:var(--zulu-gray);margin-bottom:10px}
+.breadcrumbs b{color:var(--zulu-black);font-weight:550}
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+
+/* ── Superficies ─────────────────────────────────────────────────────── */
+.card{background:var(--zulu-white);border:1px solid var(--zulu-line);border-radius:var(--radius);padding:16px}
+.panel{background:var(--zulu-white);border:1px solid var(--zulu-line);border-radius:var(--radius);overflow:hidden}
+.panel-head{padding:12px 16px;border-bottom:1px solid var(--zulu-line);display:flex;
+            align-items:center;justify-content:space-between;gap:12px}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:2fr 1fr}
+
+/* ── Botones — §8.1 ──────────────────────────────────────────────────── */
+.btn{font:inherit;font-size:13px;font-weight:550;padding:8px 14px;border-radius:var(--radius-sm);
+     border:1px solid transparent;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.btn:focus-visible{outline:2px solid var(--zulu-black);outline-offset:2px}
+.btn-brass{background:var(--zulu-brass-strong);color:#fff}
+.btn-clay{background:var(--zulu-clay-strong);color:#fff}
+.btn-sage{background:var(--zulu-sage-strong);color:#fff}
+.btn-tech{background:var(--zulu-cyan-deep);color:#fff}
+.btn-dark{background:var(--zulu-black);color:#fff}
+.btn-ghost{background:var(--zulu-white);color:var(--zulu-black);border-color:var(--zulu-line)}
+.btn-danger{background:var(--zulu-danger);color:#fff}
+
+/* ── Estados — §8.2. Color + label + punto: nunca solo color ─────────── */
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+       padding:3px 9px;border-radius:999px;border:1px solid transparent;
+       color:var(--zulu-black)}   /* ← regla §4.4.3: texto negro sobre toda superficie *-soft */
+.badge .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.b-sage{background:var(--zulu-sage-soft);border-color:#c7ddd0}   .b-sage  .dot{background:var(--zulu-sage-strong)}
+.b-brass{background:var(--zulu-brass-soft);border-color:#e3d2a5} .b-brass .dot{background:var(--zulu-brass-strong)}
+.b-clay{background:var(--zulu-clay-soft);border-color:#e5c4b8}   .b-clay  .dot{background:var(--zulu-clay-strong)}
+.b-danger{background:var(--zulu-danger-soft);border-color:#f2c4bd} .b-danger .dot{background:var(--zulu-danger)}
+.b-neutral{background:var(--zulu-warm-white);border-color:var(--zulu-line)} .b-neutral .dot{background:var(--zulu-gray)}
+
+/* ── Tabla — §8 ──────────────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:10.5px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;
+   color:var(--zulu-gray);padding:9px 16px;border-bottom:1px solid var(--zulu-line);background:var(--zulu-warm-white)}
+td{padding:11px 16px;border-bottom:1px solid #ECEBE6}
+tr:last-child td{border-bottom:none}
+
+/* ── Rack de recursos — §9 (mismo componente para habitación/silla/mesa) ─ */
+.rack{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
+.res{border:1px solid var(--zulu-line);border-radius:var(--radius-sm);background:var(--zulu-white);
+     padding:11px;border-left:3px solid var(--zulu-brass)}
+.res.busy{border-left-color:var(--zulu-brass-strong);background:var(--zulu-brass-soft)}
+.res.block{border-left-color:var(--zulu-danger);background:var(--zulu-danger-soft)}
+.res.free{border-left-color:var(--zulu-sage);background:var(--zulu-sage-soft)}
+.res-name{font-weight:600;font-size:13.5px}
+
+/* ── POS — §9 ────────────────────────────────────────────────────────── */
+.prods{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.prod{border:1px solid var(--zulu-line);border-radius:var(--radius-sm);background:var(--zulu-white);
+      padding:11px;border-top:3px solid var(--zulu-clay);cursor:pointer}
+.prod:hover{border-color:var(--zulu-clay)}
+.order-line{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #ECEBE6;font-size:13px}
+.order-total{display:flex;justify-content:space-between;padding:12px 0 4px;font-weight:650;font-size:15px}
+
+/* ── Documentación de tokens ─────────────────────────────────────────── */
+.doc{max-width:1180px;margin:0 auto;padding:36px 28px 64px}
+.doc h2{font-size:19px;font-weight:650;margin:38px 0 4px}
+.doc h2:first-child{margin-top:0}
+.doc p{color:#3a3a3a;margin-bottom:14px;max-width:78ch}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px;margin:14px 0}
+.sw{border:1px solid var(--zulu-line);border-radius:var(--radius-sm);overflow:hidden;background:#fff}
+.sw-chip{height:56px;display:grid;place-items:center;font-size:11px;font-weight:600}
+.sw-meta{padding:8px 10px;font-size:11px}
+.sw-meta code{font-family:var(--mono);font-size:10.5px;color:var(--zulu-gray)}
+.note{border-left:3px solid var(--zulu-cyan-deep);background:var(--zulu-white);
+      border:1px solid var(--zulu-line);border-left:3px solid var(--zulu-cyan-deep);
+      border-radius:var(--radius-sm);padding:12px 14px;margin:14px 0;font-size:13px}
+.note b{color:var(--zulu-cyan-deep)}
+.warn{border:1px solid #e5c4b8;border-left:3px solid var(--zulu-danger);background:var(--zulu-danger-soft);
+      border-radius:var(--radius-sm);padding:12px 14px;margin:14px 0;font-size:13px}
+.ratio{font-family:var(--mono);font-size:11px}
+.ok{color:var(--zulu-sage-strong);font-weight:650}
+.no{color:var(--zulu-danger);font-weight:650}
+.ctxtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.ctxtab{font:inherit;font-size:12.5px;padding:6px 12px;border-radius:999px;cursor:pointer;
+        border:1px solid var(--zulu-line);background:var(--zulu-white);color:var(--zulu-gray)}
+.ctxtab[aria-selected="true"]{background:var(--zulu-black);color:#fff;border-color:var(--zulu-black)}
+.hr{height:1px;background:var(--zulu-line);margin:34px 0}
+
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .g4,.g3,.g2{grid-template-columns:1fr}
+  .content{padding:18px 16px 40px}
+  .doc{padding:24px 16px 48px}
+}
+</style>
+</head>
+<body>
+
+<div class="doc">
+  <div class="metadata" style="margin-bottom:6px">Boceto de referencia · 28/08/2026 · derivado de <code>sistema-diseno-zulu-hub.md</code></div>
+  <h1 class="page-title" style="font-size:30px">ZULU Hub</h1>
+  <p style="margin-top:8px;font-size:15px">
+    <b>ZULU es monocromático en su estructura y expresivo en sus señales.</b><br>
+    Blanco y negro son la infraestructura. El color es el significado.
+  </p>
+
+  <div class="warn">
+    <b>Este no es el boceto original.</b> El <code>zulu-hub-sketch.html</code> del dueño no
+    estaba en ninguno de los dos repos al 28/08/2026. Esto es una traducción de la
+    especificación a HTML, hecha para que el criterio de aceptación 1 sea verificable. Si
+    aparece el original, lo reemplaza.
+  </div>
+
+  <h2>1 · Tokens base</h2>
+  <p>La infraestructura visual. Ningún componente define un hex propio: todo sale de acá.</p>
+  <div class="swatches">
+    <div class="sw"><div class="sw-chip" style="background:#111111;color:#fff">black</div><div class="sw-meta"><code>#111111</code><br>shell, nav, acciones oscuras</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#242424;color:#fff">graphite</div><div class="sw-meta"><code>#242424</code><br>paneles oscuros</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#6B6B6B;color:#fff">gray</div><div class="sw-meta"><code>#6B6B6B</code><br>texto secundario</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#D8D8D3">line</div><div class="sw-meta"><code>#D8D8D3</code><br>bordes y divisiones</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#FFFFFF;border-bottom:1px solid #D8D8D3">white</div><div class="sw-meta"><code>#FFFFFF</code><br>cards y formularios</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#F5F4EF;border-bottom:1px solid #D8D8D3">warm-white</div><div class="sw-meta"><code>#F5F4EF</code><br>fondo de trabajo</div></div>
+  </div>
+
+  <h2>2 · Tokens semánticos — tres niveles por familia</h2>
+  <p>
+    <b>La señal</b> pinta fondos, bordes e iconos. <b>El <code>-strong</code></b> es el único
+    que se usa como texto sobre superficie clara. <b>El <code>-soft</code></b> es superficie, y
+    el texto encima siempre es negro.
+  </p>
+  <div class="swatches">
+    <div class="sw"><div class="sw-chip" style="background:#B8892E;color:#fff">brass</div><div class="sw-meta"><code>#B8892E</code> · señal<br>reservas y recursos</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#805F19;color:#fff">brass-strong</div><div class="sw-meta"><code>#805F19</code> · texto<br><span class="ratio ok">5.88 AA</span></div></div>
+    <div class="sw"><div class="sw-chip" style="background:#F2E7C8">brass-soft</div><div class="sw-meta"><code>#F2E7C8</code> · superficie</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#B96145;color:#fff">clay</div><div class="sw-meta"><code>#B96145</code> · señal<br>comercio y POS</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#944E37;color:#fff">clay-strong</div><div class="sw-meta"><code>#944E37</code> · texto<br><span class="ratio ok">6.17 AA</span></div></div>
+    <div class="sw"><div class="sw-chip" style="background:#F2DDD5">clay-soft</div><div class="sw-meta"><code>#F2DDD5</code> · superficie</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#6E927B;color:#fff">sage</div><div class="sw-meta"><code>#6E927B</code> · señal<br>disponible, confirmado</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#4F765F;color:#fff">sage-strong</div><div class="sw-meta"><code>#4F765F</code> · texto<br><span class="ratio ok">5.14 AA</span></div></div>
+    <div class="sw"><div class="sw-chip" style="background:#E1ECE4">sage-soft</div><div class="sw-meta"><code>#E1ECE4</code> · superficie</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#B42318;color:#fff">danger</div><div class="sw-meta"><code>#B42318</code> · destructivo<br><span class="ratio ok">6.57 AA</span> · ΔE 28.3 vs clay</div></div>
+    <div class="sw"><div class="sw-chip" style="background:#39C6D8;color:#111">cyan-technical</div><div class="sw-meta"><code>#39C6D8</code> · <span class="ratio no">solo fondo oscuro</span></div></div>
+    <div class="sw"><div class="sw-chip" style="background:#1F6D77;color:#fff">cyan-deep</div><div class="sw-meta"><code>#1F6D77</code> · técnico sobre claro<br><span class="ratio ok">5.98 AA</span></div></div>
+  </div>
+
+  <div class="note">
+    <b>Las cuatro reglas que salen de medir el contraste.</b>
+    <b>(1)</b> El texto es siempre <code>*-strong</code>: <code>brass</code> sobre blanco da
+    3.16 y sobre blanco cálido 2.87 — no alcanza ni para bordes.
+    <b>(2)</b> Sobre cualquier <code>*-soft</code> el texto es <code>--zulu-black</code>
+    (14.5–15.6): el par <code>sage-strong</code>/<code>sage-soft</code> da 4.24 y se queda a
+    0.26 de AA.
+    <b>(3)</b> <code>cyan-technical</code> nunca sobre blanco (2.05); ahí va
+    <code>cyan-deep</code>.
+    <b>(4)</b> El destructivo es independiente de clay y se lee distinto: ΔE 28.3.
+  </div>
+
+  <h2>3 · Estados</h2>
+  <p>Nunca solo color: cada estado lleva punto, superficie y label.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px">
+    <span class="badge b-sage"><span class="dot"></span>Disponible</span>
+    <span class="badge b-sage"><span class="dot"></span>Confirmado</span>
+    <span class="badge b-brass"><span class="dot"></span>Pendiente</span>
+    <span class="badge b-neutral"><span class="dot"></span>En proceso</span>
+    <span class="badge b-clay"><span class="dot"></span>En consumo</span>
+    <span class="badge b-danger"><span class="dot"></span>Bloqueado</span>
+  </div>
+
+  <h2>4 · Botones</h2>
+  <p>El primario toma el color del contexto del módulo. El cian no es el primario de nada fuera del plano técnico.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">
+    <button class="btn btn-brass">Nueva reserva</button>
+    <button class="btn btn-clay">Cobrar orden</button>
+    <button class="btn btn-sage">Marcar listo</button>
+    <button class="btn btn-dark">Guardar</button>
+    <button class="btn btn-ghost">Cancelar</button>
+    <button class="btn btn-tech">Ver telemetría</button>
+    <button class="btn btn-danger">Eliminar</button>
+  </div>
+</div>
+
+<div class="hr" style="max-width:1180px;margin-left:auto;margin-right:auto"></div>
+
+<!-- ══════════════════ SHELL + RESERVAS (contexto brass) ══════════════════ -->
+<div class="doc" style="padding-bottom:12px"><h2 style="margin:0">5 · Shell — contexto reservas (brass)</h2>
+<p>Sidebar negro, contenido blanco cálido, señal de color solo en el módulo activo. Los labels salen de terminología configurable: acá, hotelería.</p></div>
+
+<div class="shell" style="min-height:0;border-top:1px solid var(--zulu-line);border-bottom:1px solid var(--zulu-line)">
+  <nav class="sidebar" style="--ctx:var(--zulu-brass)">
+    <div class="brand"><div class="brand-name">ZULU HUB</div><div class="brand-sub">TERMINAL OPERACIONAL</div></div>
+    <div class="nav-group">
+      <div class="nav-item"><span class="nav-dot"></span>Resumen</div>
+    </div>
+    <div class="nav-group">
+      <div class="section-title">Hospedaje</div>
+      <div class="nav-item active"><span class="nav-dot"></span>Reservas</div>
+      <div class="nav-item"><span class="nav-dot"></span>Habitaciones</div>
+      <div class="nav-item"><span class="nav-dot"></span>Estadías</div>
+      <div class="nav-item"><span class="nav-dot"></span>Housekeeping</div>
+      <div class="nav-item"><span class="nav-dot"></span>Mantenimiento</div>
+    </div>
+    <div class="nav-group">
+      <div class="section-title">Negocio</div>
+      <div class="nav-item"><span class="nav-dot"></span>Huéspedes</div>
+      <div class="nav-item"><span class="nav-dot"></span>Facturación</div>
+      <div class="nav-item"><span class="nav-dot"></span>Reportes</div>
+      <div class="nav-item"><span class="nav-dot"></span>Configuración</div>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="tenant"><div class="tenant-avatar">HZ</div>
+        <div><div style="font-weight:600;font-size:13px">Hostería ZULU</div>
+             <div class="metadata">Hotelería · plan PRO</div></div></div>
+      <span class="badge b-neutral"><span class="dot"></span>Turno abierto</span>
+    </div>
+    <div class="content">
+      <div class="breadcrumbs">Hospedaje / <b>Reservas</b></div>
+      <div class="page-head">
+        <div><div class="page-title">Reservas</div>
+             <div class="metadata" style="margin-top:3px">Estadías de alojamiento — los servicios puntuales están en Turnos</div></div>
+        <button class="btn btn-brass">+ Nueva reserva</button>
+      </div>
+
+      <div class="grid g4" style="margin-bottom:18px">
+        <div class="card"><div class="label">Ocupación hoy</div><div class="metric">78<span style="font-size:16px;color:var(--zulu-gray)">%</span></div></div>
+        <div class="card"><div class="label">Llegadas</div><div class="metric">6</div></div>
+        <div class="card"><div class="label">Salidas</div><div class="metric">4</div></div>
+        <div class="card"><div class="label">Ingresos del día</div><div class="metric">$284.500</div></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px">
+        <div class="panel-head"><div class="card-title">Rack de habitaciones</div>
+          <div style="display:flex;gap:6px">
+            <span class="badge b-sage"><span class="dot"></span>Libre</span>
+            <span class="badge b-brass"><span class="dot"></span>Ocupada</span>
+            <span class="badge b-danger"><span class="dot"></span>Mantenimiento</span>
+          </div></div>
+        <div style="padding:14px">
+          <div class="rack">
+            <div class="res free"><div class="res-name">101</div><div class="metadata">Doble · libre</div></div>
+            <div class="res busy"><div class="res-name">102</div><div class="metadata">Doble · hasta 30/08</div></div>
+            <div class="res busy"><div class="res-name">103</div><div class="metadata">Suite · hasta 29/08</div></div>
+            <div class="res free"><div class="res-name">104</div><div class="metadata">Doble · libre</div></div>
+            <div class="res block"><div class="res-name">105</div><div class="metadata">Suite · mantenimiento</div></div>
+            <div class="res free"><div class="res-name">106</div><div class="metadata">Triple · libre</div></div>
+          </div>
+          <div class="metadata" style="margin-top:12px">
+            Mismo componente para habitación, silla, mesa, box, cancha o consultorio — la
+            etiqueta viene de terminología, no del componente.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="card-title">Próximas reservas</div>
+          <button class="btn btn-ghost" style="padding:5px 11px;font-size:12px">Filtros</button></div>
+        <table>
+          <thead><tr><th>N°</th><th>Huésped</th><th>Recurso</th><th>Ingreso</th><th>Noches</th><th>Total</th><th>Estado</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">RES-000841</td><td>Marta Giménez</td><td>102 · Doble</td><td class="mono">28/08</td><td class="mono">2</td><td class="mono">$96.000</td><td><span class="badge b-sage"><span class="dot"></span>Confirmada</span></td></tr>
+            <tr><td class="mono">RES-000842</td><td>Luis Ferrari</td><td>103 · Suite</td><td class="mono">28/08</td><td class="mono">1</td><td class="mono">$71.500</td><td><span class="badge b-brass"><span class="dot"></span>Seña pendiente</span></td></tr>
+            <tr><td class="mono">RES-000843</td><td>Ana Ruiz</td><td>106 · Triple</td><td class="mono">29/08</td><td class="mono">3</td><td class="mono">$168.000</td><td><span class="badge b-sage"><span class="dot"></span>Confirmada</span></td></tr>
+            <tr><td class="mono">RES-000844</td><td>Diego Sosa</td><td>105 · Suite</td><td class="mono">30/08</td><td class="mono">2</td><td class="mono">$143.000</td><td><span class="badge b-danger"><span class="dot"></span>Bloqueada</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ POS (contexto clay) ══════════════════ -->
+<div class="doc" style="padding-bottom:12px;padding-top:36px"><h2 style="margin:0">6 · Mismo shell — contexto comercio (clay)</h2>
+<p>Idéntica estructura, otro rubro: cambian los labels y el color contextual, no el sistema.</p></div>
+
+<div class="shell" style="min-height:0;border-top:1px solid var(--zulu-line);border-bottom:1px solid var(--zulu-line)">
+  <nav class="sidebar" style="--ctx:var(--zulu-clay)">
+    <div class="brand"><div class="brand-name">ZULU HUB</div><div class="brand-sub">TERMINAL OPERACIONAL</div></div>
+    <div class="nav-group"><div class="nav-item"><span class="nav-dot"></span>Resumen</div></div>
+    <div class="nav-group">
+      <div class="section-title">Comercio</div>
+      <div class="nav-item active"><span class="nav-dot"></span>POS</div>
+      <div class="nav-item"><span class="nav-dot"></span>Menú</div>
+      <div class="nav-item"><span class="nav-dot"></span>Órdenes</div>
+      <div class="nav-item"><span class="nav-dot"></span>Mesas</div>
+      <div class="nav-item"><span class="nav-dot"></span>Inventario</div>
+    </div>
+    <div class="nav-group">
+      <div class="section-title">Negocio</div>
+      <div class="nav-item"><span class="nav-dot"></span>Comensales</div>
+      <div class="nav-item"><span class="nav-dot"></span>Facturación</div>
+      <div class="nav-item"><span class="nav-dot"></span>Configuración</div>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="tenant"><div class="tenant-avatar">PZ</div>
+        <div><div style="font-weight:600;font-size:13px">Parrilla ZULU</div>
+             <div class="metadata">Restaurante · plan PRO</div></div></div>
+      <span class="badge b-clay"><span class="dot"></span>Mesa 7 · abierta</span>
+    </div>
+    <div class="content">
+      <div class="breadcrumbs">Comercio / <b>POS</b></div>
+      <div class="page-head"><div><div class="page-title">Punto de venta</div>
+        <div class="metadata" style="margin-top:3px">Mesa 7 · 4 comensales</div></div></div>
+
+      <div class="grid g2">
+        <div>
+          <div class="ctxtabs">
+            <button class="ctxtab" aria-selected="true">Entradas</button>
+            <button class="ctxtab">Principales</button>
+            <button class="ctxtab">Bebidas</button>
+            <button class="ctxtab">Postres</button>
+          </div>
+          <div class="prods">
+            <div class="prod"><div style="font-weight:600">Provoleta</div><div class="mono" style="margin-top:5px">$8.900</div><div class="metadata">12 disp.</div></div>
+            <div class="prod"><div style="font-weight:600">Empanadas</div><div class="mono" style="margin-top:5px">$2.400</div><div class="metadata">30 disp.</div></div>
+            <div class="prod"><div style="font-weight:600">Tabla mixta</div><div class="mono" style="margin-top:5px">$18.500</div><div class="metadata">6 disp.</div></div>
+            <div class="prod"><div style="font-weight:600">Bruschetta</div><div class="mono" style="margin-top:5px">$6.200</div><div class="metadata">9 disp.</div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="card-title">Orden actual</div>
+            <span class="badge b-neutral"><span class="dot"></span>Abierta</span></div>
+          <div style="padding:14px">
+            <div class="order-line"><span>2 × Empanadas</span><span class="mono">$4.800</span></div>
+            <div class="order-line"><span>1 × Provoleta</span><span class="mono">$8.900</span></div>
+            <div class="order-line"><span>1 × Tabla mixta</span><span class="mono">$18.500</span></div>
+            <div class="order-total"><span>Total</span><span class="mono">$32.200</span></div>
+            <div style="display:flex;gap:8px;margin-top:14px">
+              <button class="btn btn-clay" style="flex:1;justify-content:center">Cobrar</button>
+              <button class="btn btn-ghost">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SUPERADMIN ══════════════════ -->
+<div class="doc" style="padding-bottom:12px;padding-top:36px"><h2 style="margin:0">7 · Superadmin — mismo shell, mayor densidad</h2>
+<p>El plano técnico usa cian, pero <code>cyan-deep</code> sobre superficie clara. Las capacidades muestran si están soportadas por código o solo catalogadas.</p></div>
+
+<div class="shell" style="min-height:0;border-top:1px solid var(--zulu-line);border-bottom:1px solid var(--zulu-line)">
+  <nav class="sidebar" style="--ctx:var(--zulu-cyan-technical)">
+    <div class="brand"><div class="brand-name">ZULU HUB</div><div class="brand-sub">PLATAFORMA</div></div>
+    <div class="nav-group">
+      <div class="section-title">Operación</div>
+      <div class="nav-item"><span class="nav-dot"></span>Negocios</div>
+      <div class="nav-item"><span class="nav-dot"></span>Planes y límites</div>
+      <div class="nav-item"><span class="nav-dot"></span>Roles de fábrica</div>
+    </div>
+    <div class="nav-group">
+      <div class="section-title">Configuración de plataforma</div>
+      <div class="nav-item"><span class="nav-dot"></span>Rubros</div>
+      <div class="nav-item active"><span class="nav-dot"></span>Capacidades</div>
+      <div class="nav-item"><span class="nav-dot"></span>Presets</div>
+      <div class="nav-item"><span class="nav-dot"></span>Terminología</div>
+      <div class="nav-item"><span class="nav-dot"></span>Auditoría</div>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="tenant"><div class="tenant-avatar" style="background:var(--zulu-cyan-deep)">SA</div>
+        <div><div style="font-weight:600;font-size:13px">Superadmin</div>
+             <div class="metadata">Catálogo de posibilidades</div></div></div>
+      <button class="btn btn-tech" style="padding:6px 12px;font-size:12px">+ Capacidad</button>
+    </div>
+    <div class="content">
+      <div class="breadcrumbs">Configuración de plataforma / <b>Capacidades</b></div>
+      <div class="page-head"><div><div class="page-title">Capacidades</div>
+        <div class="metadata" style="margin-top:3px">
+          Catalogar una capacidad no la implementa. <b>Soportada</b> = tiene rutas, permisos y pantalla.
+        </div></div></div>
+
+      <div class="panel">
+        <table>
+          <thead><tr><th>Clave</th><th>Nombre visible</th><th>Color contextual</th><th>Plan mínimo</th><th>Soporte</th><th>Estado</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">ALOJAMIENTO</td><td>Alojamiento</td><td><span class="badge b-brass"><span class="dot"></span>BRASS</span></td><td class="mono">FREE</td><td><span class="badge b-sage"><span class="dot"></span>Soportada</span></td><td><span class="badge b-sage"><span class="dot"></span>Activa</span></td></tr>
+            <tr><td class="mono">POS_RESTAURANTE</td><td>POS Restaurante</td><td><span class="badge b-clay"><span class="dot"></span>CLAY</span></td><td class="mono">STARTER</td><td><span class="badge b-sage"><span class="dot"></span>Soportada</span></td><td><span class="badge b-sage"><span class="dot"></span>Activa</span></td></tr>
+            <tr><td class="mono">HOUSEKEEPING</td><td>Housekeeping</td><td><span class="badge b-brass"><span class="dot"></span>BRASS</span></td><td class="mono">STARTER</td><td><span class="badge b-sage"><span class="dot"></span>Soportada</span></td><td><span class="badge b-sage"><span class="dot"></span>Activa</span></td></tr>
+            <tr><td class="mono">FACTURACION</td><td>Facturación</td><td><span class="badge b-neutral"><span class="dot"></span>NEUTRAL</span></td><td class="mono">PRO</td><td><span class="badge b-sage"><span class="dot"></span>Soportada</span></td><td><span class="badge b-sage"><span class="dot"></span>Activa</span></td></tr>
+            <tr><td class="mono">INTEGRATIONS</td><td>Integraciones</td><td><span class="badge b-neutral"><span class="dot"></span>NEUTRAL</span></td><td class="mono">ENTERPRISE</td><td><span class="badge b-brass"><span class="dot"></span>Solo catalogada</span></td><td><span class="badge b-neutral"><span class="dot"></span>Sin ofrecer</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid g2" style="margin-top:18px">
+        <div class="panel">
+          <div class="panel-head"><div class="card-title">Contexto efectivo — Hostería ZULU</div>
+            <span class="badge b-neutral"><span class="dot"></span>Rubro: HOSPITALITY</span></div>
+          <table>
+            <thead><tr><th>Módulo</th><th>Estado</th><th>Origen</th></tr></thead>
+            <tbody>
+              <tr><td>Reservas</td><td><span class="badge b-sage"><span class="dot"></span>Activo</span></td><td class="metadata">preset</td></tr>
+              <tr><td>PMS / Estadías</td><td><span class="badge b-sage"><span class="dot"></span>Activo</span></td><td class="metadata">superadmin</td></tr>
+              <tr><td>Housekeeping</td><td><span class="badge b-sage"><span class="dot"></span>Activo</span></td><td class="metadata">preset</td></tr>
+              <tr><td>Facturación</td><td><span class="badge b-sage"><span class="dot"></span>Activo</span></td><td class="metadata">tenant</td></tr>
+              <tr><td>POS</td><td><span class="badge b-neutral"><span class="dot"></span>Inactivo</span></td><td class="metadata">tenant</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="card-title">Auditoría de plataforma</div></div>
+          <div style="padding:14px">
+            <div class="order-line"><span>plan · STARTER → PRO</span><span class="metadata mono">14:02</span></div>
+            <div class="order-line"><span>status · ACTIVE → SUSPENDED</span><span class="metadata mono">11:47</span></div>
+            <div class="order-line" style="border:none"><span>plan_limits · maxCategories 3 → 5</span><span class="metadata mono">09:15</span></div>
+            <div class="metadata" style="margin-top:10px">
+              Los cambios globales se registran sin negocio asociado — no es un dato faltante.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="doc" style="padding-top:36px">
+  <h2>8 · Lo que este boceto fija</h2>
+  <p>
+    Un solo sistema para los tres contextos: cambia el label, el color contextual y qué
+    módulos aparecen — no cambia el shell, ni la tipografía, ni los componentes, ni la marca.
+    Hotel, restaurante y plataforma se ven como el mismo producto.
+  </p>
+  <p class="metadata">
+    Pendiente de la Fase V2: tipografías reales (acá se usa la del sistema), spacing scale,
+    focus rings completos, y los componentes que este boceto no muestra
+    (DatePicker, Toast, EmptyState, Modal).
+  </p>
+</div>
+
+</body>
+</html>
