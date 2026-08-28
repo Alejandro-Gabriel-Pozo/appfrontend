@@ -2,7 +2,7 @@ import type { DataProvider, BaseRecord, MetaQuery, Pagination, CrudFilters, Logi
 import {
   categoriesApi, productsApi, resourcesApi, bookableServicesApi, usersApi,
   customersApi, reservationsApi, staysApi, housekeepingApi, ordersApi,
-  wasteReasonsApi, rolesApi,
+  wasteReasonsApi, consumptionDestinationsApi, rolesApi,
 } from '@/lib/api'
 import type { PaginatedResponse } from '@/lib/api'
 import type { Category, CreateProductInput, UpdateProductInput } from '@/lib/types'
@@ -235,6 +235,20 @@ const resources: Record<string, ResourceAdapter> = {
     create: data => wasteReasonsApi.create(data.name as string),
     update: (id, data) => wasteReasonsApi.update(id, data),
     deleteOne: id => wasteReasonsApi.remove(id),
+  },
+  // 27/08/2026, pendientes-2026-08-27.md — gemelo exacto de 'motivos-merma'.
+  'destinos-consumo': {
+    list: () => consumptionDestinationsApi.list(),
+    // Sin GET /api/consumption-destinations/:id individual (sí existe list()).
+    getOne: async id => {
+      const all = await consumptionDestinationsApi.list()
+      const found = all.find(r => r.id === id)
+      if (!found) throw { message: 'Destino de consumo no encontrado', code: 'NOT_FOUND', statusCode: 404, httpStatus: 404 }
+      return found
+    },
+    create: data => consumptionDestinationsApi.create(data.name as string),
+    update: (id, data) => consumptionDestinationsApi.update(id, data),
+    deleteOne: id => consumptionDestinationsApi.remove(id),
   },
   // L (23/08/2026) — roles propios del negocio (los 5 de fábrica + los
   // custom). `GET /api/roles/:id` sí existe (a diferencia de categorías/

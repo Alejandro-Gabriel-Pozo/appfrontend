@@ -110,16 +110,22 @@ function VariantModal({
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           {[
-            { label: 'Nombre *', name: 'name', type: 'text' },
-            { label: 'SKU', name: 'sku', type: 'text' },
-            { label: `Precio override (base: ${fmt(null, basePrice)})`, name: 'priceOverride', type: 'number' },
-          ].map(({ label, name, type }) => (
+            { label: 'Nombre *', name: 'name', type: 'text', required: true },
+            // 27/08/2026, auditoría de columnas obligatorias
+            // (docs/pendientes-2026-08-27.md): la variante es la unidad
+            // real que se vende y se cuenta -- ya lo exige
+            // CreateProductVariantSchema (Zod) y product_variants.sku
+            // (NOT NULL en la base).
+            { label: 'SKU *', name: 'sku', type: 'text', required: true },
+            { label: `Precio override (base: ${fmt(null, basePrice)})`, name: 'priceOverride', type: 'number', required: false },
+          ].map(({ label, name, type, required }) => (
             <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label className="label" style={{ marginBottom: 0 }}>{label}</label>
               <input
                 name={name}
                 type={type}
                 className="input"
+                required={required}
                 value={(form[name as keyof CreateVariantInput] as string | number) ?? ''}
                 onChange={handleChange}
                 step={type === 'number' ? '0.01' : undefined}

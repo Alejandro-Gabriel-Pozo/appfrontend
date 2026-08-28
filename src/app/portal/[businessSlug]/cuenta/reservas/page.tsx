@@ -79,6 +79,12 @@ export default function MisReservasPage() {
   const [confirmPrefill, setConfirmPrefill] = useState<{
     resourceId: string; categoryId: string; startTime: string; endTime: string
   } | null>(null)
+  // 27/08/2026, docs/diseno-precio-servicio-vs-recurso-2026-08-27.md (paso
+  // 0.c-bis): este flujo viene de disponibilidad/page.tsx, que busca por
+  // categoría/recurso y nunca conoce servicios -- si la categoría prefilled
+  // es de alojamiento, hace falta elegir el servicio ACÁ (es el primer
+  // punto de este flujo con sesión garantizada) antes de poder confirmar.
+  const [prefillServiceId, setPrefillServiceId] = useState('')
 
   useEffect(() => {
     // Se lee directo de window.location en vez de useSearchParams() para no
@@ -93,6 +99,14 @@ export default function MisReservasPage() {
       setConfirmPrefill(pending)
       setCreateOpen(true)
       router.replace(`/portal/${slug}/cuenta/reservas`)
+      // Necesarios para saber si `pending.categoryId` es alojamiento (y
+      // para el selector de servicio si lo es) -- openCreate() los carga
+      // de forma perezosa para el wizard manual, pero este modo entra sin
+      // pasar por ahí. Mismo criterio "no crítico" que el resto de esta
+      // pantalla: si falla, el selector de abajo simplemente no tiene
+      // opciones -- no bloquea el resto de la UI.
+      customerCategoriesApi.list().then(setCategories).catch(() => { /* no crítico */ })
+      customerBookableServicesApi.list().then(setServices).catch(() => { /* no crítico */ })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -117,6 +131,22 @@ export default function MisReservasPage() {
   const selectedService = services.find(s => s.id === serviceId)
   const hasFixedDuration = !!selectedService && selectedService.durationMinutes != null
   const servicesInCategory = services.filter(s => s.categoryId === categoryId && s.active)
+  // 27/08/2026, docs/diseno-precio-servicio-vs-recurso-2026-08-27.md (paso
+  // 0.c-bis): "Sin servicio" es legítimo para una categoría de turnos (mesa,
+  // silla) -- el recurso ya vale $0 a propósito -- pero NUNCA para
+  // alojamiento: el precio por noche vive en el servicio, no en la
+  // habitación. El backend ya lo rechaza (LodgingRequiresServiceError);
+  // esto evita el viaje al servidor para descubrirlo.
+  const selectedCategory = categories.find(c => c.id === categoryId)
+  const isLodgingCategory = selectedCategory?.isLodging ?? false
+
+  // Mismo criterio, para el modo confirmPrefill (ver docblock del estado).
+  const isPrefillLodging = confirmPrefill
+    ? (categories.find(c => c.id === confirmPrefill.categoryId)?.isLodging ?? false)
+    : false
+  const servicesForPrefill = confirmPrefill
+    ? services.filter(s => s.categoryId === confirmPrefill.categoryId && s.active)
+    : []
 
   async function searchAvailability() {
     if (!categoryId || !startLocal) return
@@ -169,6 +199,13 @@ export default function MisReservasPage() {
 
   async function confirmPrefillBooking() {
     if (!confirmPrefill) return
+    // Espejo del guard del backend (LodgingRequiresServiceError) -- el botón
+    // ya viene deshabilitado sin esto (ver render), pero no confiar solo en
+    // el disabled del botón.
+    if (isPrefillLodging && !prefillServiceId) {
+      setCreateError('Elegí un servicio para continuar.')
+      return
+    }
     setBookingResourceId(confirmPrefill.resourceId)
     setCreateError('')
     try {
@@ -177,6 +214,7 @@ export default function MisReservasPage() {
         resourceId: confirmPrefill.resourceId,
         startTime: confirmPrefill.startTime,
         endTime: confirmPrefill.endTime,
+        ...(prefillServiceId && { serviceId: prefillServiceId }),
       })
       toast('Reserva creada', 'success')
       setCreateOpen(false)
@@ -323,10 +361,30 @@ export default function MisReservasPage() {
               <div><strong>Desde:</strong> {fmt(confirmPrefill.startTime)}</div>
               <div><strong>Hasta:</strong> {fmt(confirmPrefill.endTime)}</div>
             </div>
+            {isPrefillLodging && (
+              <div>
+                {/* 27/08/2026, paso 0.c-bis -- ver docblock de isPrefillLodging.
+                    El precio por noche sale del servicio, no de la
+                    habitación: sin esto no hay forma de cotizar bien la
+                    estadía. */}
+                <label className="label">Servicio *</label>
+                <select
+                  value={prefillServiceId}
+                  onChange={e => setPrefillServiceId(e.target.value)}
+                  className="input"
+                  required
+                >
+                  <option value="">Elegí un servicio</option>
+                  {servicesForPrefill.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             {createError && <div className="alert alert-danger">{createError}</div>}
             <button
               onClick={confirmPrefillBooking}
-              disabled={bookingResourceId !== null}
+              disabled={bookingResourceId !== null || (isPrefillLodging && !prefillServiceId)}
               className="btn-primary w-full"
             >
               {bookingResourceId ? <><span className="spinner" /> Confirmando…</> : 'Confirmar reserva'}
@@ -348,11 +406,12 @@ export default function MisReservasPage() {
 
             {categoryId && (
               <div>
-                <label className="label">Servicio</label>
+                <label className="label">Servicio{isLodgingCategory ? ' *' : ''}</label>
                 <select
                   value={serviceId}
                   onChange={e => { setServiceId(e.target.value); setAvailable(null) }}
                   className="input"
+                  required={isLodgingCategory}
                 >
                   <option value="">Elegí un servicio</option>
                   {servicesInCategory.map(s => (
@@ -360,7 +419,7 @@ export default function MisReservasPage() {
                       {s.name}{s.durationMinutes != null ? ` (${s.durationMinutes} min)` : ' (horario a elección)'}
                     </option>
                   ))}
-                  <option value={NO_SERVICE}>Sin servicio — elijo el horario</option>
+                  {!isLodgingCategory && <option value={NO_SERVICE}>Sin servicio — elijo el horario</option>}
                 </select>
               </div>
             )}

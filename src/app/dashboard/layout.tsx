@@ -41,6 +41,7 @@ const REFINE_RESOURCES = [
   { name: 'housekeeping', list: '/dashboard/housekeeping' },
   { name: 'ordenes', list: '/dashboard/ordenes' },
   { name: 'motivos-merma', list: '/dashboard/motivos-merma' },
+  { name: 'destinos-consumo', list: '/dashboard/destinos-consumo' },
   { name: 'roles', list: '/dashboard/roles' },
 ]
 
@@ -117,6 +118,12 @@ const NAV = [
     moduleKey: 'POS_RESTAURANTE',
   },
   {
+    href: '/dashboard/destinos-consumo',
+    label: 'Destinos de Consumo',
+    icon: 'M12 4.5v15m7.5-7.5h-15',
+    moduleKey: 'POS_RESTAURANTE',
+  },
+  {
     href: '/dashboard/reportes',
     label: 'Reportes',
     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
@@ -174,6 +181,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/cuentas-corrientes': 'Cuentas Corrientes',
   '/dashboard/productos':   'Productos',
   '/dashboard/motivos-merma': 'Motivos de Merma',
+  '/dashboard/destinos-consumo': 'Destinos de Consumo',
   '/dashboard/reportes':    'Reportes',
   '/dashboard/usuarios':    'Usuarios',
   '/dashboard/roles':       'Roles',

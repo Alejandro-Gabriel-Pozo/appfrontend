@@ -423,13 +423,23 @@ export default function ReservasPage() {
       >
         <form onSubmit={handleCreateReservation} className="p-6 space-y-4">
           <div>
-            <label className="label">Servicio (opcional)</label>
+            {/* 27/08/2026, docs/diseno-precio-servicio-vs-recurso-2026-08-27.md
+                (paso 0.c): esta pantalla es SIEMPRE alojamiento --
+                useReservationsScreen(true, ...) más arriba ya filtra
+                `lodgingServices` a categorías isLodging -- así que "Sin
+                servicio" nunca fue una opción legítima acá, solo un atajo
+                que dejaba la reserva sin precio por noche, sin rate plans y
+                sin "cualquier recurso disponible" (K4). El backend ya lo
+                rechaza (LodgingRequiresServiceError); esto lo evita antes
+                del viaje al servidor. */}
+            <label className="label">Servicio *</label>
             <select
               className="input"
+              required
               value={form.serviceId}
               onChange={e => setForm(f => ({ ...f, serviceId: e.target.value, ratePlanId: '' }))}
             >
-              <option value="">Sin servicio — horario libre</option>
+              <option value="" disabled>Elegí un servicio</option>
               {lodgingServices.map(s => (
                 <option key={s.id} value={s.id}>
                   {s.name}{s.bookingMode === 'block' ? ' (alojamiento — por noche)' : ''}

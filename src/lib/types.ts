@@ -8,7 +8,7 @@
 // necesiten tocar un solo import -- ver docs/convenciones-nombres.md para
 // el árbol completo de carpetas y qué tipo vive en cada una.
 
-export type { Category, CategoryField, WasteReason, RecordWasteInput } from './catalogo/types'
+export type { Category, CategoryField, WasteReason, RecordWasteInput, ConsumptionDestination, RecordConsumptionInput } from './catalogo/types'
 export type { OperatingWindow, BusinessProfile } from './negocio/types'
 export type { CustomerTag, CustomerRate, Customer, CustomerStatement, CustomerListFilters } from './clientes/types'
 export type { CustomerTaxProfile, CustomerTaxProfileAddress, UpsertCustomerTaxProfileInput, TaxpayerLookupResult } from './clientes/types'

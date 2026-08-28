@@ -32,3 +32,26 @@ export interface RecordWasteInput {
   wasteReasonId: string
   notes?: string
 }
+
+/**
+ * 27/08/2026, pendientes-2026-08-27.md — gemelo de WasteReason. Adoptado de
+ * `proyecto script` (DESTINOS_CONSUMO): un consumo interno (comida de
+ * personal, degustación, elaboración interna) es costo operativo, no
+ * pérdida — catálogo propio, nunca se mezcla con motivos de merma.
+ */
+export interface ConsumptionDestination {
+  id: string
+  businessId: string
+  name: string
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface RecordConsumptionInput {
+  productId?: string | null
+  productVariantId?: string | null
+  quantity: number
+  consumptionDestinationId: string
+  notes?: string
+}
