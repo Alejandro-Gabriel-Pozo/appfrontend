@@ -28,6 +28,12 @@ export interface Product {
   recipeOverrideStatus: OverrideStatus
   /** Solo tiene valor mientras recipeOverrideStatus === 'PENDIENTE_DE_REVISION'. */
   recipePendingMasterSnapshot: Array<{ componentProductId: string; quantityPerUnit: number }> | null
+  /** D8 — tasa de IVA (%) de este producto. null = hereda default_iva_rate del negocio. */
+  ivaRate: number | null
+  /** D8 — texto libre informativo ("unidad", "kg", "litro"). No viaja a AFIP todavía. */
+  unit: string | null
+  /** D8 — código numérico del catálogo AFIP Umed. No validado contra un catálogo (ver product.entities.ts en app-main). */
+  arcaUnitCode: number | null
   createdAt: string
   updatedAt: string
 }
@@ -83,6 +89,9 @@ export interface CreateProductInput {
   stockMinAlert?: number
   productType?: ProductType
   assembleOnDemand?: boolean
+  ivaRate?: number | null
+  unit?: string | null
+  arcaUnitCode?: number | null
 }
 
 export interface UpdateProductInput {
@@ -97,6 +106,9 @@ export interface UpdateProductInput {
   active?: boolean
   productType?: ProductType
   assembleOnDemand?: boolean
+  ivaRate?: number | null
+  unit?: string | null
+  arcaUnitCode?: number | null
 }
 
 export interface CreateVariantInput {

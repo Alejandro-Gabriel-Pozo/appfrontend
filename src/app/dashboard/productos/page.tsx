@@ -6,6 +6,7 @@ import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { extractErrorMessage, productsApi, wasteReasonsApi, consumptionDestinationsApi } from '@/lib/api'
 import type { Product, CreateProductInput, WasteReason, ConsumptionDestination, ProductType } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
+import { useBusinessModules } from '@/hooks/useBusinessModules'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento clay (POS_RESTAURANTE).
@@ -20,7 +21,14 @@ function fmt(n: number) {
 // campo de precio vacío no debería mostrar "0" a la fuerza -- forzarlo a 0
 // en cada tecleo hacía que el campo "peleara" con quien lo estaba llenando).
 // Se coerciona a number recién en handleSubmit.
-type ProductFormState = Omit<CreateProductInput, 'basePrice'> & { basePrice: number | '' }
+type ProductFormState = Omit<CreateProductInput, 'basePrice' | 'ivaRate' | 'arcaUnitCode'> & {
+  basePrice: number | ''
+  // '' es el mismo truco que basePrice para no forzar un valor mientras
+  // se tipea -- acá el resting value es null (D8: vacío = hereda del
+  // negocio), no 0.
+  ivaRate: number | '' | null
+  arcaUnitCode: number | '' | null
+}
 
 const EMPTY_CREATE: ProductFormState = {
   name: '',
@@ -33,6 +41,9 @@ const EMPTY_CREATE: ProductFormState = {
   stockMinAlert: 0,
   productType: 'RETAIL',
   assembleOnDemand: false,
+  ivaRate: null,
+  unit: null,
+  arcaUnitCode: null,
 }
 
 const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
@@ -49,6 +60,7 @@ const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
 function ProductModal({ onClose }: { onClose: () => void }) {
   const { toast } = useToast()
   const { mutateAsync: createProduct } = useCreate<Product>()
+  const modules = useBusinessModules()
 
   const [form, setForm] = useState<ProductFormState>({ ...EMPTY_CREATE })
   const [loading, setLoading] = useState(false)
@@ -71,9 +83,16 @@ function ProductModal({ onClose }: { onClose: () => void }) {
     e.preventDefault()
     setLoading(true)
     try {
-      // basePrice puede haber quedado '' (campo vacío) -- se coerciona a
-      // number recién acá, no en cada tecleo (ver ProductFormState).
-      const values: CreateProductInput = { ...form, basePrice: Number(form.basePrice) || 0 }
+      // basePrice/ivaRate/arcaUnitCode pueden haber quedado '' (campo
+      // vacío) -- se coercionan recién acá, no en cada tecleo (ver
+      // ProductFormState). ivaRate/arcaUnitCode van a null (no a 0):
+      // "vacío" es "hereda del negocio"/"sin código", no "cero".
+      const values: CreateProductInput = {
+        ...form,
+        basePrice: Number(form.basePrice) || 0,
+        ivaRate: form.ivaRate === '' || form.ivaRate == null ? null : Number(form.ivaRate),
+        arcaUnitCode: form.arcaUnitCode === '' || form.arcaUnitCode == null ? null : Number(form.arcaUnitCode),
+      }
       await createProduct({ resource: 'productos', values })
       toast('Producto creado', 'success')
       onClose()
@@ -186,6 +205,48 @@ function ProductModal({ onClose }: { onClose: () => void }) {
                 </span>
               </span>
             </label>
+          )}
+
+          {(modules === null || modules['FACTURACION'] !== false) && (
+            <details className="card" style={{ padding: 0 }}>
+              <summary style={{ cursor: 'pointer', padding: '10px 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Datos fiscales (AFIP/ARCA)
+              </summary>
+              <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label className="label" style={{ marginBottom: 0 }}>IVA del producto (%) <span style={{ color: 'var(--text-tertiary)' }}>(opcional)</span></label>
+                  <input
+                    name="ivaRate" type="number" step="0.01" min={0} className="input"
+                    value={form.ivaRate ?? ''} onChange={handleChange}
+                    placeholder="Vacío = usa el IVA general del negocio"
+                  />
+                </div>
+                <div>
+                  <label className="label" style={{ marginBottom: 0 }}>Unidad <span style={{ color: 'var(--text-tertiary)' }}>(opcional)</span></label>
+                  <input
+                    name="unit" list="unit-suggestions-create" className="input"
+                    value={form.unit ?? ''} onChange={handleChange}
+                    placeholder="unidad, kg, litro…"
+                  />
+                  <datalist id="unit-suggestions-create">
+                    <option value="unidad" /><option value="kg" /><option value="g" />
+                    <option value="litro" /><option value="ml" /><option value="hora" />
+                    <option value="m²" /><option value="docena" />
+                  </datalist>
+                </div>
+                <div>
+                  <label className="label" style={{ marginBottom: 0 }}>Código de unidad AFIP <span style={{ color: 'var(--text-tertiary)' }}>(opcional)</span></label>
+                  <input
+                    name="arcaUnitCode" type="number" step="1" className="input"
+                    value={form.arcaUnitCode ?? ''} onChange={handleChange}
+                    placeholder="Código numérico del catálogo Umed"
+                  />
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)', marginTop: 4 }}>
+                    No se valida contra un catálogo todavía — confirmá el código correcto contra el SDK de ARCA antes de usarlo en un comprobante real.
+                  </p>
+                </div>
+              </div>
+            </details>
           )}
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>

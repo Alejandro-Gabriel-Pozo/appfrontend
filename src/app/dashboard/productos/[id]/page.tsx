@@ -7,6 +7,7 @@ import { productsApi, companiesApi, extractErrorMessage } from '@/lib/api'
 import { isApiError } from '@/lib/apiErrors'
 import { useToast } from '@/context/ToastContext'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import { useBusinessModules } from '@/hooks/useBusinessModules'
 import type { Product, CreateProductInput, UpdateProductInput, ProductType, CompanyLink } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
@@ -25,7 +26,14 @@ function fmt(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
 }
 
-type ProductFormState = Omit<CreateProductInput, 'basePrice'> & { basePrice: number | '' }
+type ProductFormState = Omit<CreateProductInput, 'basePrice' | 'ivaRate' | 'arcaUnitCode'> & {
+  basePrice: number | ''
+  // '' es el mismo truco que basePrice para no forzar un valor mientras
+  // se tipea -- acá el resting value es null (D8: vacío = hereda del
+  // negocio), no 0.
+  ivaRate: number | '' | null
+  arcaUnitCode: number | '' | null
+}
 
 const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
   RAW_MATERIAL: 'Materia prima',
@@ -97,6 +105,7 @@ export default function ProductoDetailPage() {
   const { mutateAsync: updateProduct } = useUpdate<Product>()
   const { mutateAsync: deleteProductMutation } = useDelete<Product>()
   const invalidate = useInvalidate()
+  const modules = useBusinessModules()
 
   const [product, setProduct] = useState<Product | null>(null)
   const [components, setComponents] = useState<Product[]>([])
@@ -137,6 +146,9 @@ export default function ProductoDetailPage() {
         stockMinAlert: p.stockMinAlert,
         productType: p.productType,
         assembleOnDemand: p.assembleOnDemand,
+        ivaRate: p.ivaRate,
+        unit: p.unit,
+        arcaUnitCode: p.arcaUnitCode,
       })
     } catch (err) {
       if (isApiError(err) && err.code === 'PRODUCT_NOT_FOUND') {
@@ -174,7 +186,14 @@ export default function ProductoDetailPage() {
     if (!product || !form) return
     setSaving(true)
     try {
-      const body: UpdateProductInput = { ...form, basePrice: Number(form.basePrice) || 0 }
+      // ivaRate/arcaUnitCode van a null (no a 0) si quedaron '' -- "vacío"
+      // es "hereda del negocio"/"sin código", no "cero" (ver ProductFormState).
+      const body: UpdateProductInput = {
+        ...form,
+        basePrice: Number(form.basePrice) || 0,
+        ivaRate: form.ivaRate === '' || form.ivaRate == null ? null : Number(form.ivaRate),
+        arcaUnitCode: form.arcaUnitCode === '' || form.arcaUnitCode == null ? null : Number(form.arcaUnitCode),
+      }
       const { data: updated } = await updateProduct({ resource: 'productos', id: product.id, values: body })
       toast('Producto actualizado', 'success')
       setProduct(updated)
@@ -386,6 +405,48 @@ export default function ProductoDetailPage() {
                     </span>
                   </span>
                 </label>
+              )}
+
+              {(modules === null || modules['FACTURACION'] !== false) && (
+                <details className="card" style={{ padding: 0 }}>
+                  <summary style={{ cursor: 'pointer', padding: '10px 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Datos fiscales (AFIP/ARCA)
+                  </summary>
+                  <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <label className="label" style={{ marginBottom: 0 }}>IVA del producto (%) <span style={{ color: 'var(--text-tertiary)' }}>(opcional)</span></label>
+                      <input
+                        name="ivaRate" type="number" step="0.01" min={0} className="input"
+                        value={form.ivaRate ?? ''} onChange={handleFormChange}
+                        placeholder="Vacío = usa el IVA general del negocio"
+                      />
+                    </div>
+                    <div>
+                      <label className="label" style={{ marginBottom: 0 }}>Unidad <span style={{ color: 'var(--text-tertiary)' }}>(opcional)</span></label>
+                      <input
+                        name="unit" list="unit-suggestions-edit" className="input"
+                        value={form.unit ?? ''} onChange={handleFormChange}
+                        placeholder="unidad, kg, litro…"
+                      />
+                      <datalist id="unit-suggestions-edit">
+                        <option value="unidad" /><option value="kg" /><option value="g" />
+                        <option value="litro" /><option value="ml" /><option value="hora" />
+                        <option value="m²" /><option value="docena" />
+                      </datalist>
+                    </div>
+                    <div>
+                      <label className="label" style={{ marginBottom: 0 }}>Código de unidad AFIP <span style={{ color: 'var(--text-tertiary)' }}>(opcional)</span></label>
+                      <input
+                        name="arcaUnitCode" type="number" step="1" className="input"
+                        value={form.arcaUnitCode ?? ''} onChange={handleFormChange}
+                        placeholder="Código numérico del catálogo Umed"
+                      />
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)', marginTop: 4 }}>
+                        No se valida contra un catálogo todavía — confirmá el código correcto contra el SDK de ARCA antes de usarlo en un comprobante real.
+                      </p>
+                    </div>
+                  </div>
+                </details>
               )}
 
               <button type="submit" disabled={saving || !form.name || Number(form.basePrice) < 0} className="btn-primary">

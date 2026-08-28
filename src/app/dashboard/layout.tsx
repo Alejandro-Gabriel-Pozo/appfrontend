@@ -9,7 +9,8 @@ import routerProvider from '@refinedev/nextjs-router/app'
 import { ToastProvider, useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import { useIsManagement } from '@/hooks/useAuthRole'
-import { businessModulesApi, systemApi, type DeadLetterEvent } from '@/lib/api'
+import { useBusinessModules } from '@/hooks/useBusinessModules'
+import { systemApi, type DeadLetterEvent } from '@/lib/api'
 import { dataProvider } from '@/lib/refine/dataProvider'
 import { createAuthProvider } from '@/lib/refine/authProvider'
 import SystemRail from '@/components/SystemRail'
@@ -325,22 +326,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  // null mientras carga (o si falla el fetch) — con null no se oculta nada,
-  // el gate real ya lo hace el backend (402 MODULE_NOT_ENABLED); esto es
-  // solo para no mostrar en el nav un módulo que el negocio no tiene.
-  const [modules, setModules] = useState<Record<string, boolean> | null>(null)
+  const modules = useBusinessModules()
 
   useEffect(() => {
     if (isLoading) return
     if (!isAuthenticated) router.push('/login')
   }, [isLoading, isAuthenticated, router])
-
-  useEffect(() => {
-    if (!isAuthenticated) return
-    businessModulesApi.get()
-      .then(({ modules }) => setModules(modules))
-      .catch(() => setModules(null))
-  }, [isAuthenticated])
 
   const visibleNav = NAV.filter(
     item =>
