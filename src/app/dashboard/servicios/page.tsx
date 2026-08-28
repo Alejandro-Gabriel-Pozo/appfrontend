@@ -20,7 +20,11 @@ type FormState = {
   name: string
   categoryId: string
   description: string
-  bookingMode: BookingMode
+  // null = sin elegir todavía -- sin opción pre-seleccionada (28/08/2026,
+  // diseno-taxonomia-tipos-reserva-2026-08-28.md §3). Antes arrancaba en
+  // 'slot' ya tildado: quien no tocaba el selector se quedaba con ese modo
+  // sin haberlo elegido.
+  bookingMode: BookingMode | null
   durationMinutes: number | null
   // '' mientras se tipea (18/08/2026, pedido del dueño) -- ver
   // ProductFormState en dashboard/productos/page.tsx para el mismo criterio.
@@ -28,13 +32,34 @@ type FormState = {
 }
 
 const EMPTY: FormState = {
-  name: '', categoryId: '', description: '', bookingMode: 'slot', durationMinutes: 30, price: '',
+  name: '', categoryId: '', description: '', bookingMode: null, durationMinutes: null, price: '',
 }
 
 const MODE_LABEL: Record<BookingMode, string> = {
   slot: 'Turno (duración fija)',
   block: 'Bloque (inicio/fin libre)',
-  event: 'Evento (horario fijo)',
+  event: 'Evento (bloque único, precio plano)',
+}
+
+/**
+ * Selector nombrado de `bookingMode`, copy contextual al `isExclusive` de
+ * la categoría elegida -- diseno-taxonomia-tipos-reserva-2026-08-28.md §3b.
+ * `is_exclusive` es de la CATEGORÍA (uniforme dentro de ella, no se repite
+ * la pregunta acá), `booking_mode` es del SERVICIO -- este selector solo
+ * controla el segundo.
+ */
+function bookingModeOptions(isExclusive: boolean): Array<{ value: BookingMode; title: string; hint: string }> {
+  return isExclusive
+    ? [
+        { value: 'slot',  title: 'Con horario fijo',                  hint: 'Turno de peluquería, spa, consultorio.' },
+        { value: 'block', title: 'Por rango de fechas',                hint: 'Estadía / alquiler multi-día (auto, equipo).' },
+        { value: 'event', title: 'Bloque único, precio plano',         hint: 'Evento — bloquea el espacio completo.' },
+      ]
+    : [
+        { value: 'slot',  title: 'Con horario fijo, cupo compartido',  hint: 'Clase grupal con horario fijo.' },
+        { value: 'block', title: 'Por rango de fechas, cupo compartido', hint: 'Alquiler de varias unidades por día.' },
+        { value: 'event', title: 'Bloque único, cupo compartido',      hint: 'Tour / salida grupal.' },
+      ]
 }
 
 export default function ServiciosPage() {
@@ -91,6 +116,13 @@ export default function ServiciosPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    // Sin modo elegido -- no se completa el alta (mismo criterio que
+    // isExclusive en Categorías). El botón ya queda disabled en este caso,
+    // esto es el guard real.
+    if (form.bookingMode === null) {
+      toast('Elegí cómo se reserva este servicio', 'error')
+      return
+    }
     setSubmitting(true)
     setFieldErrors({})
     try {
@@ -134,6 +166,7 @@ export default function ServiciosPage() {
   }
 
   const getCatName = (id: string) => categories.find(c => c.id === id)?.name ?? id
+  const selectedCategory = categories.find(c => c.id === form.categoryId) ?? null
 
   return (
     <div className={`zulu`} style={{ margin: -24, padding: 32, minHeight: 'calc(100% + 48px)' }}>
@@ -234,17 +267,49 @@ export default function ServiciosPage() {
             {fieldErrors['categoryId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['categoryId']}</p>}
           </div>
 
+          {/* Selector nombrado -- diseno-taxonomia-tipos-reserva-2026-08-28.md
+              §3b. Copy contextual al is_exclusive de la categoría elegida
+              (uniforme dentro de ella); sin categoría todavía, no hay de
+              dónde sacar ese contexto -- se pide elegir categoría primero
+              en vez de mostrar opciones que después podrían no aplicar. */}
           <div>
-            <label className="label">Modo de reserva</label>
-            <select
-              className="input"
-              value={form.bookingMode}
-              onChange={e => setForm(f => ({ ...f, bookingMode: e.target.value as BookingMode }))}
-            >
-              {(Object.keys(MODE_LABEL) as BookingMode[]).map(m => (
-                <option key={m} value={m}>{MODE_LABEL[m]}</option>
-              ))}
-            </select>
+            <label className="label">¿Cómo se reserva este servicio?</label>
+            {!selectedCategory ? (
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Elegí una categoría arriba primero.</p>
+            ) : (
+              <div className="space-y-2">
+                {bookingModeOptions(selectedCategory.isExclusive).map(opt => (
+                  <label
+                    key={opt.value}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13,
+                      color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: 10,
+                      background: form.bookingMode === opt.value ? 'var(--surface-4)' : 'transparent',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="bookingMode"
+                      checked={form.bookingMode === opt.value}
+                      onChange={() => setForm(f => ({ ...f, bookingMode: opt.value }))}
+                      style={{ accentColor: 'var(--accent)', width: 16, height: 16, marginTop: 2 }}
+                    />
+                    <span>
+                      {opt.title}
+                      <br />
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{opt.hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {/* Resumen siempre visible, nunca en tooltip ni colapsado -- el
+                nombre ayuda a elegir, nunca reemplaza el valor real guardado. */}
+            <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+              → Exclusivo: {selectedCategory ? (selectedCategory.isExclusive ? 'sí' : 'no, cupo compartido') : '—'}
+              {' · '}Modo: {form.bookingMode ?? '(sin elegir todavía)'}
+              {form.bookingMode === 'slot' && ` · Duración fija: ${form.durationMinutes ?? '—'} min`}
+            </p>
           </div>
 
           {form.bookingMode === 'slot' && (
@@ -293,7 +358,7 @@ export default function ServiciosPage() {
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancelar</button>
-            <button type="submit" disabled={submitting} className="btn-primary flex-1">
+            <button type="submit" disabled={submitting || form.bookingMode === null} className="btn-primary flex-1">
               {submitting ? <span className="spinner" /> : null}
               {editing ? 'Guardar cambios' : 'Crear servicio'}
             </button>

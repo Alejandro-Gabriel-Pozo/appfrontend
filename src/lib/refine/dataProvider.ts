@@ -74,6 +74,13 @@ const resources: Record<string, ResourceAdapter> = {
         name: data.name as string,
         description: data.description as string | undefined,
         fields: (data.fields as Category['fields']) ?? [],
+        // 28/08/2026 -- antes de este fix, isLodging/isExclusive se
+        // perdían en el alta (este adapter los descartaba aunque el form
+        // los mandara): solo sobrevivían si se editaba la categoría
+        // después de creada. isExclusive obligatorio desde
+        // diseno-taxonomia-tipos-reserva-2026-08-28.md §5.
+        isLodging: data.isLodging as boolean | undefined,
+        isExclusive: data.isExclusive as boolean,
       }),
     update: (id, data) => categoriesApi.update(id, data),
     deleteOne: id => categoriesApi.remove(id),

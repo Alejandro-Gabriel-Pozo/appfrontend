@@ -14,6 +14,14 @@ export interface Category {
   active: boolean
   /** Backlog E1 — true = categoría de alojamiento (Reservas + Estadías), false = servicios (Turnos). */
   isLodging: boolean
+  /**
+   * D8-taxonomía (28/08/2026, diseno-taxonomia-tipos-reserva-2026-08-28.md)
+   * — true = una reserva a la vez (checkAvailability binaria). false =
+   * cupo compartido (varias reservas hasta `capacity`). Obligatorio desde
+   * este cambio: antes no tenía NINGÚN control en la UI y quedaba en
+   * `false` sin que nadie lo hubiera elegido (caso real: Peluquería/Spa).
+   */
+  isExclusive: boolean
 }
 
 export interface WasteReason {

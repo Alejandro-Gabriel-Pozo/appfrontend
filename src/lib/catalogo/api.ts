@@ -5,9 +5,9 @@ import type { Category, WasteReason, ConsumptionDestination } from './types'
 // ─── Categories ───────────────────────────────────────────────────────────────
 export const categoriesApi = {
   list: () => apiFetch<Category[]>('/api/categories'),
-  create: (body: { name: string; description?: string; fields: Category['fields'] }) =>
+  create: (body: { name: string; description?: string; fields: Category['fields']; isLodging?: boolean; isExclusive: boolean }) =>
     apiFetch<Category>('/api/categories', { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: string, body: Partial<{ name: string; description: string; fields: Category['fields']; active: boolean }>) =>
+  update: (id: string, body: Partial<{ name: string; description: string; fields: Category['fields']; active: boolean; isLodging: boolean; isExclusive: boolean }>) =>
     apiFetch<Category>(`/api/categories/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   remove: (id: string) =>
     apiFetch<void>(`/api/categories/${id}`, { method: 'DELETE' }),

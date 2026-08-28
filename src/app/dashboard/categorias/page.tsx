@@ -36,7 +36,14 @@ export default function CategoriasPage() {
 
   const [modalOpen, setModalOpen]     = useState(false)
   const [editing, setEditing]         = useState<Category | null>(null)
-  const [form, setForm]               = useState({ name: '', description: '', isLodging: false })
+  // isExclusive arranca en null -- sin opción pre-seleccionada (28/08/2026,
+  // diseno-taxonomia-tipos-reserva-2026-08-28.md §2/§3): el alta no se
+  // completa sin elegir explícitamente. Antes de este cambio este campo no
+  // tenía NINGÚN control, quedaba siempre en `false` sin que nadie lo
+  // eligiera (caso real: Peluquería/Spa cargadas como cupo compartido).
+  const [form, setForm] = useState<{ name: string; description: string; isLodging: boolean; isExclusive: boolean | null }>(
+    { name: '', description: '', isLodging: false, isExclusive: null },
+  )
   const [fieldDrafts, setFieldDrafts] = useState<FieldDraft[]>([])
   const [submitting, setSubmitting]   = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
@@ -45,14 +52,14 @@ export default function CategoriasPage() {
 
   function openCreate() {
     setEditing(null)
-    setForm({ name: '', description: '', isLodging: false })
+    setForm({ name: '', description: '', isLodging: false, isExclusive: null })
     setFieldDrafts([])
     setModalOpen(true)
   }
 
   function openEdit(c: Category) {
     setEditing(c)
-    setForm({ name: c.name, description: c.description ?? '', isLodging: c.isLodging })
+    setForm({ name: c.name, description: c.description ?? '', isLodging: c.isLodging, isExclusive: c.isExclusive })
     setFieldDrafts(c.fields.map(f => ({ ...f, _key: crypto.randomUUID() })))
     setModalOpen(true)
   }
@@ -90,20 +97,28 @@ export default function CategoriasPage() {
       toast(fieldsErr, 'error')
       return
     }
+    // Sin opción elegida en "¿cómo se ocupan los recursos?" -- no se
+    // completa el alta (diseno-taxonomia-tipos-reserva-2026-08-28.md §3).
+    // El botón ya queda disabled en este caso, esto es el guard real.
+    if (form.isExclusive === null) {
+      toast('Elegí cómo se ocupan los recursos de esta categoría', 'error')
+      return
+    }
     const fields: CategoryField[] = fieldDrafts.map(({ _key, ...f }) => ({
       ...f,
       ...(f.type === 'select' && { options: (f.options ?? []).map(o => o.trim()).filter(Boolean) }),
     }))
+    const values = { ...form, isExclusive: form.isExclusive, fields }
     setSubmitting(true)
     try {
       if (editing) {
         // UPDATE: no aplica límite de plan
-        await updateCategory({ resource: 'categorias', id: editing.id, values: { ...form, fields } })
+        await updateCategory({ resource: 'categorias', id: editing.id, values })
         toast('Categoría actualizada', 'success')
         setModalOpen(false)
       } else {
         // CREATE: puede fallar con 402, 503 o error genérico
-        await createCategory({ resource: 'categorias', values: { ...form, fields } })
+        await createCategory({ resource: 'categorias', values })
         toast('Categoría creada', 'success')
         setModalOpen(false)
       }
@@ -191,6 +206,7 @@ export default function CategoriasPage() {
               </div>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{c.fields.length} campo{c.fields.length !== 1 ? 's' : ''} definido{c.fields.length !== 1 ? 's' : ''}</p>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{c.isLodging ? 'Alojamiento — Reservas/Estadías' : 'Servicio — Turnos'}</p>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{c.isExclusive ? 'Exclusivo' : 'Cupo compartido'}</p>
               <div className="flex gap-2 mt-auto pt-2" style={{ borderTop: '1px solid var(--border)' }}>
                 <button onClick={() => openEdit(c)} className="btn-secondary text-xs py-1.5 flex-1">Editar</button>
                 <button onClick={() => setDeleteTarget(c)} className="btn-mini btn-mini-clay" style={{ padding: '7px 12px' }}>Eliminar</button>
@@ -236,6 +252,64 @@ export default function CategoriasPage() {
                   </span>
                 </span>
               </label>
+
+              {/* Selector nombrado -- diseno-taxonomia-tipos-reserva-2026-08-28.md
+                  §2/§3. isLodging (arriba) es pricing, ortogonal, queda
+                  afuera. Sin opción pre-seleccionada. */}
+              <div>
+                <label className="label" style={{ marginBottom: 6 }}>¿Cómo se ocupan los recursos de esta categoría?</label>
+                <div className="space-y-2">
+                  <label
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13,
+                      color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: 10,
+                      background: form.isExclusive === true ? 'var(--surface-4)' : 'transparent',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="isExclusive"
+                      checked={form.isExclusive === true}
+                      onChange={() => setForm(f => ({ ...f, isExclusive: true }))}
+                      style={{ accentColor: 'var(--accent)', width: 16, height: 16, marginTop: 2 }}
+                    />
+                    <span>
+                      Exclusivo — una reserva a la vez
+                      <br />
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+                        Ej: habitaciones, sillas de peluquería, consultorios, alquiler de auto.
+                      </span>
+                    </span>
+                  </label>
+                  <label
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13,
+                      color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: 10,
+                      background: form.isExclusive === false ? 'var(--surface-4)' : 'transparent',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="isExclusive"
+                      checked={form.isExclusive === false}
+                      onChange={() => setForm(f => ({ ...f, isExclusive: false }))}
+                      style={{ accentColor: 'var(--accent)', width: 16, height: 16, marginTop: 2 }}
+                    />
+                    <span>
+                      Cupo compartido — varias reservas hasta un límite
+                      <br />
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+                        Ej: clases grupales, tours, dormis compartidos.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+                {/* Resumen siempre visible, nunca en tooltip ni colapsado --
+                    el nombre ayuda a elegir, nunca reemplaza el valor real. */}
+                <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                  → is_exclusive: {form.isExclusive === null ? '(sin elegir todavía)' : form.isExclusive ? 'true' : 'false'}
+                </p>
+              </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -319,7 +393,7 @@ export default function CategoriasPage() {
 
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancelar</button>
-                <button type="submit" disabled={submitting} className="btn-primary flex-1">
+                <button type="submit" disabled={submitting || form.isExclusive === null} className="btn-primary flex-1">
                   {submitting ? <span className="spinner" /> : null}
                   {editing ? 'Guardar cambios' : 'Crear'}
                 </button>
