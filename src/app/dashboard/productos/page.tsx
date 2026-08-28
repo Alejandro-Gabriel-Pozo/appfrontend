@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTable, useCreate, useInvalidate } from '@refinedev/core'
-import { extractErrorMessage, productsApi, wasteReasonsApi } from '@/lib/api'
-import type { Product, CreateProductInput, WasteReason, ProductType } from '@/lib/types'
+import { extractErrorMessage, productsApi, wasteReasonsApi, consumptionDestinationsApi } from '@/lib/api'
+import type { Product, CreateProductInput, WasteReason, ConsumptionDestination, ProductType } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
@@ -84,13 +84,14 @@ function ProductModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const field = (label: string, name: keyof CreateProductInput, type: string = 'text') => (
+  const field = (label: string, name: keyof CreateProductInput, type: string = 'text', required = false) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <label className="label" style={{ marginBottom: 0 }}>{label}</label>
       <input
         name={name}
         type={type}
         className="input"
+        required={required}
         value={type === 'checkbox' ? undefined : (form[name] as string | number) ?? ''}
         checked={type === 'checkbox' ? (form[name] as boolean) : undefined}
         onChange={handleChange}
@@ -113,9 +114,14 @@ function ProductModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {field('Nombre *', 'name')}
-          {field('Precio base *', 'basePrice', 'number')}
-          {field('SKU', 'sku')}
+          {field('Nombre *', 'name', 'text', true)}
+          {field('Precio base *', 'basePrice', 'number', true)}
+          {/* 27/08/2026, auditoría de columnas obligatorias (docs/pendientes-2026-08-27.md):
+              un producto sin SKU no debería poder existir -- ya lo exige
+              CreateProductSchema (Zod) y products.sku (NOT NULL en la
+              base); el asterisco + required acá evita el viaje redondo al
+              servidor solo para descubrirlo. */}
+          {field('SKU *', 'sku', 'text', true)}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label className="label" style={{ marginBottom: 0 }}>Descripción</label>
             <textarea
@@ -293,6 +299,106 @@ function WasteModal({ product, onClose, onDone }: { product: Product; onClose: (
   )
 }
 
+// ─── Modal Registrar consumo interno ───────────────────────────────────────────
+// 27/08/2026, pendientes-2026-08-27.md — gemelo exacto de WasteModal, adoptado
+// de `proyecto script` (DESTINOS_CONSUMO). POST /api/products/stock/consumption
+// — solo para productos sin variantes acá, mismo criterio que WasteModal.
+function ConsumptionModal({ product, onClose, onDone }: { product: Product; onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast()
+  const [destinations, setDestinations] = useState<ConsumptionDestination[]>([])
+  const [destinationId, setDestinationId] = useState('')
+  const [quantity, setQuantity] = useState(1)
+  const [notes, setNotes] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    queueMicrotask(async () => {
+      try {
+        setDestinations(await consumptionDestinationsApi.list())
+      } catch (err) {
+        toast(extractErrorMessage(err), 'error')
+      } finally {
+        setLoading(false)
+      }
+    })
+  }, [toast])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      await productsApi.recordConsumption({
+        productId: product.id,
+        quantity,
+        consumptionDestinationId: destinationId,
+        notes: notes.trim() || undefined,
+      })
+      toast('Consumo registrado', 'success')
+      onDone()
+      onClose()
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="card" style={{ width: '100%', maxWidth: 420, padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Registrar consumo — {product.name}</h2>
+          <button onClick={onClose} style={{ color: 'var(--text-tertiary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
+        </div>
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          Stock actual: <span className="mono" style={{ color: 'var(--text-secondary)' }}>{product.stockQuantity}</span>
+        </p>
+
+        {loading ? (
+          <div className="h-24 rounded-lg skeleton" />
+        ) : destinations.length === 0 ? (
+          <p className="text-sm" style={{ color: 'var(--warning)' }}>
+            No hay destinos de consumo cargados. Creá uno primero en la sección Destinos de Consumo.
+          </p>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label className="label">Destino</label>
+              <select className="input" value={destinationId} onChange={e => setDestinationId(e.target.value)} required>
+                <option value="">Elegí un destino…</option>
+                {destinations.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Cantidad</label>
+              <input
+                type="number" className="input" min={1} max={product.stockQuantity || undefined}
+                value={quantity} onChange={e => setQuantity(Math.max(1, Number(e.target.value)))} required
+              />
+            </div>
+            <div>
+              <label className="label">Notas <span style={{ color: 'var(--text-tertiary)' }}>(opcional)</span></label>
+              <textarea className="input resize-none" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observaciones…" />
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+              <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+              <button type="submit" disabled={submitting || !destinationId} className="btn-primary">
+                {submitting ? <span className="spinner" /> : null}
+                Registrar consumo
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Modal Registrar producción ────────────────────────────────────────────────
 // POST /api/products/stock/production — solo para productos COMPOSITE con
 // assembleOnDemand=false (necesitan stock propio producido de antemano).
@@ -379,6 +485,7 @@ export default function ProductosPage() {
 
   const [modal, setModal] = useState(false)
   const [wasteTarget, setWasteTarget] = useState<Product | null>(null)
+  const [consumptionTarget, setConsumptionTarget] = useState<Product | null>(null)
   const [productionTarget, setProductionTarget] = useState<Product | null>(null)
   const [search, setSearch] = useState('')
 
@@ -476,6 +583,9 @@ export default function ProductosPage() {
                       {!p.hasVariants && (
                         <button onClick={() => setWasteTarget(p)} title="Registrar merma" className="btn-mini btn-mini-neutral">Merma</button>
                       )}
+                      {!p.hasVariants && (
+                        <button onClick={() => setConsumptionTarget(p)} title="Registrar consumo interno" className="btn-mini btn-mini-neutral">Consumo</button>
+                      )}
                       {p.productType === 'COMPOSITE' && !p.assembleOnDemand && (
                         <button onClick={() => setProductionTarget(p)} title="Registrar producción" className="btn-mini btn-mini-sage">Producir</button>
                       )}
@@ -497,6 +607,15 @@ export default function ProductosPage() {
         <WasteModal
           product={wasteTarget}
           onClose={() => setWasteTarget(null)}
+          onDone={() => invalidate({ resource: 'productos', invalidates: ['list'] })}
+        />
+      )}
+
+      {/* Modal consumo interno */}
+      {consumptionTarget && (
+        <ConsumptionModal
+          product={consumptionTarget}
+          onClose={() => setConsumptionTarget(null)}
           onDone={() => invalidate({ resource: 'productos', invalidates: ['list'] })}
         />
       )}

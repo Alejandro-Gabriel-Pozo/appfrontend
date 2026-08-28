@@ -1,6 +1,6 @@
 'use client'
 import { apiFetch } from '../http'
-import type { RecordWasteInput } from '../catalogo/types'
+import type { RecordWasteInput, RecordConsumptionInput } from '../catalogo/types'
 import type { CompanyProduct } from '../empresa/types'
 import type {
   Product, ProductVariant, CreateProductInput, UpdateProductInput,
@@ -18,6 +18,9 @@ export const productsApi = {
   remove: (id: string)                => apiFetch<void>(`/api/products/${id}`, { method: 'DELETE' }),
   recordWaste: (body: RecordWasteInput) =>
     apiFetch<unknown>('/api/products/stock/waste', { method: 'POST', body: JSON.stringify(body) }),
+  /** 27/08/2026, pendientes-2026-08-27.md — gemelo de recordWaste. */
+  recordConsumption: (body: RecordConsumptionInput) =>
+    apiFetch<unknown>('/api/products/stock/consumption', { method: 'POST', body: JSON.stringify(body) }),
   recordProduction: (body: RecordProductionInput) =>
     apiFetch<unknown>('/api/products/stock/production', { method: 'POST', body: JSON.stringify(body) }),
   companyCatalog: () => apiFetch<CompanyProduct[]>('/api/products/company-catalog'),

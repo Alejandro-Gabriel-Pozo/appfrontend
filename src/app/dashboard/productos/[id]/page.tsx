@@ -330,8 +330,8 @@ export default function ProductoDetailPage() {
                   <input name="basePrice" type="number" step="0.01" className="input" value={form.basePrice} onChange={handleFormChange} />
                 </div>
                 <div>
-                  <label className="label">SKU</label>
-                  <input name="sku" className="input" value={form.sku ?? ''} onChange={handleFormChange} />
+                  <label className="label">SKU *</label>
+                  <input name="sku" className="input" value={form.sku ?? ''} onChange={handleFormChange} required />
                 </div>
               </div>
               <div>
