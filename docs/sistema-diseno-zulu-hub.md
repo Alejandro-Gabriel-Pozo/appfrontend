@@ -1,7 +1,9 @@
 # Sistema de diseño — ZULU Hub
 
 - **Fecha:** 2026-08-28
-- **Estado:** especificación aceptada por el dueño, **sin implementar**.
+- **Estado:** especificación aceptada por el dueño. **Sin implementar: 0 de 7 fases
+  ejecutadas, ninguna pantalla migrada, ningún token cambiado.** Lo que se ve en
+  producción sigue siendo el bloque `.zulu` navy + cian de `globals.css`.
 - **Reemplaza a:** `sistema-diseno-bastion.md` (histórico) y **al bloque `.zulu` actual de
   `src/app/globals.css`** (guía del 23/08/2026 — ver §1, conflicto explícito).
 - **Corriente de trabajo:** Fases V1–V7, parte del plan activo

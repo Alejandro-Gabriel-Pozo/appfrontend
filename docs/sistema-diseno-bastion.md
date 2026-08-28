@@ -1,4 +1,31 @@
-# Sistema de diseño "Bastión" — Guía para Claude Code
+# Sistema de diseño "Bastión" — HISTÓRICO, no usar
+
+> ## ⛔ Documento superado dos veces. No seguir estas instrucciones.
+>
+> - **23/08/2026** — reemplazado por la guía ZULU (navy + cian único, sin color
+>   por módulo), implementada en el bloque `.zulu` de `src/app/globals.css`.
+> - **28/08/2026** — esa guía a su vez fue reemplazada por
+>   **[`sistema-diseno-zulu-hub.md`](sistema-diseno-zulu-hub.md)**, que es la
+>   fuente de verdad vigente. Boceto: [`zulu-hub-sketch.html`](zulu-hub-sketch.html).
+>
+> **Por qué se conserva:** el sistema del 28/08 recupera el *mecanismo* que
+> Bastión tenía y ZULU había descartado — un color por vertical, brass para
+> reservas y clay para comercio. Entender por qué se fue y por qué volvió
+> requiere poder leer este documento.
+>
+> **Lo que NO se recupera son los valores.** Los hexes del sistema vigente son
+> distintos de los de acá (brass `#B8892E` vs `#B8935F` de Bastión; base blanca
+> vs el `#FAF7F0` de pergamino), y están elegidos con contraste medido, no por
+> apariencia. Copiar un hex de este archivo es un error.
+>
+> Todo lo de abajo queda tal como estaba, como registro. La instrucción original
+> —"pegarle este archivo completo a Claude Code al pedir una pantalla nueva"— ya
+> no aplica: apuntaba a un sistema que se reemplazó.
+
+---
+
+<details>
+<summary>Contenido histórico (28/08/2026)</summary>
 
 Sistema visual a usar en pantallas nuevas del dashboard admin (`src/app/dashboard/**`).
 No reemplaza automáticamente el diseño oscuro que ya tienen las pantallas migradas a
@@ -187,3 +214,5 @@ Con esto, las 14 pantallas de ABM/gestión del dashboard (+ la subpágina de
 variantes de Productos) tienen Bastión aplicado. Quedan sin migrar el shell
 compartido (sidebar/topbar) y dos componentes de uso puntual con texto sin
 retintar pero legible (`ResourceLockPicker.tsx`) — ver nota en el código.
+
+</details>

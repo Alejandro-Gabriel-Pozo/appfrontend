@@ -48,11 +48,73 @@ archivos de 600+ líneas con todos los dominios mezclados).
   backend igual la valida en serio; esto solo evita mostrar un botón
   que el backend va a rechazar).
 
-**Las tipografías del sistema de diseño "Bastión" se cargan una sola
-vez, en `dashboard/layout.tsx`.** Una pantalla nueva del dashboard que
-use la clase `.bastion` NO necesita volver a importar
-`Fraunces`/`IBM_Plex_Sans`/`IBM_Plex_Mono` — las variables CSS ya
+**Las tipografías se cargan una sola vez, en `dashboard/layout.tsx`.** Una
+pantalla nueva del dashboard que use la clase `.zulu` NO necesita volver a
+importar `Space_Grotesk`/`IBM_Plex_Sans`/`IBM_Plex_Mono` — las variables
+`--font-zulu-display` / `--font-zulu-sans` / `--font-zulu-mono` ya
 cascadean desde el layout.
+
+*(Este párrafo decía `.bastion` y `Fraunces` hasta el 28/08/2026. Las dos
+cosas eran falsas desde la migración del 23/08: ningún `.tsx` usa
+`.bastion` — 0 ocurrencias — y la display es Space Grotesk. Ver la sección
+"Sistema de diseño" más abajo.)*
+
+## Sistema de diseño — ZULU Hub (normativo; el código todavía no lo refleja)
+
+**Fuente de verdad:** `docs/sistema-diseno-zulu-hub.md`.
+**Boceto de referencia:** `docs/zulu-hub-sketch.html` (se abre con doble click).
+**Corriente de trabajo:** Fases V1–V7, en
+`app-main/docs/plan-separacion-dominios-multirubro-2026-08-28.md` §16.
+
+Esta sección existe porque hay una brecha declarada entre lo que el código
+hace hoy y lo que el sistema manda. **Leer el spec antes de tocar color,
+tipografía o un componente compartido** — no alcanza con mirar cómo lo hace
+la pantalla de al lado.
+
+### Lo que rige hoy en el código (legado, se reemplaza en la Fase V2)
+
+El bloque `.zulu` de `src/app/globals.css` es **navy `#060a1f` + cian neón
+`#00e0ff`**, con un acento primario único y sin color por módulo. Sigue
+siendo lo que se ve en pantalla y no se toca fuera de la Fase V2.
+
+### Lo que manda el sistema nuevo
+
+Base **blanco / blanco cálido / negro / grafito**; **brass** para reservas y
+recursos; **clay** para comercio y POS; **sage** para estados positivos;
+**cian restringido al plano técnico**. Hexes y contrastes medidos: spec §4.
+
+**No es una extensión del sistema actual: es un reemplazo del token layer**,
+y da vuelta la polaridad de oscuro a claro. Revierte deliberadamente la guía
+del 23/08/2026 que está escrita en `globals.css:645-656` (decisión del dueño,
+28/08/2026, registrada en el spec §1). Tampoco es "volver a Bastión": los
+hexes son distintos (brass `#B8892E` acá vs `#B8935F` en Bastión).
+
+### Reglas que ya rigen para código nuevo, antes de la Fase V2
+
+1. **Cero hexadecimales en `.tsx`/`.ts`.** Si falta un token, se agrega al
+   sistema, no un `#RRGGBB` en la página. Hoy hay 21 en 10 archivos: es
+   deuda registrada, no un precedente.
+2. **Cero clases Tailwind de color crudas** (`bg-slate-800`, `text-emerald-400`).
+   Hoy hay 69, concentradas en `app/superadmin/*`, que nunca se migró.
+3. **Color nunca como única señal de estado.** Todo estado lleva label y
+   punto o icono, además del color.
+4. **No reasignar `.btn-mini-clay` / `.btn-mini-sage` sin revisar sus call
+   sites.** Hoy apuntan a `var(--danger)` (ROJO) y `var(--success)` —
+   repintarlos al clay/sage reales convertiría botones "Eliminar" en botones
+   de contexto comercio. Es el caso concreto del criterio 15 del spec: un
+   cambio de token no puede cambiar la semántica en silencio.
+5. **El texto de color es siempre el token `*-strong`**; sobre cualquier
+   superficie `*-soft` el texto es `--zulu-black`. Sale de medir contraste,
+   no de gusto (spec §4.3/§4.4).
+
+### Qué NO hacer todavía
+
+No migrar pantallas al sistema nuevo de a una. El orden es tokens y
+primitives (V2) → shell (V3) → pantallas (V4+). Repintar una pantalla suelta
+antes de eso deja el producto con dos sistemas conviviendo, que es
+exactamente lo que esta corriente viene a terminar.
+
+---
 
 ## Interacción — modal, panel o ruta dedicada (convención aplicada, no aspiracional)
 
