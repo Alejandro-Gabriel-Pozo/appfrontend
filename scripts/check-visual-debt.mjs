@@ -160,12 +160,12 @@ const REGLAS = [
     // con un color escrito a mano, no. Es lo que dejó pasar cuatro fases
     // de cian neón en drop-shadow y box-shadow.
     nombre: 'color crudo en reglas CSS (fuera de tokens)',
-    // V2.6.2c bajó de 12 a 6, y la decisión sobre los glows de 6 a 4:
-    // el halo de la marca pasó a --zulu-brand-glow (excepción sancionada,
-    // con nombre) y el del botón primario se eliminó. Los 4 que quedan
-    // están todos en styles.css, archivo muerto que se borra en V2.6.2d.
-    fase: 'medida en V2.6.1, los 4 restantes se van con styles.css en V2.6.2d',
-    max: 4,
+    // 12 -> 6 en V2.6.2c, -> 4 con la decisión sobre los glows (el halo de
+    // la marca pasó a --zulu-brand-glow, el del botón primario se eliminó),
+    // -> 0 en V2.6.2d al borrar styles.css. Vuelve a 0: si aparece un color
+    // literal en una regla que consume color, falla.
+    fase: 'saldada en V2.6.2d',
+    max: 0,
     hits: () => colores(isCss, 'css'),
     ayuda: 'Un color literal sólo puede aparecer declarando una custom property. ' +
            'Una regla que consume color pasa por var(--token).',
@@ -192,11 +192,11 @@ const REGLAS = [
     // vivos y en alcance: ApiSection 3, ResourceLockPicker 3, ApiBlock 2,
     // reportes 1.
     nombre: 'overlay blanco sin token — forma Tailwind',
-    // V2.6.2c bajó de 24 a 15 migrando los 9 vivos a --zulu-overlay-NN.
-    // Los 15 que quedan: 9 en styles.css (muerto, V2.6.2d) y 6 en
-    // superadmin (V5a). Ninguno en alcance hoy.
-    fase: 'medida en V2.6.2b, 15 restantes esperan V2.6.2d y V5(a)',
-    max: 15,
+    // 24 -> 15 en V2.6.2c migrando los 9 vivos a --zulu-overlay-NN, y
+    // -> 6 en V2.6.2d al borrar styles.css, que aportaba 9. Los 6 que
+    // quedan están todos en superadmin, que se migra entero en V5(a).
+    fase: 'medida en V2.6.2b, los 6 restantes son de superadmin (V5a)',
+    max: 6,
     hits: () => countActivo(/\b(?:bg|border|ring|divide|from|to|via)-white\/(?:\[[0-9.]+\]|[0-9]+)/g,
                             (f) => isTsx(f) || isCss(f)),
     ayuda: 'Mismo problema que la regla de arriba, otra sintaxis: blanco translúcido ' +
