@@ -389,7 +389,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             inset: sidebarOpen ? '0 auto 0 0' : undefined,
             zIndex: 40,
             width: 240,
-            background: 'var(--surface-1)',
+            background: 'var(--zulu-surface-shell)',
             borderRight: '1px solid var(--border)',
             display: 'flex',
             flexDirection: 'column',
@@ -397,7 +397,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             transform: sidebarOpen ? 'translateX(0)' : undefined,
             flexShrink: 0,
           }}
-          className={`sidebar-desktop${sidebarOpen ? ' sidebar-open' : ''}`}
+          className={`zulu-shell-dark sidebar-desktop${sidebarOpen ? ' sidebar-open' : ''}`}
         >
           {/* Lockup de marca */}
           <div

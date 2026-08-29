@@ -143,14 +143,17 @@ export default function BancoDePrimitives() {
         </h2>
         <p style={{ fontSize: 12, opacity: .55, marginBottom: 12, maxWidth: '70ch' }}>
           Acá se verifica <code>link-on-dark</code>, el foco sobre oscuro y el cian técnico, que son
-          las tres señales que sobre claro no funcionan.
+          las tres señales que sobre claro no funcionan. Solo se muestra lo que de verdad vive en el
+          sidebar: <code>SystemRail</code> está en el header (<code>layout.tsx:618</code>, fuera del
+          <code>&lt;aside&gt;</code> que va de la 400 a la 550), o sea sobre superficie clara. Ponerlo
+          acá daba un falso negativo de contraste — una superficie <code>*-soft</code> clara con el
+          texto blanco del scope oscuro.
         </p>
         <div className="zulu zulu-shell-dark" style={{ background: 'var(--zulu-surface-shell)', padding: 20, borderRadius: 12 }}>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
             <a href="#dark" style={{ color: 'var(--zulu-link)' }}>Link sobre oscuro</a>
             <button className="btn btn-ghost">Foco (tabulá)</button>
             <span className="system-rail-syncing">syncing</span>
-            <span className="system-rail-healthy">healthy</span>
             <span style={{ color: 'var(--zulu-technical)', fontFamily: 'var(--font-zulu-mono)', fontSize: 13 }}>
               api · telemetría
             </span>
