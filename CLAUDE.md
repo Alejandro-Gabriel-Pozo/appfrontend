@@ -95,7 +95,17 @@ hexes son distintos (brass `#B8892E` acá vs `#B8935F` en Bastión).
    sistema, no un `#RRGGBB` en la página. Hoy hay 21 en 10 archivos: es
    deuda registrada, no un precedente.
 2. **Cero clases Tailwind de color crudas** (`bg-slate-800`, `text-emerald-400`).
-   Hoy hay 69, concentradas en `app/superadmin/*`, que nunca se migró.
+   Medido el 29/08/2026 (V2.6.1): hay **93**, y **no** están concentradas en
+   `app/superadmin/*` — ahí vive el 31% (29). El 69% restante está repartido:
+   `styles.css` 24, `app/admin` 11, `ApiSection.tsx` 10, `ResourceLockPicker`
+   y `UpgradePrompt` 6 cada uno, `ToastContext.tsx` 4. *(Este punto decía "69,
+   concentradas en `app/superadmin/*`" y las dos mitades eran falsas. Contarlas
+   de nuevo antes de citar el número.)*
+   Dos consecuencias que importan más que el número: `ToastContext.tsx` es el
+   toast que usa toda la app y pinta con `bg-emerald-600`/`bg-amber-600`, fuera
+   del sistema de tokens y por debajo de AA (3.77 / 3.19). Y `src/styles.css`
+   **no lo importa nadie** — es un sistema de diseño oscuro entero, muerto, que
+   redefine `.card`, `.input`, `.btn-primary` y `.badge-*` con otros valores.
 3. **Color nunca como única señal de estado.** Todo estado lleva label y
    punto o icono, además del color.
 4. **No reasignar `.btn-mini-clay` / `.btn-mini-sage` sin revisar sus call

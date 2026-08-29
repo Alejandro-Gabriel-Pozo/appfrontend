@@ -25,20 +25,24 @@ const ALERTAS = ['alert-info', 'alert-warning', 'alert-danger', 'alert-success']
 const TOASTS = ['success', 'error', 'info'] as const
 
 /**
-  * Consumidores de `var(--danger*)` que V2.5 colapsa a un solo rojo.
-  *
-  * OJO: hasta el 29/08/2026 esta lista decía "cubiertos" y nombraba ocho,
-  * pero el componente sólo renderizaba cinco -- los otros tres eran texto
-  * en un párrafo, no elementos verificables. La lista quedó separada en
-  * renderizados / pendientes para que lo declarado y lo real coincidan.
-  * `toast error` pasó a renderizado con el hotfix del toast; los dos que
-  * faltan se agregan en V2.6.1, junto con el guard de rgba().
-  */
-const DANGER_RENDERIZADOS = [
-  'badge-cancelled', 'badge-del', 'alert-danger', 'btn-danger',
-  'system-rail-blocked', 'toast error',
+ * Consumidores del rojo, sacados del CSS -- no de memoria.
+ *
+ * Historia de esta lista, porque es el punto de V2.6.1: el comentario decía
+ * "17 consumidores", la pantalla nombraba ocho, y de esos ocho renderizaba
+ * cinco. Y uno de los ocho, "input inválido", NO EXISTE: no hay ninguna
+ * regla de estado inválido en globals.css. El banco declaraba cobertura
+ * sobre un componente inventado.
+ *
+ * La lista real salió de recorrer globals.css buscando `var(--danger*)` con
+ * el mismo escáner que usa el guard: 10 selectores, todos renderizados acá
+ * abajo. Si aparece uno nuevo en el CSS y no se agrega acá, esto vuelve a
+ * mentir -- revisarlo cada vez que se toque el rojo.
+ */
+const DANGER_EN_EL_CSS = [
+  'kpi-card-danger', 'kpi-trend.down', 'btn-danger', 'badge-del',
+  'badge-cancelled', 'response-block.error', 'alert-danger',
+  'system-rail-blocked', 'toast.error', 'btn-mini-danger',
 ]
-const DANGER_PENDIENTES = ['kpi-trend down', 'input inválido']
 
 function Bloque({ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }) {
   return (
@@ -106,6 +110,21 @@ function Inventario() {
       </Bloque>
 
       <Bloque
+        titulo="Consumidores del rojo que faltaban"
+        nota="kpi-card-danger vive en el borde de la tarjeta y se enciende al pasar el mouse; kpi-trend.down en la métrica; response-block.error en la respuesta de API. Ninguno de los tres estaba en el banco.">
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <div className="kpi-card kpi-card-danger" style={{ padding: 14, minWidth: 180 }}>
+            <div style={{ fontSize: 12, opacity: .6 }}>Cancelaciones</div>
+            <div className="kpi-value" style={{ fontSize: 26 }}>7</div>
+            <p className="kpi-trend down">▼ 12% vs. semana anterior</p>
+          </div>
+          <div className="response-block error" style={{ minWidth: 230 }}>
+            {'{ "error": "TENANT_NOT_FOUND" }'}
+          </div>
+        </div>
+      </Bloque>
+
+      <Bloque
         titulo="Toasts"
         nota="Regresión de V2.5 corregida acá: tenían fondo oscuro traslúcido compuesto sobre la página, y al invertir la polaridad toast.error cayó a 2.57. Ahora el relleno es opaco, así el contraste no depende del fondo. Se les fuerza position:static -- el resto (relleno, texto, icono) sale del CSS real.">
         <div style={{ display: 'grid', gap: 8 }}>
@@ -143,9 +162,8 @@ export default function BancoDePrimitives() {
           autenticación. No prueba la composición del shell — eso necesita sesión.
         </p>
         <p style={{ fontSize: 12, opacity: .5, marginTop: 6 }}>
-          Consumidores de <code>danger</code> renderizados acá: {DANGER_RENDERIZADOS.join(' · ')}.
-          <br />
-          Todavía NO renderizados (V2.6.1): {DANGER_PENDIENTES.join(' · ')}.
+          Los {DANGER_EN_EL_CSS.length} consumidores del rojo que hay en <code>globals.css</code>, todos
+          renderizados abajo: {DANGER_EN_EL_CSS.join(' · ')}.
         </p>
       </header>
 

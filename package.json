@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "lint:visual": "node scripts/check-visual-debt.mjs"
+    "lint:visual": "node scripts/check-visual-debt.mjs",
+    "test:visual": "node --test scripts/lib/*.test.mjs"
   },
   "dependencies": {
     "@refinedev/core": "^5.0.12",
