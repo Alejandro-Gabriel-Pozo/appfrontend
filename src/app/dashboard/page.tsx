@@ -65,7 +65,10 @@ function RecentReservations({ reservations, loading }: { reservations: Reservati
         <Link
           href="/dashboard/reservas"
           className="text-xs font-medium"
-          style={{ color: 'var(--zulu-status-emphasis)' }} /* TODO V2.6: énfasis tipográfico, no color semántico */
+          /* V2.6.4 — la auditoría V1 lo clasificó como "métrica destacada".
+             No lo es: es un hipervínculo ("Ver todas →"). El sistema ya
+             tiene token para eso, y es transversal por definición. */
+          style={{ color: 'var(--zulu-link)' }}
         >
           Ver todas →
         </Link>

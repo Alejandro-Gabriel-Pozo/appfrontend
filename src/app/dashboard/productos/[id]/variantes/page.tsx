@@ -291,11 +291,22 @@ export default function VariantesPage() {
                 <tr key={v.id}>
                   <td className="table-cell-primary">{v.name}</td>
                   <td className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{v.sku ?? '—'}</td>
-                  <td className="mono" style={{ fontWeight: 600, color: v.priceOverride !== null ? 'var(--zulu-status-emphasis)' /* TODO V2.6: origen del precio, con etiqueta 'Propio'/'Heredado' — no solo color */ : 'var(--success)' }}>
+                  {/*
+                    V2.6.4 — el origen del precio lo dice la ETIQUETA, no el
+                    color. Antes eran dos colores distintos (negro si era
+                    propio, verde si venía heredado) más un "(override)" que
+                    sólo aparecía en un caso: quien no supiera que el verde
+                    significaba "heredado" no tenía forma de deducirlo, y
+                    quien no distingue esos dos colores tampoco.
+                    Ahora las dos filas se ven igual y cada una dice qué es.
+                    "(override)" era jerga: se reemplaza por Propio/Heredado,
+                    que es la redacción que el propio TODO ya proponía.
+                  */}
+                  <td className="mono" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                     {fmt(v.priceOverride, basePrice)}
-                    {v.priceOverride !== null && (
-                      <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginLeft: 4 }}>(override)</span>
-                    )}
+                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginLeft: 4 }}>
+                      {v.priceOverride !== null ? 'Propio' : 'Heredado'}
+                    </span>
                   </td>
                   <td className="mono" style={{ color: v.stockQuantity <= v.stockMinAlert ? 'var(--warning)' : 'var(--text-secondary)' }}>
                     {v.stockQuantity}

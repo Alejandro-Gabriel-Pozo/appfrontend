@@ -419,7 +419,20 @@ export default function ReportesPage() {
                 <div><label className="label">Hasta</label><input type="datetime-local" value={underTo} onChange={e => setUnderTo(e.target.value)} className="input" /></div>
               </div>
               <div>
-                <label className="label">Threshold de subutilización (%): <span style={{ color: 'var(--zulu-status-emphasis)' }}>{threshold}%</span>{/* TODO V2.6: sage dentro de rango, brass cerca del límite, danger fuera */}</label>
+                {/*
+                  V2.6.4 — el TODO acá proponía "sage dentro de rango, brass
+                  cerca del límite, danger fuera". No aplica: esto no es un
+                  valor medido, es el número que el usuario ARRASTRA en un
+                  slider de 0 a 100 para definir el umbral. No hay dentro ni
+                  fuera de rango, así que esos tres colores comunicarían un
+                  juicio que el producto no hace.
+                  Es el caso de "métrica destacada": va con énfasis
+                  TIPOGRÁFICO -- mono y peso -- y color de texto normal.
+                */}
+                <label className="label">
+                  Threshold de subutilización (%):{' '}
+                  <span className="mono" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{threshold}%</span>
+                </label>
                 <input type="range" min={0} max={100} value={threshold} onChange={e => setThreshold(e.target.value)} className="w-full mt-1" style={{ accentColor: 'var(--zulu-form-control)' }} />
               </div>
             </div>

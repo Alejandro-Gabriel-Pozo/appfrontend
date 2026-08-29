@@ -138,12 +138,19 @@
   --zulu-notice:         var(--zulu-gray);
   --zulu-notice-border:  var(--zulu-line);
 
-  /* Énfasis provisorio — los 3 casos que la auditoría V1 §1.1 marcó como
-     ESTADO mal expresado con color (precio propio vs heredado, métrica
-     destacada, valor de threshold). Token puente: preserva el valor actual
-     para no cambiar el pixel, y marca los call sites para V2.6, donde se
-     decide QUÉ comunica cada uno — no sólo de qué color es. */
-  --zulu-status-emphasis:  var(--zulu-black);   /* V2.6 decide qué comunica cada caso */
+  /* `--zulu-status-emphasis` vivió acá desde V2.1 como token PUENTE: no
+     tenía significado propio, sólo preservaba el valor viejo y marcaba los
+     3 call sites que la auditoría V1 §1.1 señaló como estado mal expresado
+     con color, para decidirlos en V2.6.
+     V2.6.4 los resolvió y el token se borra -- un puente que sobrevive a su
+     motivo se convierte en un alias sin dueño, que es de dónde venía el
+     problema de `--accent`.
+     Dónde terminó cada uno, porque dos estaban mal clasificados:
+       "métrica destacada"  era un HIPERVÍNCULO   -> --zulu-link
+       "valor de threshold" era el número de un SLIDER, sin semántica de
+                            salud                 -> énfasis tipográfico
+       "precio propio vs heredado"                -> etiqueta Propio/Heredado
+                                                     y un solo color */
 
   /* Link sobre superficie OSCURA (sidebar negro, paneles grafito).
      Medido: #245A75 da 2.51 sobre negro y #163F54 da 1.68 — los dos fallan.
