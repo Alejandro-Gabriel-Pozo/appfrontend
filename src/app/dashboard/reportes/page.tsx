@@ -263,7 +263,7 @@ function AccountsReceivableManager() {
                 type="button"
                 onClick={handleInvoiceNow}
                 disabled={invoicingNow || entries.filter(e => e.status === 'PENDIENTE_FACTURAR').length === 0}
-                className="btn-mini btn-mini-sage"
+                className="btn-mini btn-mini-confirm"
                 title="Emite UN comprobante AFIP cubriendo todo lo pendiente de facturar de esta empresa ahora mismo"
               >
                 {invoicingNow ? <span className="spinner" /> : null} Facturar ahora
@@ -311,7 +311,7 @@ function AccountsReceivableManager() {
                   <button
                     onClick={() => handleMarkCollected(ar)}
                     disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-sage"
+                    className="btn-mini btn-mini-confirm"
                   >
                     Marcar cobrado
                   </button>

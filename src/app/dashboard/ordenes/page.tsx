@@ -284,7 +284,7 @@ export default function OrdenesPage() {
                           <button
                             onClick={() => doAction(o.id, 'confirm')}
                             disabled={actionLoading !== null}
-                            className="btn-mini btn-mini-sage"
+                            className="btn-mini btn-mini-confirm"
                           >
                             {actionLoading === `${o.id}-confirm` ? '…' : 'Confirmar'}
                           </button>
@@ -314,7 +314,7 @@ export default function OrdenesPage() {
                           <button
                             onClick={() => doAction(o.id, 'cancel')}
                             disabled={actionLoading !== null}
-                            className="btn-mini btn-mini-clay"
+                            className="btn-mini btn-mini-danger"
                           >
                             {actionLoading === `${o.id}-cancel` ? '…' : 'Cancelar'}
                           </button>

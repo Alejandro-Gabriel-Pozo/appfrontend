@@ -229,7 +229,7 @@ export default function TurnosPage() {
                           <button
                             onClick={() => doScreenAction(r.id, 'confirm', 'Turno')}
                             disabled={actionLoading !== null}
-                            className="btn-mini btn-mini-sage"
+                            className="btn-mini btn-mini-confirm"
                           >
                             {actionLoading === `${r.id}-confirm` ? '…' : 'Confirmar'}
                           </button>
@@ -238,7 +238,7 @@ export default function TurnosPage() {
                           <button
                             onClick={() => doScreenAction(r.id, 'cancel', 'Turno')}
                             disabled={actionLoading !== null}
-                            className="btn-mini btn-mini-clay"
+                            className="btn-mini btn-mini-danger"
                           >
                             {actionLoading === `${r.id}-cancel` ? '…' : 'Cancelar'}
                           </button>

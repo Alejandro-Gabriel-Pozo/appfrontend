@@ -280,12 +280,12 @@ export default function TurnoDetailPage() {
                   <button onClick={() => setEditingDetail(true)} className="btn-mini btn-mini-neutral">Editar horario</button>
                 )}
                 {reservation.allowedTransitions?.includes('CONFIRMED') && (
-                  <button onClick={() => doDetailAction('confirm')} disabled={actionLoading !== null} className="btn-mini btn-mini-sage">
+                  <button onClick={() => doDetailAction('confirm')} disabled={actionLoading !== null} className="btn-mini btn-mini-confirm">
                     {actionLoading === 'confirm' ? '…' : 'Confirmar'}
                   </button>
                 )}
                 {reservation.allowedTransitions?.includes('CANCELLED') && (
-                  <button onClick={() => doDetailAction('cancel')} disabled={actionLoading !== null} className="btn-mini btn-mini-clay">
+                  <button onClick={() => doDetailAction('cancel')} disabled={actionLoading !== null} className="btn-mini btn-mini-danger">
                     {actionLoading === 'cancel' ? '…' : 'Cancelar turno'}
                   </button>
                 )}

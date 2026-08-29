@@ -66,7 +66,7 @@ function OverrideSection({
             La empresa actualizó el maestro mientras tu valor local estaba activo: {pendingLabel}
           </p>
           <div className="flex gap-2">
-            <button onClick={onAccept} disabled={busy !== null} className="btn-mini btn-mini-sage">
+            <button onClick={onAccept} disabled={busy !== null} className="btn-mini btn-mini-confirm">
               {busy === 'accept' ? '…' : 'Aceptar (usar el de la empresa)'}
             </button>
             <button onClick={onReject} disabled={busy !== null} className="btn-mini btn-mini-neutral">
@@ -523,7 +523,7 @@ export default function ProductoDetailPage() {
           <div className="detail-card-header">Eliminar</div>
           <div className="detail-card-body">
             <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>Esta acción no se puede deshacer.</p>
-            <button type="button" onClick={() => setConfirmDelete(true)} className="btn-mini btn-mini-clay">Eliminar producto</button>
+            <button type="button" onClick={() => setConfirmDelete(true)} className="btn-mini btn-mini-danger">Eliminar producto</button>
           </div>
         </div>
       </div>

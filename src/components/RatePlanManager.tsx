@@ -139,7 +139,7 @@ export default function RatePlanManager({ open, onClose, service }: RatePlanMana
               </div>
               <div className="flex items-center gap-1.5">
                 <button onClick={() => openEdit(rp)} className="btn-mini btn-mini-neutral">Editar</button>
-                <button onClick={() => handleDeactivate(rp)} className="btn-mini btn-mini-clay">Desactivar</button>
+                <button onClick={() => handleDeactivate(rp)} className="btn-mini btn-mini-danger">Desactivar</button>
               </div>
             </div>
           ))}

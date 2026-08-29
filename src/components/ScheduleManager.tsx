@@ -129,7 +129,7 @@ export default function ScheduleManager({ open, onClose, service }: ScheduleMana
               </div>
               <div className="flex items-center gap-1.5">
                 <button onClick={() => openEdit(s)} className="btn-mini btn-mini-neutral">Editar</button>
-                <button onClick={() => setDeleteTarget(s)} className="btn-mini btn-mini-clay">Eliminar</button>
+                <button onClick={() => setDeleteTarget(s)} className="btn-mini btn-mini-danger">Eliminar</button>
               </div>
             </div>
           ))}

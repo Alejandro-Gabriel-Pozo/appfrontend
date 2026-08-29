@@ -648,7 +648,7 @@ export default function ProductosPage() {
                         <button onClick={() => setConsumptionTarget(p)} title="Registrar consumo interno" className="btn-mini btn-mini-neutral">Consumo</button>
                       )}
                       {p.productType === 'COMPOSITE' && !p.assembleOnDemand && (
-                        <button onClick={() => setProductionTarget(p)} title="Registrar producción" className="btn-mini btn-mini-sage">Producir</button>
+                        <button onClick={() => setProductionTarget(p)} title="Registrar producción" className="btn-mini btn-mini-confirm">Producir</button>
                       )}
                       <Link href={`/dashboard/productos/${p.id}`} className="btn-mini btn-mini-neutral" style={{ textDecoration: 'none' }}>Ver detalle</Link>
                     </div>

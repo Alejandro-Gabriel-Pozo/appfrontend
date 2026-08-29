@@ -353,7 +353,7 @@ export default function ReservasPage() {
                           <button
                             onClick={() => doScreenAction(r.id, 'confirm', 'Reserva')}
                             disabled={actionLoading !== null}
-                            className="btn-mini btn-mini-sage"
+                            className="btn-mini btn-mini-confirm"
                           >
                             {actionLoading === `${r.id}-confirm` ? '…' : 'Confirmar'}
                           </button>
@@ -362,7 +362,7 @@ export default function ReservasPage() {
                           <button
                             onClick={() => doScreenAction(r.id, 'cancel', 'Reserva')}
                             disabled={actionLoading !== null}
-                            className="btn-mini btn-mini-clay"
+                            className="btn-mini btn-mini-danger"
                           >
                             {actionLoading === `${r.id}-cancel` ? '…' : 'Cancelar'}
                           </button>

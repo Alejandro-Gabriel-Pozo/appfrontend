@@ -268,7 +268,7 @@ export default function RecetaPage() {
                   <td>
                     <div className="flex gap-1.5">
                       <button onClick={() => setModal({ kind: 'edit', item })} className="btn-mini btn-mini-neutral">Editar</button>
-                      <button onClick={() => handleDelete(item)} className="btn-mini btn-mini-clay">Quitar</button>
+                      <button onClick={() => handleDelete(item)} className="btn-mini btn-mini-danger">Quitar</button>
                     </div>
                   </td>
                 </tr>

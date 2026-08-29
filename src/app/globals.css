@@ -204,9 +204,20 @@
   --warning-dim:    rgba(251,191,36,0.10);
   --warning-border: rgba(251,191,36,0.22);
 
-  --danger:         #f87171;
-  --danger-dim:     rgba(248,113,113,0.10);
-  --danger-border:  rgba(248,113,113,0.22);
+  /* Destructivo — V2.4 (29/08/2026). `--zulu-danger` es ahora la fuente
+     semántica; `--danger` queda como alias heredado para los consumidores
+     viejos. Un token destructivo no puede tener dos definiciones sueltas.
+     OJO: el scope `.zulu` lo redefine con OTRO valor (ver ahí). Medido: el
+     split cae en 34 pantallas de dashboard (#ff6b6b) vs 19 de portal/auth/
+     superadmin (#f87171). No lo decidió nadie — es residuo de que el scope
+     .zulu solo se aplicó al dashboard. V2.5 lo colapsa a #B42318 y el split
+     desaparece; unificarlo ACÁ movería el pixel de un lado o del otro. */
+  --zulu-danger:         #f87171;
+  --zulu-danger-dim:     rgba(248,113,113,0.10);
+  --zulu-danger-border:  rgba(248,113,113,0.22);
+  --danger:         var(--zulu-danger);
+  --danger-dim:     var(--zulu-danger-dim);
+  --danger-border:  var(--zulu-danger-border);
 
   --info:           #60a5fa;
   --info-dim:       rgba(96,165,250,0.10);
@@ -590,7 +601,7 @@
   }
 
   /* ── Botón mini de acción de fila — estructura genérica, sin color propio
-     (lo da el modificador .btn-mini-sage/-clay/-neutral, definido en el
+     (lo da el modificador .btn-mini-confirm/-danger/-neutral, definido en el
      scope .zulu más abajo). Usado en casi todas las pantallas de tabla. ── */
   .btn-mini {
     display: inline-flex;
@@ -805,7 +816,7 @@
   /* ── Sistema de diseño "ZULU" (guía de transferencia aportada por el
      dueño, 23/08/2026) — reemplaza a Bastión. Mismo mecanismo de scope
      opt-in vía clase en el div raíz de una pantalla, mismo criterio de
-     "reasignar los tokens genéricos" que ya usaba .bastion, así que
+     "reasignar los tokens genéricos" del sistema anterior, así que
      .card, .btn-primary, .table, .badge-pending, .input y .empty-state
      repintan solos sin tocar cada regla. Un solo acento primario (cian) en
      todo el dashboard
@@ -853,9 +864,19 @@
     --warning-dim: rgba(240, 180, 41, 0.12);
     --warning-border: rgba(240, 180, 41, 0.3);
 
-    --danger: #ff6b6b;
-    --danger-dim: rgba(255, 107, 107, 0.12);
-    --danger-border: rgba(255, 107, 107, 0.3);
+    /* El otro valor del split (ver :root). V2.5: los dos a #B42318. */
+    --zulu-danger: #ff6b6b;
+    --zulu-danger-dim: rgba(255, 107, 107, 0.12);
+    --zulu-danger-border: rgba(255, 107, 107, 0.3);
+    /* El alias TIENE que re-declararse acá. Una custom property se resuelve
+       en el elemento donde se DECLARA: `--danger: var(--zulu-danger)` puesto
+       solo en :root computa el valor de :root y se hereda ya resuelto, así
+       que dentro de .zulu daba #f87171 en vez de #ff6b6b. Lo detectó la
+       verificación en runtime de V2.4 -- afectaba 17 reglas (badge-cancelled,
+       alert-danger, kpi-trend.down, system-rail-blocked, toast.error...). */
+    --danger: var(--zulu-danger);
+    --danger-dim: var(--zulu-danger-dim);
+    --danger-border: var(--zulu-danger-border);
 
     --success: #34d399;
     --success-dim: rgba(52, 211, 153, 0.12);
@@ -910,8 +931,15 @@
   }
 
   .zulu .btn-mini:hover:not(:disabled) { filter: brightness(1.2); }
-  .zulu .btn-mini-sage    { background: var(--success-dim); color: var(--success); }
-  .zulu .btn-mini-clay    { background: var(--danger-dim);  color: var(--danger); }
+  /* V2.4 (29/08/2026) — renombrados desde los alias engañosos. Los 40 call
+     sites se revisaron uno por uno: `clay` se usaba en Cancelar, Eliminar,
+     Quitar, Desactivar y "Marcar fuera de servicio", y `sage` en Confirmar,
+     Completar, Producir y emitir comprobante. NINGUNO era contexto de
+     comercio. Con el nombre viejo, asignarle clay=comercio en V2.5 habría
+     convertido los botones "Eliminar" en botones de POS -- criterio 15 de
+     la especificación. Mismos valores: cero cambio de pixel. */
+  .zulu .btn-mini-confirm { background: var(--success-dim);     color: var(--success); }
+  .zulu .btn-mini-danger  { background: var(--zulu-danger-dim); color: var(--zulu-danger); }
   .zulu .btn-mini-neutral { background: var(--surface-4);   color: var(--text-secondary); }
 
   /* Punto de señal (SignalBadge/SystemRail) — toma el color por herencia

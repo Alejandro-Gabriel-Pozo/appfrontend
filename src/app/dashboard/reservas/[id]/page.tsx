@@ -535,7 +535,7 @@ export default function ReservaDetailPage() {
                       <button
                         onClick={handleConfirmPriceAdjustment}
                         disabled={confirmingAdjustment}
-                        className="btn-mini btn-mini-sage"
+                        className="btn-mini btn-mini-confirm"
                       >
                         {confirmingAdjustment ? '…' : 'Confirmar ajuste'}
                       </button>
@@ -570,14 +570,14 @@ export default function ReservaDetailPage() {
                     <button
                       onClick={() => setScheduleApproveOpen(o => !o)}
                       disabled={actionLoading !== null}
-                      className="btn-mini btn-mini-sage"
+                      className="btn-mini btn-mini-confirm"
                     >
                       Aprobar horario
                     </button>
                     <button
                       onClick={rejectSchedule}
                       disabled={actionLoading !== null}
-                      className="btn-mini btn-mini-clay"
+                      className="btn-mini btn-mini-danger"
                     >
                       {actionLoading === 'reject-schedule' ? '…' : 'Rechazar horario'}
                     </button>
@@ -587,7 +587,7 @@ export default function ReservaDetailPage() {
                   <button
                     onClick={() => doDetailAction('confirm')}
                     disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-sage"
+                    className="btn-mini btn-mini-confirm"
                   >
                     {actionLoading === 'confirm' ? '…' : 'Confirmar'}
                   </button>
@@ -596,7 +596,7 @@ export default function ReservaDetailPage() {
                   <button
                     onClick={() => doDetailAction('cancel')}
                     disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-clay"
+                    className="btn-mini btn-mini-danger"
                   >
                     {actionLoading === 'cancel' ? '…' : 'Cancelar reserva'}
                   </button>

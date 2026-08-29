@@ -364,7 +364,7 @@ export default function EstadiaDetailPage() {
             <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
               El huésped no se presentó — cierra la estadía sin check-out.
             </p>
-            <button type="button" onClick={() => setConfirmNoShow(true)} className="btn-mini btn-mini-clay">
+            <button type="button" onClick={() => setConfirmNoShow(true)} className="btn-mini btn-mini-danger">
               Marcar como no show
             </button>
           </div>

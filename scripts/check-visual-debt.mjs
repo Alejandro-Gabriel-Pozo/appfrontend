@@ -74,8 +74,8 @@ const REGLAS = [
   },
   {
     nombre: 'clase .bastion residual',
-    fase: 'a saldar en V2.4',
-    max: 1,
+    fase: 'saldada en V2.4',
+    max: 0,
     hits: () => count(/\bbastion\b/gi, (f) => isTsx(f) || isCss(f)),
     ayuda: 'Sistema superado. Borrar la clase y sus comentarios.',
   },
@@ -102,10 +102,12 @@ const REGLAS = [
   },
   {
     nombre: 'alias engañoso .btn-mini-clay / -sage',
-    // 40 call sites reales, medidos — no los 2 de globals.css. La primera
-    // corrida de esta cerca corrigió una estimación mía de 8.
-    fase: 'a revisar call site por call site en V2.4',
-    max: 40,
+    // Los 40 call sites se revisaron uno por uno en V2.4 y se renombraron a
+    // .btn-mini-danger / -confirm, que es lo que de verdad hacían. Ninguno
+    // era contexto de comercio. El techo baja a 0: si el nombre vuelve a
+    // aparecer, alguien está reintroduciendo la trampa.
+    fase: 'saldada en V2.4',
+    max: 0,
     hits: () => count(/btn-mini-(clay|sage)/g, (f) => isTsx(f) || isCss(f)),
     ayuda: 'Hoy apuntan a --danger (ROJO) y --success. Repintarlos al clay/sage reales ' +
            'convierte botones "Eliminar" en botones de contexto comercio. Revisar cada uso ' +

@@ -201,7 +201,7 @@ export default function RolesPage() {
                     ) : (
                       <div className="flex gap-2 justify-end">
                         <button onClick={() => openEdit(r)} className="btn-mini btn-mini-neutral">Editar</button>
-                        <button onClick={() => setDeleteTarget(r)} className="btn-mini btn-mini-clay">Desactivar</button>
+                        <button onClick={() => setDeleteTarget(r)} className="btn-mini btn-mini-danger">Desactivar</button>
                       </div>
                     )}
                   </td>

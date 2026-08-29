@@ -308,7 +308,7 @@ export default function RecursoDetailPage() {
             <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
               Esta acción no se puede deshacer.
             </p>
-            <button type="button" onClick={() => setConfirmDelete(true)} className="btn-mini btn-mini-clay">
+            <button type="button" onClick={() => setConfirmDelete(true)} className="btn-mini btn-mini-danger">
               Eliminar recurso
             </button>
           </div>

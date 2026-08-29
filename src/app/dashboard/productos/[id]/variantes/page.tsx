@@ -312,7 +312,7 @@ export default function VariantesPage() {
                   <td>
                     <div className="flex gap-1.5">
                       <button onClick={() => setModal({ kind: 'edit', variant: v })} className="btn-mini btn-mini-neutral">Editar</button>
-                      <button onClick={() => handleDelete(v)} className="btn-mini btn-mini-clay">Eliminar</button>
+                      <button onClick={() => handleDelete(v)} className="btn-mini btn-mini-danger">Eliminar</button>
                     </div>
                   </td>
                 </tr>

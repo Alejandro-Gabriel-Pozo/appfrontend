@@ -209,7 +209,7 @@ export default function CategoriasPage() {
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{c.isExclusive ? 'Exclusivo' : 'Cupo compartido'}</p>
               <div className="flex gap-2 mt-auto pt-2" style={{ borderTop: '1px solid var(--border)' }}>
                 <button onClick={() => openEdit(c)} className="btn-secondary text-xs py-1.5 flex-1">Editar</button>
-                <button onClick={() => setDeleteTarget(c)} className="btn-mini btn-mini-clay" style={{ padding: '7px 12px' }}>Eliminar</button>
+                <button onClick={() => setDeleteTarget(c)} className="btn-mini btn-mini-danger" style={{ padding: '7px 12px' }}>Eliminar</button>
               </div>
             </div>
           ))}
@@ -340,7 +340,7 @@ export default function CategoriasPage() {
                           <button
                             type="button"
                             onClick={() => removeFieldDraft(f._key)}
-                            className="btn-mini btn-mini-clay"
+                            className="btn-mini btn-mini-danger"
                             aria-label="Quitar campo"
                           >
                             ✕

@@ -384,7 +384,7 @@ export default function HousekeepingResourceDetailPage() {
                   </div>
                 </form>
               ) : (
-                <button onClick={() => setMwOpen(true)} className="btn-mini btn-mini-clay">Marcar fuera de servicio</button>
+                <button onClick={() => setMwOpen(true)} className="btn-mini btn-mini-danger">Marcar fuera de servicio</button>
               )
             ) : (
               <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Sin ventana de mantenimiento activa.</p>
@@ -422,10 +422,10 @@ export default function HousekeepingResourceDetailPage() {
                     </button>
                   )}
                   {task.allowedTransitions?.includes('DONE') && (
-                    <button onClick={() => setCompleteOpen(o => !o)} className="btn-mini btn-mini-sage">Completar</button>
+                    <button onClick={() => setCompleteOpen(o => !o)} className="btn-mini btn-mini-confirm">Completar</button>
                   )}
                   {task.allowedTransitions?.includes('INSPECTED') && (
-                    <button onClick={() => doSimpleAction('inspect')} disabled={actionLoading !== null} className="btn-mini btn-mini-sage">
+                    <button onClick={() => doSimpleAction('inspect')} disabled={actionLoading !== null} className="btn-mini btn-mini-confirm">
                       {actionLoading === 'inspect' ? '…' : 'Inspeccionar'}
                     </button>
                   )}

@@ -470,13 +470,13 @@ export default function HousekeepingPage() {
                   </button>
                 )}
                 {task.allowedTransitions?.includes('DONE') && (
-                  <button onClick={() => openAction('complete', task)} className="btn-mini btn-mini-sage">Completar</button>
+                  <button onClick={() => openAction('complete', task)} className="btn-mini btn-mini-confirm">Completar</button>
                 )}
                 {task.allowedTransitions?.includes('INSPECTED') && (
                   <button
                     onClick={() => doSimpleAction(task, 'inspect')}
                     disabled={actionLoading !== null}
-                    className="btn-mini btn-mini-sage"
+                    className="btn-mini btn-mini-confirm"
                   >
                     {actionLoading === `${task.id}-inspect` ? '…' : 'Inspeccionar'}
                   </button>

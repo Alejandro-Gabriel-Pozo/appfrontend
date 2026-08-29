@@ -226,7 +226,7 @@ export default function ServiciosPage() {
                       )}
                       <button onClick={() => setRatePlanTarget(s)} className="btn-mini btn-mini-neutral">Tarifas</button>
                       <button onClick={() => openEdit(s)} className="btn-mini btn-mini-neutral">Editar</button>
-                      <button onClick={() => setDeleteTarget(s)} className="btn-mini btn-mini-clay">Eliminar</button>
+                      <button onClick={() => setDeleteTarget(s)} className="btn-mini btn-mini-danger">Eliminar</button>
                     </div>
                   </td>
                 </tr>

@@ -364,7 +364,7 @@ export default function UsuarioDetailPage() {
                   <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
                     Desactivar le saca el acceso al panel. No se borra su historial.
                   </p>
-                  <button type="button" onClick={() => setConfirmDeactivate(true)} className="btn-mini btn-mini-clay">
+                  <button type="button" onClick={() => setConfirmDeactivate(true)} className="btn-mini btn-mini-danger">
                     Desactivar usuario
                   </button>
                 </>

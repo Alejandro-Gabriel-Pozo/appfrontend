@@ -235,7 +235,7 @@ export default function UsuariosPage() {
                       >
                         {resendingId === inv.id ? <span className="spinner" /> : 'Reenviar'}
                       </button>
-                      <button onClick={() => setRevokeTarget(inv)} className="btn-mini btn-mini-clay">Cancelar</button>
+                      <button onClick={() => setRevokeTarget(inv)} className="btn-mini btn-mini-danger">Cancelar</button>
                     </div>
                   </td>
                 </tr>

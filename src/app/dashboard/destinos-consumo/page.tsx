@@ -115,7 +115,7 @@ export default function DestinosConsumoPage() {
                   <td>
                     <div className="flex items-center justify-end gap-1.5">
                       <button onClick={() => openEdit(d)} className="btn-mini btn-mini-neutral">Editar</button>
-                      <button onClick={() => setDeleteTarget(d)} className="btn-mini btn-mini-clay">Eliminar</button>
+                      <button onClick={() => setDeleteTarget(d)} className="btn-mini btn-mini-danger">Eliminar</button>
                     </div>
                   </td>
                 </tr>
