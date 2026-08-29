@@ -43,7 +43,7 @@ export default function Modal({ open, onClose, title, size = 'max-w-md', childre
         className={`relative w-full ${size} rounded-xl shadow-2xl`}
         style={{
           background: 'var(--surface-2, #1a1d27)',
-          border: '1px solid var(--border-md, rgba(255,255,255,0.08))',
+          border: '1px solid var(--border-md, var(--zulu-overlay-08))',
           maxHeight: '90dvh',
           display: 'flex',
           flexDirection: 'column',
@@ -52,7 +52,7 @@ export default function Modal({ open, onClose, title, size = 'max-w-md', childre
         {/* Header */}
         <div
           className="flex items-center justify-between px-6 py-4"
-          style={{ borderBottom: '1px solid var(--border, rgba(255,255,255,0.06))', flexShrink: 0 }}
+          style={{ borderBottom: '1px solid var(--border, var(--zulu-overlay-06))', flexShrink: 0 }}
         >
           <h2 id="modal-title" className="font-semibold text-sm" style={{ color: 'var(--text-primary, #fff)' }}>
             {title}

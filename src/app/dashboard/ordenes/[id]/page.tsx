@@ -267,12 +267,12 @@ export default function OrderDetailPage() {
         .btn-ghost {
           display: inline-flex; align-items: center; gap: 6px;
           padding: 7px 14px; border-radius: 8px; font-size: 13px;
-          background: rgba(255,255,255,0.05); color: var(--text-secondary);
+          background: var(--zulu-overlay-05); color: var(--text-secondary);
           border: none; cursor: pointer; transition: background 150ms;
         }
-        .btn-ghost:hover { background: rgba(255,255,255,0.09); }
+        .btn-ghost:hover { background: var(--zulu-overlay-09); }
         .input-sm {
-          background: rgba(255,255,255,0.05);
+          background: var(--zulu-overlay-05);
           border: 1px solid var(--border-md);
           border-radius: 8px;
           padding: 6px 10px;
@@ -446,7 +446,7 @@ export default function OrderDetailPage() {
                   </div>
                   <span style={{
                     fontSize: 11, padding: '2px 8px', borderRadius: 4,
-                    background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)',
+                    background: 'var(--zulu-overlay-06)', color: 'var(--text-secondary)',
                   }}>
                     {ITEM_TYPE_LABEL[item.itemType] ?? item.itemType}
                   </span>

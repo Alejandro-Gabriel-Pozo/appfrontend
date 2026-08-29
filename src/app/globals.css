@@ -120,6 +120,43 @@
      decide QUÉ comunica cada uno — no sólo de qué color es. */
   --zulu-status-emphasis:  var(--accent);
 
+  /* Link sobre superficie OSCURA (sidebar negro, paneles grafito).
+     Medido: #245A75 da 2.51 sobre negro y #163F54 da 1.68 — los dos fallan.
+     El link necesita un valor propio para fondo oscuro, igual que le pasó a
+     danger. V2.5: un celeste claro de lectura, remedido contra el grafito
+     real del shell, distinto del cian de telemetría. Hoy apunta al valor
+     viejo para no cambiar el pixel. */
+  --zulu-link-on-dark:  var(--accent);
+
+  /* =====================================================================
+     Overlays — V2.2 (29/08/2026)
+     docs/auditoria-visual-v1-2026-08-29.md §5
+     =====================================================================
+     24 usos de blanco translúcido para hovers, bordes, superficies y
+     scrollbars. Blanco al 4% sobre navy da un gris apenas más claro: se ve.
+     Blanco al 4% SOBRE BLANCO no existe. No se rompen ruidosamente al
+     invertir la polaridad — se vuelven invisibles, que es peor.
+
+     `--zulu-overlay-tint` es el ÚNICO lugar que sabe de qué lado está el
+     fondo. En V2.5 pasa a `17, 17, 17` y los 24 overlays se invierten
+     juntos, sin tocar un solo call site.
+
+     La escala tiene exactamente los 9 alfas que el código ya usaba: V2.2 no
+     cambia ni un pixel. Consolidarlos en menos pasos es limpieza para más
+     adelante, no para una fase que debe ser visualmente neutra.
+     --------------------------------------------------------------------- */
+  --zulu-overlay-tint: 255, 255, 255;
+
+  --zulu-overlay-02: rgba(var(--zulu-overlay-tint), 0.02);
+  --zulu-overlay-03: rgba(var(--zulu-overlay-tint), 0.03);
+  --zulu-overlay-04: rgba(var(--zulu-overlay-tint), 0.04);
+  --zulu-overlay-05: rgba(var(--zulu-overlay-tint), 0.05);
+  --zulu-overlay-06: rgba(var(--zulu-overlay-tint), 0.06);
+  --zulu-overlay-07: rgba(var(--zulu-overlay-tint), 0.07);
+  --zulu-overlay-08: rgba(var(--zulu-overlay-tint), 0.08);
+  --zulu-overlay-09: rgba(var(--zulu-overlay-tint), 0.09);
+  --zulu-overlay-13: rgba(var(--zulu-overlay-tint), 0.13);
+
   /* Marca — el wordmark ZULU. V2.5: --zulu-black. */
   --zulu-brand:  var(--accent);
 
@@ -221,10 +258,10 @@
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.07);
+    background: var(--zulu-overlay-07);
     border-radius: 999px;
   }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.13); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--zulu-overlay-13); }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -288,7 +325,7 @@
   }
   .sidebar-link:hover {
     color: var(--text-primary);
-    background-color: rgba(255,255,255,0.04);
+    background-color: var(--zulu-overlay-04);
   }
   .sidebar-link.active {
     color: var(--zulu-module-context);
@@ -473,7 +510,7 @@
     transition: background-color var(--t), border-color var(--t), color var(--t);
   }
   .btn-secondary:hover:not(:disabled) {
-    background-color: rgba(255,255,255,0.04);
+    background-color: var(--zulu-overlay-04);
     border-color: var(--border-lg);
     color: var(--text-primary);
   }
@@ -513,7 +550,7 @@
     transition: background-color var(--t), color var(--t);
   }
   .btn-ghost:hover:not(:disabled) {
-    background-color: rgba(255,255,255,0.05);
+    background-color: var(--zulu-overlay-05);
     color: var(--text-primary);
   }
 
@@ -536,7 +573,7 @@
   /* ── Inputs ── */
   .input {
     @apply w-full px-3 py-2 text-sm rounded-lg;
-    background-color: rgba(255,255,255,0.03);
+    background-color: var(--zulu-overlay-03);
     border: 1px solid var(--border-md);
     color: var(--text-primary);
     transition: border-color var(--t), box-shadow var(--t), background-color var(--t);
@@ -547,7 +584,7 @@
     outline: none;
     border-color: var(--zulu-focus);
     box-shadow: 0 0 0 3px var(--zulu-focus-dim);
-    background-color: rgba(255,255,255,0.05);
+    background-color: var(--zulu-overlay-05);
   }
   .input:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -643,7 +680,7 @@
   .table tbody tr:last-child td { border-bottom: none; }
   .table tbody tr { transition: background-color var(--t); }
   .table tbody tr:hover td {
-    background-color: rgba(255,255,255,0.02);
+    background-color: var(--zulu-overlay-02);
     color: var(--text-primary);
   }
   .table-cell-primary { color: var(--text-primary); font-weight: 500; }

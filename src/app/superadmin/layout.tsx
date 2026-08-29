@@ -18,7 +18,7 @@ const NAV_LINKS = [
 function SuperadminNav() {
   const pathname = usePathname() ?? ''
   return (
-    <nav className="flex items-center gap-1 px-6 pt-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+    <nav className="flex items-center gap-1 px-6 pt-4" style={{ borderBottom: '1px solid var(--zulu-overlay-06)' }}>
       {NAV_LINKS.map(link => (
         <Link
           key={link.href}
@@ -26,7 +26,7 @@ function SuperadminNav() {
           className="px-3 py-2 text-sm rounded-t-lg"
           style={{
             color: pathname === link.href ? 'white' : '#94a3b8',
-            background: pathname === link.href ? 'rgba(255,255,255,0.04)' : 'transparent',
+            background: pathname === link.href ? 'var(--zulu-overlay-04)' : 'transparent',
           }}
         >
           {link.label}

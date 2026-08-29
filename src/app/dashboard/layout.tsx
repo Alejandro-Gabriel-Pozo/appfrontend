@@ -275,7 +275,7 @@ function OutboxAlertBanner() {
                 gap: 10,
                 padding: '8px 10px',
                 borderRadius: 8,
-                background: 'rgba(255,255,255,0.03)',
+                background: 'var(--zulu-overlay-03)',
               }}
             >
               <div style={{ minWidth: 0 }}>
@@ -487,7 +487,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     gap: 10,
                     padding: '8px 10px',
                     borderRadius: 8,
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'var(--zulu-overlay-03)',
                     marginBottom: 6,
                   }}
                 >
@@ -544,7 +544,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </button>
               </>
             ) : (
-              <div style={{ height: 56, background: 'rgba(255,255,255,0.04)', borderRadius: 8, animation: 'pulse 1.5s infinite' }} />
+              <div style={{ height: 56, background: 'var(--zulu-overlay-04)', borderRadius: 8, animation: 'pulse 1.5s infinite' }} />
             )}
           </div>
         </aside>
@@ -654,7 +654,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
           }
-          a:hover { color: var(--text-primary) !important; background: rgba(255,255,255,0.05) !important; }
+          a:hover { color: var(--text-primary) !important; background: var(--zulu-overlay-05) !important; }
         `}</style>
       </div>
       </Refine>

@@ -91,9 +91,12 @@ const REGLAS = [
   },
   {
     nombre: 'overlay blanco sin token (rgba(255,255,255,α))',
-    fase: 'a saldar en V2.2',
-    max: 24,
-    hits: () => count(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,/g, (f) => isTsx(f) || isCss(f)),
+    fase: 'saldada en V2.2',
+    max: 0,
+    // Se permite SOLO la definición del tint, que es el único lugar que
+    // declara de qué lado está el fondo.
+    hits: () => count(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,/g, (f) => isTsx(f) || isCss(f))
+      .filter((h) => !/--zulu-overlay-tint/.test(h)),
     ayuda: 'Blanco translúcido SOLO funciona sobre fondo oscuro; al invertir la polaridad ' +
            'desaparece en silencio. Usar un token de overlay que sepa de qué lado está el fondo.',
   },

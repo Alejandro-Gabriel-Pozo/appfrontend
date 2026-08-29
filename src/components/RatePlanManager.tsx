@@ -121,14 +121,14 @@ export default function RatePlanManager({ open, onClose, service }: RatePlanMana
 
       {loading ? (
         <div className="space-y-2 mb-4">
-          {[...Array(2)].map((_, i) => <div key={i} className="h-10 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)' }} />)}
+          {[...Array(2)].map((_, i) => <div key={i} className="h-10 rounded-lg" style={{ background: 'var(--zulu-overlay-04)' }} />)}
         </div>
       ) : ratePlans.length === 0 ? (
         <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>Sin tarifas todavía — el servicio sigue usando su precio de catálogo (${service.price.toLocaleString('es-AR')}).</p>
       ) : (
         <div className="space-y-1.5 mb-4">
           {ratePlans.map(rp => (
-            <div key={rp.id} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <div key={rp.id} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'var(--zulu-overlay-03)' }}>
               <div>
                 <p className="text-sm" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{rp.name}</p>
                 <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>

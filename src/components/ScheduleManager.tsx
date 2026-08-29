@@ -110,14 +110,14 @@ export default function ScheduleManager({ open, onClose, service }: ScheduleMana
 
       {loading ? (
         <div className="space-y-2 mb-4">
-          {[...Array(2)].map((_, i) => <div key={i} className="h-10 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)' }} />)}
+          {[...Array(2)].map((_, i) => <div key={i} className="h-10 rounded-lg" style={{ background: 'var(--zulu-overlay-04)' }} />)}
         </div>
       ) : sorted.length === 0 ? (
         <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>Sin horarios todavía — sin al menos uno, este servicio no tiene turnos disponibles para reservar.</p>
       ) : (
         <div className="space-y-1.5 mb-4">
           {sorted.map(s => (
-            <div key={s.id} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <div key={s.id} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'var(--zulu-overlay-03)' }}>
               <div>
                 <p className="text-sm" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
                   {DAYS[s.dayOfWeek]} — {s.startTime.slice(0, 5)}
