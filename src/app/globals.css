@@ -821,28 +821,44 @@
   }
 
   /* ── Toast ── */
+  /* Hotfix posterior a V2.5 (29/08/2026) — REGRESION corregida.
+     Estas tres reglas tenian fondo oscuro casi opaco compuesto sobre la
+     pagina: rgba(22,10,10,0.93) etc. Mientras la pagina fue navy eso daba
+     un toast oscuro sobre fondo oscuro y funcionaba (error: 7.01). Al
+     invertir la polaridad en V2.5 el fondo real paso a #261a1a sobre claro
+     y el texto se oscurecio a #B42318 -> 2.57, por debajo de AA.
+     Es el mismo defecto que el nav activo (2.56): una isla oscura que
+     sobrevivio a la inversion.
+     Se aplica la regla ya decidida en valores-v25 §4: superficie LLENA con
+     el token fuerte + texto blanco. El relleno es OPACO a proposito -- asi
+     el contraste deja de depender de lo que haya detras, que es la causa
+     raiz. Por eso tambien se va el backdrop-filter (no hace nada sobre un
+     fondo opaco) y el borde queda transparente: los *-border son claros,
+     pensados para superficies *-soft, y sobre relleno oscuro dibujaban un
+     halo (4.20 / 4.24 / 10.85). La separacion la da --shadow-lg. */
   .toast {
     @apply fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3
            rounded-xl text-sm font-medium;
     border: 1px solid transparent;
     box-shadow: var(--shadow-lg);
     animation: toastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
-    backdrop-filter: blur(12px);
+    /* Sin esto un mensaje largo se estira hasta casi tocar el borde
+       izquierdo (medido: 6px de margen a 419px de ancho). El otro sistema
+       de toasts -- ToastContext.tsx -- ya usa max-w-xs; esta regla no tenia
+       tope. El calc() garantiza 24px de aire de los dos lados. */
+    max-width: min(24rem, calc(100vw - 3rem));
   }
   .toast.success {
-    background: rgba(12, 22, 16, 0.93);
-    border-color: var(--success-border);
-    color: var(--success);
+    background: var(--zulu-sage-strong);   /* 5.14 AA vs blanco */
+    color: var(--zulu-white);
   }
   .toast.error {
-    background: rgba(22, 10, 10, 0.93);
-    border-color: var(--danger-border);
-    color: var(--danger);
+    background: var(--zulu-danger);        /* 6.57 AA vs blanco */
+    color: var(--zulu-white);
   }
   .toast.info {
-    background: rgba(10, 15, 25, 0.93);
-    border-color: var(--zulu-notice-border);
-    color: var(--zulu-notice);
+    background: var(--zulu-graphite);      /* 15.52 AAA vs blanco */
+    color: var(--zulu-white);
   }
 
   /* ── Spinner ── */

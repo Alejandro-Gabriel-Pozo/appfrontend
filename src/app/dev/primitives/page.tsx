@@ -22,12 +22,23 @@ import { notFound } from 'next/navigation'
 const BADGES = ['badge-active', 'badge-pending', 'badge-confirmed', 'badge-completed', 'badge-cancelled'] as const
 const METODOS = ['badge-get', 'badge-post', 'badge-del'] as const
 const ALERTAS = ['alert-info', 'alert-warning', 'alert-danger', 'alert-success'] as const
+const TOASTS = ['success', 'error', 'info'] as const
 
-/** Los 17 consumidores de `var(--danger*)` que V2.5 colapsa a un solo rojo. */
-const CONSUMIDORES_DANGER = [
+/**
+  * Consumidores de `var(--danger*)` que V2.5 colapsa a un solo rojo.
+  *
+  * OJO: hasta el 29/08/2026 esta lista decía "cubiertos" y nombraba ocho,
+  * pero el componente sólo renderizaba cinco -- los otros tres eran texto
+  * en un párrafo, no elementos verificables. La lista quedó separada en
+  * renderizados / pendientes para que lo declarado y lo real coincidan.
+  * `toast error` pasó a renderizado con el hotfix del toast; los dos que
+  * faltan se agregan en V2.6.1, junto con el guard de rgba().
+  */
+const DANGER_RENDERIZADOS = [
   'badge-cancelled', 'badge-del', 'alert-danger', 'btn-danger',
-  'kpi-trend down', 'system-rail-blocked', 'toast error', 'input inválido',
+  'system-rail-blocked', 'toast error',
 ]
+const DANGER_PENDIENTES = ['kpi-trend down', 'input inválido']
 
 function Bloque({ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }) {
   return (
@@ -94,6 +105,19 @@ function Inventario() {
         ))}
       </Bloque>
 
+      <Bloque
+        titulo="Toasts"
+        nota="Regresión de V2.5 corregida acá: tenían fondo oscuro traslúcido compuesto sobre la página, y al invertir la polaridad toast.error cayó a 2.57. Ahora el relleno es opaco, así el contraste no depende del fondo. Se les fuerza position:static -- el resto (relleno, texto, icono) sale del CSS real.">
+        <div style={{ display: 'grid', gap: 8 }}>
+          {TOASTS.map(t => (
+            <div key={t} className={`toast ${t}`} style={{ position: 'static' }}>
+              <span aria-hidden style={{ fontWeight: 700 }}>{t === 'success' ? '✓' : t === 'error' ? '✕' : 'i'}</span>
+              toast {t} — texto de ejemplo
+            </div>
+          ))}
+        </div>
+      </Bloque>
+
       <Bloque titulo="Tabla">
         <table className="table" style={{ width: '100%', maxWidth: 620 }}>
           <thead><tr><th>N°</th><th>Recurso</th><th>Total</th><th>Estado</th></tr></thead>
@@ -119,7 +143,9 @@ export default function BancoDePrimitives() {
           autenticación. No prueba la composición del shell — eso necesita sesión.
         </p>
         <p style={{ fontSize: 12, opacity: .5, marginTop: 6 }}>
-          Consumidores de <code>danger</code> cubiertos: {CONSUMIDORES_DANGER.join(' · ')}
+          Consumidores de <code>danger</code> renderizados acá: {DANGER_RENDERIZADOS.join(' · ')}.
+          <br />
+          Todavía NO renderizados (V2.6.1): {DANGER_PENDIENTES.join(' · ')}.
         </p>
       </header>
 
