@@ -25,7 +25,7 @@ export default function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Modal open={open} onClose={onClose} title={title} size="max-w-sm">
-      <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--text-secondary, #cbd5e1)' }}>{description}</p>
+      <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{description}</p>
       <div className="flex gap-3">
         <button
           type="button"

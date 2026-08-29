@@ -81,8 +81,8 @@ const REGLAS = [
   },
   {
     nombre: 'hex crudo en .ts/.tsx',
-    fase: 'a saldar en V2.3',
-    max: 19,
+    fase: 'saldada en V2.3',
+    max: 0,
     hits: () => count(/#[0-9a-fA-F]{3,8}\b/g, isTsx)
       // "Ej: OC #123" vive dentro de un placeholder de texto, no es un color.
       // No filtrar por "#seguido de dígito": eso descartaba #7f1d1d y #060a1f.

@@ -117,7 +117,7 @@ export default function ResourceLockPicker({ open, onClose, service }: ResourceL
                       checked={selected.has(r.id)}
                       onChange={() => toggle(r.id)}
                       className="w-4 h-4 rounded"
-                      style={{ accentColor: '#10b981' }}
+                      style={{ accentColor: 'var(--zulu-legacy-check-positive)' }}
                     />
                     <span className="text-sm text-slate-200">{r.name}</span>
                   </label>

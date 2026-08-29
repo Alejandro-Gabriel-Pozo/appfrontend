@@ -249,7 +249,7 @@ function OutboxAlertBanner() {
           textAlign: 'left',
         }}
       >
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#fca5a5', fontWeight: 600 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--zulu-legacy-alert-title)', fontWeight: 600 }}>
           <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
@@ -257,12 +257,12 @@ function OutboxAlertBanner() {
             ? '1 evento no se pudo procesar automáticamente'
             : `${events.length} eventos no se pudieron procesar automáticamente`}
         </span>
-        <span style={{ fontSize: 11, color: '#9ca3af' }}>{expanded ? 'Ocultar' : 'Ver detalle'}</span>
+        <span style={{ fontSize: 11, color: 'var(--zulu-legacy-alert-meta)' }}>{expanded ? 'Ocultar' : 'Ver detalle'}</span>
       </button>
 
       {expanded && (
         <div style={{ borderTop: '1px solid rgba(239,68,68,0.25)', padding: '8px 14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <p style={{ fontSize: 11.5, color: '#9ca3af', margin: '4px 0 2px' }}>
+          <p style={{ fontSize: 11.5, color: 'var(--zulu-legacy-alert-meta)', margin: '4px 0 2px' }}>
             Cada uno se reintentó varias veces solo, sin éxito. Reintentar de nuevo puede resolverlo si ya se corrigió lo que lo bloqueaba.
           </p>
           {events.map(ev => (
@@ -279,8 +279,8 @@ function OutboxAlertBanner() {
               }}
             >
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 12.5, color: '#e2e4ea', fontWeight: 500 }}>{ev.eventType}</p>
-                <p style={{ fontSize: 11, color: '#6b7280' }}>
+                <p style={{ fontSize: 12.5, color: 'var(--zulu-legacy-alert-text)', fontWeight: 500 }}>{ev.eventType}</p>
+                <p style={{ fontSize: 11, color: 'var(--zulu-legacy-alert-meta-dim)' }}>
                   {new Date(ev.failedAt).toLocaleString('es-AR')} · {ev.retryCount} intentos
                   {ev.lastError ? ` · ${ev.lastError}` : ''}
                 </p>
@@ -294,8 +294,8 @@ function OutboxAlertBanner() {
                   borderRadius: 6,
                   fontSize: 11.5,
                   fontWeight: 500,
-                  color: '#fff',
-                  background: retryingId === ev.id ? '#7f1d1d' : '#dc2626',
+                  color: 'var(--zulu-on-context)',
+                  background: retryingId === ev.id ? 'var(--zulu-legacy-alert-btn-busy)' : 'var(--zulu-legacy-alert-btn)',
                   border: 'none',
                   cursor: retryingId === ev.id ? 'default' : 'pointer',
                 }}
@@ -356,8 +356,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#060a1f' }}>
-        <span style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid #00e0ff', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-0)' }}>
+        <span style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid var(--zulu-brand)', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )

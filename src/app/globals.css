@@ -157,6 +157,41 @@
   --zulu-overlay-09: rgba(var(--zulu-overlay-tint), 0.09);
   --zulu-overlay-13: rgba(var(--zulu-overlay-tint), 0.13);
 
+  /* =====================================================================
+     Valores heredados — V2.3 (29/08/2026)
+     docs/auditoria-visual-v1-2026-08-29.md §3
+     =====================================================================
+     Hex que estaban sueltos en pantallas y NO tenían token equivalente.
+     Reemplazarlos por "el token más parecido" habría movido el pixel, y
+     esta fase tiene que ser visualmente neutra — así que se los saca de las
+     pantallas con su valor EXACTO y se los marca acá.
+
+     V2.5 los colapsa en la escala real (danger, gray, sage) y este bloque
+     desaparece. Hasta entonces son deuda visible en un solo lugar, en vez
+     de 19 hex reponditos en 8 archivos.
+     --------------------------------------------------------------------- */
+
+  /* Texto sobre una superficie de contexto LLENA (toggle activo de Reservas
+     y Turnos). V2.5: el color legible sobre brass/clay, medido. */
+  --zulu-on-context:  #ffffff;
+
+  /* Banner de dead-letter del outbox (dashboard/layout.tsx). Es la alerta de
+     que algo falló en producción: V2.5 la pasa a la escala danger real. */
+  --zulu-legacy-alert-title:    #fca5a5;
+  --zulu-legacy-alert-meta:     #9ca3af;
+  --zulu-legacy-alert-meta-dim: #6b7280;
+  --zulu-legacy-alert-text:     #e2e4ea;
+  --zulu-legacy-alert-btn:      #dc2626;
+  --zulu-legacy-alert-btn-busy: #7f1d1d;
+
+  /* Nav inactivo del panel de Superadmin, que nunca se migró (69 clases
+     Tailwind crudas). Se resuelve entero en V5(a). */
+  --zulu-legacy-nav-idle:  #94a3b8;
+
+  /* accentColor del checkbox "recurso seleccionado" (ResourceLockPicker).
+     V2.5: sage — es una selección positiva, no un verde cualquiera. */
+  --zulu-legacy-check-positive:  #10b981;
+
   /* Marca — el wordmark ZULU. V2.5: --zulu-black. */
   --zulu-brand:  var(--accent);
 

@@ -25,7 +25,7 @@ function SuperadminNav() {
           href={link.href}
           className="px-3 py-2 text-sm rounded-t-lg"
           style={{
-            color: pathname === link.href ? 'white' : '#94a3b8',
+            color: pathname === link.href ? 'white' : 'var(--zulu-legacy-nav-idle)',
             background: pathname === link.href ? 'var(--zulu-overlay-04)' : 'transparent',
           }}
         >

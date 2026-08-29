@@ -42,7 +42,7 @@ export default function Modal({ open, onClose, title, size = 'max-w-md', childre
       <div
         className={`relative w-full ${size} rounded-xl shadow-2xl`}
         style={{
-          background: 'var(--surface-2, #1a1d27)',
+          background: 'var(--surface-2)',
           border: '1px solid var(--border-md, var(--zulu-overlay-08))',
           maxHeight: '90dvh',
           display: 'flex',
@@ -54,13 +54,13 @@ export default function Modal({ open, onClose, title, size = 'max-w-md', childre
           className="flex items-center justify-between px-6 py-4"
           style={{ borderBottom: '1px solid var(--border, var(--zulu-overlay-06))', flexShrink: 0 }}
         >
-          <h2 id="modal-title" className="font-semibold text-sm" style={{ color: 'var(--text-primary, #fff)' }}>
+          <h2 id="modal-title" className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
             {title}
           </h2>
           <button
             onClick={onClose}
             className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
-            style={{ color: 'var(--text-tertiary, #94a3b8)' }}
+            style={{ color: 'var(--text-tertiary)' }}
             aria-label="Cerrar modal"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

@@ -549,7 +549,7 @@ export default function ReservasPage() {
                             fontSize: 12, padding: '6px 12px', borderRadius: 8,
                             transition: 'background-color 150ms, color 150ms',
                             background: active ? 'var(--zulu-module-context)' : 'var(--surface-4)',
-                            color: active ? '#fff' : 'var(--text-secondary)',
+                            color: active ? 'var(--zulu-on-context)' : 'var(--text-secondary)',
                             border: 'none',
                           }}
                         >
