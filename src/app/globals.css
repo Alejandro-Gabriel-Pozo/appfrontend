@@ -192,6 +192,12 @@
      V2.5: sage — es una selección positiva, no un verde cualquiera. */
   --zulu-legacy-check-positive:  #10b981;
 
+  /* Superficie del shell oscuro (sidebar). Existe desde V2.5-prep para que
+     el banco de primitives pueda renderizar el scope oscuro sin fallbacks.
+     Hoy vale lo mismo que la superficie oscura actual: cero cambio de pixel.
+     V2.5: pasa a --zulu-black #111111. */
+  --zulu-surface-shell:  #060a1f;
+
   /* Marca — el wordmark ZULU. V2.5: --zulu-black. */
   --zulu-brand:  var(--accent);
 
