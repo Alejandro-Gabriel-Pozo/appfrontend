@@ -97,7 +97,7 @@ function VariantModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}
+      style={{ background: 'var(--zulu-scrim)', backdropFilter: 'blur(3px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="card" style={{ width: '100%', maxWidth: 460, padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>

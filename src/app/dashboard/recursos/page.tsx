@@ -131,7 +131,7 @@ export default function RecursosPage() {
 
       {/* Modal crear */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--zulu-scrim)', backdropFilter: 'blur(3px)' }}>
           <div className="card" style={{ width: '100%', maxWidth: 480, maxHeight: '90dvh', overflowY: 'auto' }}>
             <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
               <h2 style={{ fontWeight: 600, fontSize: 15 }}>Nuevo recurso</h2>

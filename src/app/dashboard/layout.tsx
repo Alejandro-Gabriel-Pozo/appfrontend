@@ -557,7 +557,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               position: 'fixed',
               inset: 0,
               zIndex: 30,
-              background: 'rgba(0,0,0,0.65)',
+              background: 'var(--zulu-scrim)',
               backdropFilter: 'blur(2px)',
             }}
             onClick={() => setSidebarOpen(false)}

@@ -40,6 +40,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { buscarColores } from './lib/find-colors.mjs';
+import { conservarSolo } from './lib/scan-source.mjs';
 
 const SRC = new URL('../src/', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const IGNORE = new Set(['node_modules', '.next', 'dist']);
@@ -66,6 +67,29 @@ function count(re, filter) {
     const lines = read(f).split(/\r?\n/);
     lines.forEach((line, i) => {
       for (const _ of line.matchAll(re)) {
+        hits.push(`${relative(SRC, f).split(sep).join('/')}:${i + 1}  ${line.trim().slice(0, 100)}`);
+      }
+    });
+  }
+  return hits;
+}
+
+/**
+ * Como `count`, pero ignorando comentarios (V2.6.2b).
+ *
+ * Hizo falta porque el patrón se repitió por tercera vez: un comentario que
+ * DOCUMENTA la clase recién sacada la vuelve a contar, y el guard falla por
+ * su propia explicación. Las dos respuestas anteriores fueron reescribir la
+ * prosa; ésta es usar el escáner que ya existe.
+ */
+function countActivo(re, filter) {
+  const hits = [];
+  for (const f of files.filter(filter)) {
+    const lang = f.endsWith('.css') ? 'css' : 'js';
+    const activo = conservarSolo(read(f), lang, lang === 'css' ? ['code'] : ['code', 'string', 'template']);
+    activo.split(/\r?\n/).forEach((line, i) => {
+      const n = (line.match(re) || []).length;
+      for (let k = 0; k < n; k++) {
         hits.push(`${relative(SRC, f).split(sep).join('/')}:${i + 1}  ${line.trim().slice(0, 100)}`);
       }
     });
@@ -118,15 +142,16 @@ const REGLAS = [
   },
   {
     // V2.6.1: esta regla reemplaza a la vieja "hex crudo en .ts/.tsx", que
-    // reportaba 0 y era falso. Sólo miraba hex: los 21 colores que hay de
-    // verdad en las pantallas están escritos como rgba() y pasaban enteros.
+    // reportaba 0 y era falso. Sólo miraba hex: los 21 colores que había de
+    // verdad en las pantallas estaban escritos como rgba() y pasaban enteros.
+    // V2.6.2b bajó de 21 a 4 al pasar los 17 scrims a --zulu-scrim.
+    // Los 4 que quedan: el banner de dead-letter con el rojo viejo
+    // (layout.tsx 232, 233, 264) y una sombra en RoomCalendar (542).
     nombre: 'color crudo en pantallas (.ts/.tsx)',
-    fase: 'medida en V2.6.1, se salda en V2.6.2',
-    max: 21,
+    fase: 'medida en V2.6.1, se salda en V2.6.2c',
+    max: 4,
     hits: () => colores(isTsx, 'js'),
-    ayuda: 'Si falta un token, agregalo al sistema — no un color en la pantalla. ' +
-           'Casi todos son overlays de modal navy rgba(20,33,61,0.45) y el banner ' +
-           'de dead-letter con el rojo viejo rgba(239,68,68,…).',
+    ayuda: 'Si falta un token, agregalo al sistema — no un color en la pantalla.',
   },
   {
     // La regla de fondo: los literales viven en la CAPA DE TOKENS. Una
@@ -141,7 +166,7 @@ const REGLAS = [
            'Una regla que consume color pasa por var(--token).',
   },
   {
-    nombre: 'overlay blanco sin token (rgba(255,255,255,α))',
+    nombre: 'overlay blanco sin token — forma rgba()',
     fase: 'saldada en V2.2',
     max: 0,
     // Se permite SOLO la definición del tint, que es el único lugar que
@@ -150,6 +175,24 @@ const REGLAS = [
       .filter((h) => !/--zulu-overlay-tint/.test(h)),
     ayuda: 'Blanco translúcido SOLO funciona sobre fondo oscuro; al invertir la polaridad ' +
            'desaparece en silencio. Usar un token de overlay que sepa de qué lado está el fondo.',
+  },
+  {
+    // V2.6.2b: la regla de arriba decía "saldada en V2.2" y marcaba 0, pero
+    // sólo miraba la forma `rgba(255,255,255,…)`. En Tailwind el MISMO bug
+    // se escribe `bg-white/10` o `border-white/[0.06]`, y así hay 24 que
+    // nunca vio -- el mismo tipo de punto ciego que V2.6.1 encontró con
+    // rgba(). El de `Modal.tsx` era un hover invisible sobre el diálogo
+    // blanco. 9 de los 24 están en `styles.css`, que no importa nadie y se
+    // borra en V2.6.2d; 6 en superadmin, que se migra en V5(a). Quedan 9
+    // vivos y en alcance: ApiSection 3, ResourceLockPicker 3, ApiBlock 2,
+    // reportes 1.
+    nombre: 'overlay blanco sin token — forma Tailwind',
+    fase: 'medida en V2.6.2b, se salda en V2.6.2c',
+    max: 24,
+    hits: () => countActivo(/\b(?:bg|border|ring|divide|from|to|via)-white\/(?:\[[0-9.]+\]|[0-9]+)/g,
+                            (f) => isTsx(f) || isCss(f)),
+    ayuda: 'Mismo problema que la regla de arriba, otra sintaxis: blanco translúcido ' +
+           'sobre fondo claro no se ve. Usar --zulu-overlay-NN, que sigue la polaridad.',
   },
   {
     nombre: 'alias engañoso .btn-mini-clay / -sage',

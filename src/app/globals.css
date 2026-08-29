@@ -183,6 +183,46 @@
   --zulu-overlay-13: rgba(var(--zulu-overlay-tint), 0.13);
 
   /* =====================================================================
+     Scrim — V2.6.2b (29/08/2026)
+     =====================================================================
+     Un scrim NO es un overlay, aunque los dos sean translúcidos. La
+     taxonomía, para que no vuelvan a mezclarse:
+
+       overlay de superficie  tinte leve: hover, borde, scrollbar. Sigue la
+                              polaridad (`--zulu-overlay-tint`), porque su
+                              trabajo es "un poco más oscuro/claro que el
+                              fondo".
+       scrim                  velo que BLOQUEA lo de atrás: fondo de modal,
+                              backdrop del cajón lateral. Su trabajo es
+                              oscurecer, y eso no depende de la polaridad:
+                              un scrim claro no bloquea nada. Por eso es un
+                              literal y NO deriva del tint.
+       superficie del modal   el diálogo en sí (`--surface-2`).
+
+     Antes de esta fase había dos scrims distintos para el mismo concepto:
+     `rgba(20,33,61,0.45)` navy en 15 modales escritos a mano, y
+     `rgba(0,0,0,0.65)` en `Modal.tsx` y en el backdrop del sidebar mobile.
+     El navy era además residuo del sistema viejo.
+
+     Medido sobre la página clara #F5F4EF (separación del diálogo blanco /
+     supresión del contenido de atrás):
+
+       navy 0.45        3.01 / 2.86     <- lo que había en 15 usos
+       negro 0.45       3.29 / 2.74     <- este token
+       negro 0.55       4.47 / 2.01
+       negro 0.65       6.27 / 1.55     <- lo que había en 2 usos
+
+     Separación >= 3 es el umbral de contraste no textual, así que 0.45
+     pasa. Los dos usos que estaban en 0.65 quedan más livianos: es el
+     precio de tener un solo valor, y se sube con un número si se prefiere
+     el velo más denso.
+
+     No hay `--zulu-scrim-on-dark`: hoy los 17 scrims viven sobre la página
+     clara. Anotado para cuando aparezca uno sobre superficie oscura, no
+     inventado ahora. */
+  --zulu-scrim: rgba(17, 17, 17, 0.45);
+
+  /* =====================================================================
      Valores heredados — V2.3 (29/08/2026)
      docs/auditoria-visual-v1-2026-08-29.md §3
      =====================================================================
@@ -874,6 +914,12 @@
     background: var(--zulu-graphite);      /* 15.52 AAA vs blanco */
     color: var(--zulu-white);
   }
+
+  /* ── Modal ── */
+  /* V2.6.2b: el botón de cerrar usaba `hover:bg-white/10`, invisible sobre
+     la superficie blanca del diálogo. El overlay del sistema sí sabe de qué
+     lado está el fondo. */
+  .modal-close:hover { background: var(--zulu-overlay-08); }
 
   /* ── Spinner ── */
   .spinner {

@@ -214,7 +214,7 @@ export default function RolesPage() {
 
       {/* Modal crear/editar */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--zulu-scrim)', backdropFilter: 'blur(3px)' }}>
           <div className="card" style={{ width: '100%', maxWidth: 480 }}>
             <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
               <h2 style={{ fontWeight: 600, fontSize: 15 }}>{editing ? 'Editar rol' : 'Nuevo rol'}</h2>
@@ -285,7 +285,7 @@ export default function RolesPage() {
 
       {/* Confirmar desactivación */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(20,33,61,0.45)', backdropFilter: 'blur(3px)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--zulu-scrim)', backdropFilter: 'blur(3px)' }}>
           <div className="card p-6" style={{ width: '100%', maxWidth: 400 }}>
             <h2 style={{ fontWeight: 600, marginBottom: 8 }}>¿Desactivar rol?</h2>
             <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>

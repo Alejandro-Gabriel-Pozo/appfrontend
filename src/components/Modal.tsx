@@ -33,7 +33,7 @@ export default function Modal({ open, onClose, title, size = 'max-w-md', childre
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(3px)' }}
+      style={{ background: 'var(--zulu-scrim)', backdropFilter: 'blur(3px)' }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -57,9 +57,17 @@ export default function Modal({ open, onClose, title, size = 'max-w-md', childre
           <h2 id="modal-title" className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
             {title}
           </h2>
+          {/*
+            V2.6.2b — el hover era `hover:bg-white/10`: blanco al 10% sobre
+            la superficie blanca del modal, o sea invisible desde que se
+            invirtió la polaridad. Es el mismo defecto que V2.2 vino a
+            cerrar, pero escrito en Tailwind, que es la forma que el guard
+            no miraba. Ahora usa el overlay del sistema, que sabe de qué
+            lado está el fondo.
+          */}
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
+            className="modal-close p-1.5 rounded-md transition-colors"
             style={{ color: 'var(--text-tertiary)' }}
             aria-label="Cerrar modal"
           >

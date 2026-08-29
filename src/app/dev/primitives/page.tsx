@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import BancoModal from './BancoModal'
 
 /**
  * Banco de pruebas de primitives — herramienta de la corriente visual.
@@ -112,6 +113,12 @@ function Inventario() {
             {n}
           </div>
         ))}
+      </Bloque>
+
+      <Bloque
+        titulo="Scrim y modal"
+        nota="Los 17 scrims usan --zulu-scrim. Un scrim no es un overlay: el overlay sigue la polaridad (tinte leve), el scrim siempre oscurece porque su trabajo es bloquear. En la confirmación destructiva, el rojo es de la acción y el velo es neutro.">
+        <BancoModal />
       </Bloque>
 
       <Bloque
