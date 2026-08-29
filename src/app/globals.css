@@ -638,13 +638,15 @@
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold
            rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed;
     background-color: var(--zulu-module-context-dark);
-    color: #fff;
+    color: var(--zulu-on-context);   /* 5.88 AA sobre brass-strong */
     border: 1px solid transparent;
     transition: background-color var(--t), box-shadow var(--t), transform var(--t);
   }
   .btn-primary:hover:not(:disabled) {
     background-color: var(--zulu-module-context);
-    color: #0a0c10;
+    /* Negro sobre el brass claro del hover: 5.98. El blanco ahi daria 3.16,
+       asi que la inversion de texto en hover es correcta, no un descuido. */
+    color: var(--zulu-black);
     box-shadow: 0 0 0 3px var(--zulu-module-context-dim);
   }
   .btn-primary:active:not(:disabled) { transform: scale(0.98); }
@@ -672,7 +674,7 @@
     transition: background-color var(--t), box-shadow var(--t);
   }
   .btn-danger:hover:not(:disabled) {
-    background-color: rgba(248,113,113,0.18);
+    background-color: var(--zulu-danger-dim);
     box-shadow: 0 0 0 3px var(--danger-dim);
   }
 
@@ -685,7 +687,7 @@
     transition: background-color var(--t), box-shadow var(--t);
   }
   .btn-success:hover:not(:disabled) {
-    background-color: rgba(52,211,153,0.17);
+    background-color: var(--zulu-sage-soft);
     box-shadow: 0 0 0 3px var(--success-dim);
   }
 
@@ -769,11 +771,23 @@
   .badge-active    { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--zulu-status-active-dim);  color: var(--text-primary);  border: 1px solid var(--zulu-status-active-dim); }
 
   /* ── Response block ── */
+  /* V2.6.2c — otra isla oscura que sobrevivió a la inversión.
+     Era `rgba(0,0,0,0.35)` con texto `#7d8799`: sobre navy daba un bloque
+     de código oscuro y funcionaba; sobre la página clara el fondo real
+     queda en #9f9f9b y el texto mide 1.36. Ilegible, y se ve en /admin y
+     en Reportes cada vez que una llamada responde bien.
+
+     Se resuelve hacia CLARO, no hacia oscuro, por dos razones que ya
+     estaban decididas: `.response-block.error` -- la variante de al lado --
+     ya usa `--danger-dim`, que es una superficie clara, así que la familia
+     queda coherente; y en V2.5 el dueño resolvió que sobre superficie
+     clara el plano técnico se expresa con grafito, no con cian
+     (valores-v25 §2, opción A). */
   .response-block {
     @apply mt-3 p-4 rounded-lg text-xs font-mono leading-relaxed overflow-auto max-h-72;
-    background: rgba(0,0,0,0.35);
+    background: var(--surface-3);
     border: 1px solid var(--border);
-    color: #7d8799;
+    color: var(--zulu-technical);   /* grafito #242424 — 13.98 sobre #F5F4EF */
   }
   .response-block.error {
     border-color: var(--danger-border);

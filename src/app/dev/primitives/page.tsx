@@ -133,6 +133,16 @@ function Inventario() {
           <div className="response-block error" style={{ minWidth: 230 }}>
             {'{ "error": "TENANT_NOT_FOUND" }'}
           </div>
+          {/*
+            El .response-block SIN .error es el que estaba roto: fondo
+            rgba(0,0,0,0.35) y texto #7d8799 daban 1.36 sobre la página
+            clara. Se veía así en /admin y en Reportes cada vez que una
+            llamada respondía bien, y no había forma de mirarlo desde acá
+            porque las dos pantallas están detrás del login. V2.6.2c.
+          */}
+          <div className="response-block" style={{ minWidth: 230 }}>
+            {'{ "ok": true, "reservas": 3 }'}
+          </div>
         </div>
       </Bloque>
 

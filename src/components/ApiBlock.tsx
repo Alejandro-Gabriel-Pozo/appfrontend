@@ -91,7 +91,7 @@ export default function ApiBlock({
         >
           {loading ? (
             <>
-              <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              <span className="spinner w-3 h-3" />
               Cargando
             </>
           ) : hasInputs && !open ? 'Configurar' : 'Ejecutar'}
@@ -133,7 +133,7 @@ export default function ApiBlock({
                 transition-all duration-150 disabled:opacity-50 ${BTN_COLOR[method]}`}
             >
               {loading ? (
-                <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Ejecutando…</>
+                <><span className="spinner w-3.5 h-3.5" />Ejecutando…</>
               ) : 'Ejecutar'}
             </button>
             <button

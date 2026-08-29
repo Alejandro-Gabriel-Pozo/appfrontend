@@ -539,7 +539,7 @@ function ReservationTooltip({ reservation, serviceName, pos }: { reservation: Re
         position: 'fixed', top: pos.top, left: pos.left, transform: 'translate(-50%, calc(-100% - 8px))',
         background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8,
         padding: '10px 12px', minWidth: 200, maxWidth: 260,
-        boxShadow: '0 8px 24px rgba(0,0,0,0.25)', zIndex: 1000, pointerEvents: 'none',
+        boxShadow: 'var(--shadow-md)', zIndex: 1000, pointerEvents: 'none',
       }}
     >
       <p className="text-sm" style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>

@@ -144,12 +144,13 @@ const REGLAS = [
     // V2.6.1: esta regla reemplaza a la vieja "hex crudo en .ts/.tsx", que
     // reportaba 0 y era falso. Sólo miraba hex: los 21 colores que había de
     // verdad en las pantallas estaban escritos como rgba() y pasaban enteros.
-    // V2.6.2b bajó de 21 a 4 al pasar los 17 scrims a --zulu-scrim.
-    // Los 4 que quedan: el banner de dead-letter con el rojo viejo
-    // (layout.tsx 232, 233, 264) y una sombra en RoomCalendar (542).
+    // V2.6.2b bajó de 21 a 4 al pasar los 17 scrims a --zulu-scrim, y
+    // V2.6.2c de 4 a 0: el banner de dead-letter pasó a los tokens danger
+    // y la sombra de RoomCalendar a --shadow-md. Vuelve a 0: si aparece un
+    // color nuevo en una pantalla, falla.
     nombre: 'color crudo en pantallas (.ts/.tsx)',
-    fase: 'medida en V2.6.1, se salda en V2.6.2c',
-    max: 4,
+    fase: 'saldada en V2.6.2c',
+    max: 0,
     hits: () => colores(isTsx, 'js'),
     ayuda: 'Si falta un token, agregalo al sistema — no un color en la pantalla.',
   },
@@ -159,8 +160,13 @@ const REGLAS = [
     // con un color escrito a mano, no. Es lo que dejó pasar cuatro fases
     // de cian neón en drop-shadow y box-shadow.
     nombre: 'color crudo en reglas CSS (fuera de tokens)',
-    fase: 'medida en V2.6.1, se salda en V2.6.2',
-    max: 12,
+    // V2.6.2c bajó de 12 a 6. Los 6 que quedan son DOS cosas distintas:
+    //   4 en styles.css, archivo muerto que se borra en V2.6.2d;
+    //   2 glows de cian neón (.zulu-mark 463, .btn-primary:hover 1149) que
+    //     necesitan decisión de producto -- son marca e interacción, no un
+    //     reemplazo mecánico.
+    fase: 'medida en V2.6.1, 6 restantes esperan V2.6.2d y decisión de marca',
+    max: 6,
     hits: () => colores(isCss, 'css'),
     ayuda: 'Un color literal sólo puede aparecer declarando una custom property. ' +
            'Una regla que consume color pasa por var(--token).',
@@ -187,8 +193,11 @@ const REGLAS = [
     // vivos y en alcance: ApiSection 3, ResourceLockPicker 3, ApiBlock 2,
     // reportes 1.
     nombre: 'overlay blanco sin token — forma Tailwind',
-    fase: 'medida en V2.6.2b, se salda en V2.6.2c',
-    max: 24,
+    // V2.6.2c bajó de 24 a 15 migrando los 9 vivos a --zulu-overlay-NN.
+    // Los 15 que quedan: 9 en styles.css (muerto, V2.6.2d) y 6 en
+    // superadmin (V5a). Ninguno en alcance hoy.
+    fase: 'medida en V2.6.2b, 15 restantes esperan V2.6.2d y V5(a)',
+    max: 15,
     hits: () => countActivo(/\b(?:bg|border|ring|divide|from|to|via)-white\/(?:\[[0-9.]+\]|[0-9]+)/g,
                             (f) => isTsx(f) || isCss(f)),
     ayuda: 'Mismo problema que la regla de arriba, otra sintaxis: blanco translúcido ' +

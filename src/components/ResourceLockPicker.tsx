@@ -91,7 +91,7 @@ export default function ResourceLockPicker({ open, onClose, service }: ResourceL
       {loading ? (
         <div className="space-y-2">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-10 rounded-lg bg-white/[0.04] animate-pulse" />
+            <div key={i} className="h-10 rounded-lg bg-[var(--zulu-overlay-04)] animate-pulse" />
           ))}
         </div>
       ) : resources.length === 0 ? (
@@ -110,7 +110,7 @@ export default function ResourceLockPicker({ open, onClose, service }: ResourceL
                 {items.map(r => (
                   <label
                     key={r.id}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/[0.03] cursor-pointer transition-colors"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--zulu-overlay-03)] cursor-pointer transition-colors"
                   >
                     <input
                       type="checkbox"
@@ -128,7 +128,7 @@ export default function ResourceLockPicker({ open, onClose, service }: ResourceL
         </div>
       )}
 
-      <div className="flex gap-3 pt-5 mt-1 border-t border-white/[0.06]">
+      <div className="flex gap-3 pt-5 mt-1 border-t border-[var(--zulu-overlay-06)]">
         <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
         <button type="button" onClick={handleSave} disabled={saving || loading} className="btn-primary flex-1">
           {saving ? <span className="spinner" /> : null}

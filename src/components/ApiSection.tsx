@@ -34,7 +34,7 @@ export default function ApiSection({ method, title, endpoint, onSubmit, formCont
     <div className="card overflow-hidden">
       {/* Header row */}
       <div
-        className="flex items-center gap-3 px-5 py-4 cursor-pointer select-none hover:bg-white/[0.02] transition-colors"
+        className="flex items-center gap-3 px-5 py-4 cursor-pointer select-none hover:bg-[var(--zulu-overlay-02)] transition-colors"
         onClick={() => formContent && setOpen(o => !o)}
       >
         <span className={methodBadge}>{method}</span>
@@ -62,7 +62,7 @@ export default function ApiSection({ method, title, endpoint, onSubmit, formCont
 
       {/* Collapsible form */}
       {formContent && open && (
-        <div className="px-5 pb-5 border-t border-white/[0.05]">
+        <div className="px-5 pb-5 border-t border-[var(--zulu-overlay-05)]">
           <div className="pt-4 space-y-3">
             {formContent}
             <div className="pt-2">
@@ -92,7 +92,7 @@ export default function ApiSection({ method, title, endpoint, onSubmit, formCont
 
       {/* Inline result (no form) */}
       {!formContent && result && (
-        <div className="px-5 pb-5 border-t border-white/[0.05]">
+        <div className="px-5 pb-5 border-t border-[var(--zulu-overlay-05)]">
           <div className="flex items-center gap-2 mt-4 mb-2">
             <span className={`text-xs font-bold px-2 py-0.5 rounded ${result.status >= 400 ? 'bg-red-500/15 text-red-400' : 'bg-emerald-500/15 text-emerald-400'}`}>
               {result.status}

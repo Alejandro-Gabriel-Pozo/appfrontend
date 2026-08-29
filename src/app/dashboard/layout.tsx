@@ -229,8 +229,8 @@ function OutboxAlertBanner() {
       style={{
         marginBottom: 16,
         borderRadius: 10,
-        border: '1px solid rgba(239,68,68,0.35)',
-        background: 'rgba(239,68,68,0.08)',
+        border: '1px solid var(--zulu-danger-border)',
+        background: 'var(--zulu-danger-dim)',
         overflow: 'hidden',
       }}
     >
@@ -261,7 +261,7 @@ function OutboxAlertBanner() {
       </button>
 
       {expanded && (
-        <div style={{ borderTop: '1px solid rgba(239,68,68,0.25)', padding: '8px 14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ borderTop: '1px solid var(--zulu-danger-border)', padding: '8px 14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <p style={{ fontSize: 11.5, color: 'var(--zulu-legacy-alert-meta)', margin: '4px 0 2px' }}>
             Cada uno se reintentó varias veces solo, sin éxito. Reintentar de nuevo puede resolverlo si ya se corrigió lo que lo bloqueaba.
           </p>

@@ -170,7 +170,7 @@ function AccountsReceivableManager() {
           Elegí una empresa para avanzar el estado de lo que se le transfirió — marcar facturado (solo estado, la emisión sigue siendo manual) y marcar cobrado (registra el pago real contra su cuenta).
         </p>
       </div>
-      <div className="px-5 pb-5 border-t border-white/[0.05] pt-4 space-y-3">
+      <div className="px-5 pb-5 border-t border-[var(--zulu-overlay-05)] pt-4 space-y-3">
         <select className="input" value={companyId} onChange={e => pickCompany(e.target.value)}>
           <option value="">Seleccioná una empresa…</option>
           {companies.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
