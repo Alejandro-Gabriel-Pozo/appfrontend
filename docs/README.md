@@ -15,6 +15,7 @@
 |---|---|---|
 | [sistema-diseno-zulu-hub.md](sistema-diseno-zulu-hub.md) | **Fuente de verdad visual.** Paleta con contrastes medidos, tipografía, shell, componentes, fases V1–V7 y criterios de aceptación | Normativo. **0 de 7 fases ejecutadas** — el código no lo refleja en nada todavía, ver abajo |
 | [zulu-hub-sketch.html](zulu-hub-sketch.html) | Boceto de referencia: los 3 contextos (reservas/brass, comercio/clay, Superadmin/técnico) sobre el mismo shell. Autocontenido, se abre con doble click | Referencia. **No es el boceto original del dueño**, que no estaba en ningún repo — es una traducción de la especificación; si aparece el original, lo reemplaza |
+| [auditoria-visual-v1-2026-08-29.md](auditoria-visual-v1-2026-08-29.md) | **Entregable de la Fase V1.** Los 53 usos de `var(--accent)` clasificados por rol, inventario de hex y clases Tailwind crudas, alias engañosos, tokens que faltan y orden de migración para V2 | Auditoría cerrada. **No cambió código**: V1 es auditar y documentar |
 | [auditoria-modales.md](auditoria-modales.md) | Cuándo modal, cuándo panel, cuándo ruta dedicada `/dashboard/{entidad}/[id]` | Convención aplicada. Backlog de migración vivo |
 | [roadmap-migracion-refine.md](roadmap-migracion-refine.md) | Qué pantallas usan Refine, qué falta y qué queda afuera a propósito | Roadmap vivo |
 
@@ -28,9 +29,13 @@
 
 ## Estado de la corriente visual: no empezó
 
-**0 de 7 fases ejecutadas. Ninguna pantalla migrada. Ningún token cambiado.** Lo que hay
-hasta ahora es preparación: la especificación, el boceto y estas convenciones. Lo que se ve
-en producción sigue siendo el sistema navy + cian.
+**1 de 7 fases ejecutadas** (V1, auditoría — no cambia código). **Ninguna pantalla migrada.
+Ningún token cambiado.** Lo que se ve en producción sigue siendo el sistema navy + cian.
+
+El entregable de V1 es [auditoria-visual-v1-2026-08-29.md](auditoria-visual-v1-2026-08-29.md).
+Su hallazgo principal condiciona toda la V2: **`--accent` no es un token de acento, son
+siete trabajos distintos con un solo nombre**, y solo 9 de sus 53 usos son color de contexto
+de módulo. Hay que partirlo antes de repintarlo.
 
 El orden es **tokens/primitives (V2) → shell de ZULU Hub (V3) → pantallas prioritarias,
 Superadmin incluido (V4/V5) → cobertura restante (V6) → V7, responsive y accesibilidad como
