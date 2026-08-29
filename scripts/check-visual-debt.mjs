@@ -160,13 +160,12 @@ const REGLAS = [
     // con un color escrito a mano, no. Es lo que dejó pasar cuatro fases
     // de cian neón en drop-shadow y box-shadow.
     nombre: 'color crudo en reglas CSS (fuera de tokens)',
-    // V2.6.2c bajó de 12 a 6. Los 6 que quedan son DOS cosas distintas:
-    //   4 en styles.css, archivo muerto que se borra en V2.6.2d;
-    //   2 glows de cian neón (.zulu-mark 463, .btn-primary:hover 1149) que
-    //     necesitan decisión de producto -- son marca e interacción, no un
-    //     reemplazo mecánico.
-    fase: 'medida en V2.6.1, 6 restantes esperan V2.6.2d y decisión de marca',
-    max: 6,
+    // V2.6.2c bajó de 12 a 6, y la decisión sobre los glows de 6 a 4:
+    // el halo de la marca pasó a --zulu-brand-glow (excepción sancionada,
+    // con nombre) y el del botón primario se eliminó. Los 4 que quedan
+    // están todos en styles.css, archivo muerto que se borra en V2.6.2d.
+    fase: 'medida en V2.6.1, los 4 restantes se van con styles.css en V2.6.2d',
+    max: 4,
     hits: () => colores(isCss, 'css'),
     ayuda: 'Un color literal sólo puede aparecer declarando una custom property. ' +
            'Una regla que consume color pasa por var(--token).',

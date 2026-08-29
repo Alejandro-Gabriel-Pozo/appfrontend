@@ -222,6 +222,17 @@
      inventado ahora. */
   --zulu-scrim: rgba(17, 17, 17, 0.45);
 
+  /* Halo de la marca — la única excepción sancionada al cian fuera del
+     plano técnico. Decisión del dueño (29/08/2026) al cerrar V2.6.2c:
+     el cian puede existir como detalle de identidad dentro del shell
+     oscuro, pero NO asciende a acento general. Concretamente:
+       sí   el halo del isotipo en el sidebar negro (.zulu-mark)
+       no   el hover del botón primario, que era la otra mitad de este
+            mismo rgba() y se eliminó en el mismo cambio
+     Tiene nombre propio justamente para que se lea como decisión y no
+     como residuo del sistema viejo. */
+  --zulu-brand-glow: rgba(0, 224, 255, 0.24);
+
   /* =====================================================================
      Valores heredados — V2.3 (29/08/2026)
      docs/auditoria-visual-v1-2026-08-29.md §3
@@ -460,7 +471,12 @@
     align-items: center;
     justify-content: center;
     color: var(--zulu-brand);
-    filter: drop-shadow(0 0 7px rgba(0,224,255,0.24));
+    /* La ÚNICA excepción sancionada al cian fuera del plano técnico.
+       Decisión del dueño, 29/08/2026: es firma de marca, sutil y limitada
+       al shell oscuro. Pasa a token para que la excepción tenga nombre y no
+       parezca residuo del sistema viejo -- que es lo que parecía cuando era
+       un rgba() suelto. Ver --zulu-brand-glow. */
+    filter: drop-shadow(0 0 7px var(--zulu-brand-glow));
   }
   .zulu-mark svg { display: block; width: 100%; height: 100%; }
 
@@ -1145,8 +1161,14 @@
     letter-spacing: 0.02em;
   }
 
+  /* Tenía un halo de cian neón junto al anillo de contexto, con un
+     `TODO V2.3` que sobrevivió a V2.3, V2.4, V2.5 y V2.6.2b -- el guard no
+     lo veía porque estaba escrito como rgba().
+     Decisión del dueño (29/08/2026): el botón primario es la acción
+     principal, no el plano técnico. Se va el cian y queda el anillo de
+     contexto del módulo, que es lo que de verdad comunica. */
   .zulu .btn-primary:hover:not(:disabled) {
-    box-shadow: 0 0 0 3px var(--zulu-module-context-dim), 0 0 14px rgba(0, 224, 255, 0.32); /* TODO V2.3: rgba = cian viejo hardcodeado */
+    box-shadow: 0 0 0 3px var(--zulu-module-context-dim);
   }
 
   .zulu .btn-mini:hover:not(:disabled) { filter: brightness(1.2); }
