@@ -85,7 +85,7 @@ export default function AcceptInvitationForm() {
               <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Invitación inválida</h2>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{loadError}</p>
               <p className="text-xs mt-4">
-                <Link href="/login" style={{ color: 'var(--accent)' }}>Ir al inicio de sesión</Link>
+                <Link href="/login" style={{ color: 'var(--zulu-link)' }}>Ir al inicio de sesión</Link>
               </p>
             </>
           ) : done ? (

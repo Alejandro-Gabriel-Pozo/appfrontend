@@ -242,7 +242,7 @@ export default function CategoriasPage() {
                   type="checkbox"
                   checked={form.isLodging}
                   onChange={e => setForm(f => ({ ...f, isLodging: e.target.checked }))}
-                  style={{ accentColor: 'var(--accent)', width: 16, height: 16, marginTop: 2 }}
+                  style={{ accentColor: 'var(--zulu-form-control)', width: 16, height: 16, marginTop: 2 }}
                 />
                 <span>
                   Es alojamiento (habitaciones, cabañas…)
@@ -271,7 +271,7 @@ export default function CategoriasPage() {
                       name="isExclusive"
                       checked={form.isExclusive === true}
                       onChange={() => setForm(f => ({ ...f, isExclusive: true }))}
-                      style={{ accentColor: 'var(--accent)', width: 16, height: 16, marginTop: 2 }}
+                      style={{ accentColor: 'var(--zulu-form-control)', width: 16, height: 16, marginTop: 2 }}
                     />
                     <span>
                       Exclusivo — una reserva a la vez
@@ -293,7 +293,7 @@ export default function CategoriasPage() {
                       name="isExclusive"
                       checked={form.isExclusive === false}
                       onChange={() => setForm(f => ({ ...f, isExclusive: false }))}
-                      style={{ accentColor: 'var(--accent)', width: 16, height: 16, marginTop: 2 }}
+                      style={{ accentColor: 'var(--zulu-form-control)', width: 16, height: 16, marginTop: 2 }}
                     />
                     <span>
                       Cupo compartido — varias reservas hasta un límite
@@ -371,7 +371,7 @@ export default function CategoriasPage() {
                               type="checkbox"
                               checked={f.required}
                               onChange={e => updateFieldDraft(f._key, { required: e.target.checked })}
-                              style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
+                              style={{ accentColor: 'var(--zulu-form-control)', width: 14, height: 14 }}
                             />
                             Obligatorio
                           </label>

@@ -119,7 +119,7 @@ export default function CustomerLoginPage() {
 
           <p className="text-center text-xs mt-5" style={{ color: 'var(--text-tertiary)' }}>
             ¿No tenés cuenta?{' '}
-            <Link href={`/portal/${slug}/register`} style={{ color: 'var(--accent)' }}>
+            <Link href={`/portal/${slug}/register`} style={{ color: 'var(--zulu-link)' }}>
               Registrate
             </Link>
           </p>

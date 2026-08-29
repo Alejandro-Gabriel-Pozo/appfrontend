@@ -149,7 +149,7 @@ export default function ApiBlock({
       {/* Response block */}
       {response && (
         <div className={`response-block mx-4 mb-4 ${response.status >= 400 || response.status === 0 ? 'error' : ''}`}>
-          <div className="mb-2 font-bold text-[11px] uppercase tracking-wide" style={{ color: response.status >= 400 || response.status === 0 ? 'var(--danger)' : 'var(--accent)' }}>
+          <div className="mb-2 font-bold text-[11px] uppercase tracking-wide" style={{ color: response.status >= 400 || response.status === 0 ? 'var(--danger)' : 'var(--zulu-technical)' }}>
             {response.status === 0 ? 'Error de red' : `HTTP ${response.status}`}
           </div>
           <pre className="whitespace-pre-wrap break-all">{JSON.stringify(response.body, null, 2)}</pre>

@@ -160,7 +160,7 @@ function ProductModal({ onClose }: { onClose: () => void }) {
               name="hasVariants"
               checked={form.hasVariants ?? false}
               onChange={handleChange}
-              style={{ accentColor: 'var(--accent)', width: 16, height: 16 }}
+              style={{ accentColor: 'var(--zulu-form-control)', width: 16, height: 16 }}
             />
             Tiene variantes (gestión de stock por variante)
           </label>
@@ -195,7 +195,7 @@ function ProductModal({ onClose }: { onClose: () => void }) {
                 name="assembleOnDemand"
                 checked={form.assembleOnDemand ?? false}
                 onChange={handleChange}
-                style={{ accentColor: 'var(--accent)', width: 16, height: 16, marginTop: 2 }}
+                style={{ accentColor: 'var(--zulu-form-control)', width: 16, height: 16, marginTop: 2 }}
               />
               <span>
                 Armar en vivo al vender (sándwich)

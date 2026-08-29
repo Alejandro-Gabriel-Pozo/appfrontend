@@ -29,12 +29,99 @@
   --text-secondary: #aab2de;
   --text-tertiary:  #6b74a6;
 
-  /* Zulu Neon — reservado para señal, foco y acción */
+  /* Zulu Neon — reservado para señal, foco y acción.
+     LEGADO desde V2.1 (29/08/2026): ya no se usa directamente en ninguna
+     regla ni pantalla. Sobrevive solo como VALOR del que dependen los
+     tokens semánticos de abajo, hasta que V2.5 les asigne los suyos.
+     No agregar usos nuevos de --accent: usá el token semántico que
+     corresponda. */
   --accent:         #00e0ff;
   --accent-dark:    #0aa8c2;
   --accent-hover:   #33e6ff;
   --accent-dim:     rgba(0,224,255,0.10);
   --accent-border:  rgba(0,224,255,0.28);
+
+  /* =====================================================================
+     Taxonomía semántica — V2.1 (29/08/2026)
+     docs/auditoria-visual-v1-2026-08-29.md §1, §2 y §8
+     =====================================================================
+     La auditoría V1 encontró que `--accent` hacía SIETE trabajos distintos
+     con un solo nombre, y que solo 9 de sus 53 usos en pantallas eran
+     "color de contexto de módulo". Apuntarlo a brass —el atajo obvio—
+     hubiera pintado de brass los anillos de foco, los 17 checkboxes, los
+     18 hipervínculos, el badge "Activo", los toasts y el riel de estado.
+
+     Este bloque separa el SIGNIFICADO. Todos los tokens apuntan hoy al
+     mismo valor que tenían antes, así que **V2.1 no cambia ni un pixel**:
+     lo único que cambia es que cada uso declara qué es. Los valores
+     definitivos (link #245A75, brass, clay, sage, cian técnico, inversión
+     de polaridad) entran recién en V2.5, cuando cada token pueda moverse
+     por separado sin arrastrar a los demás.
+
+     Foco y plano técnico quedan deliberadamente aislados: son las dos
+     señales que NUNCA deben tomar el color del módulo activo. El foco
+     tiene que verse igual en todas las pantallas (criterio 12 de
+     accesibilidad) y el cian está reservado a API/telemetría/logs.
+     --------------------------------------------------------------------- */
+
+  /* Contexto de módulo — el ÚNICO que en V2.5 pasa a brass/clay/sage según
+     la pantalla. Nav activo, botón primario, tab activo, accesos rápidos. */
+  --zulu-module-context:        var(--accent);
+  --zulu-module-context-hover:  var(--accent-hover);
+  --zulu-module-context-dark:   var(--accent-dark);
+  --zulu-module-context-dim:    var(--accent-dim);
+  --zulu-module-context-border: var(--accent-border);
+
+  /* Hipervínculo — TRANSVERSAL. Un link dentro de POS sigue siendo un link
+     de ZULU, no un elemento clay. V2.5: #245A75 / #163F54 + underline en
+     hover. Nota de la medición: ambos fallan sobre fondo oscuro (2.51 y
+     1.68) — el sidebar negro necesita --zulu-link-on-dark. */
+  --zulu-link:        var(--accent);
+  --zulu-link-hover:  var(--accent-hover);
+
+  /* Foco — señal de interacción transversal, jamás color de módulo.
+     V2.5: negro sobre superficie clara, blanco sobre oscura. */
+  --zulu-focus:      var(--accent);
+  --zulu-focus-dim:  var(--accent-dim);
+
+  /* Cromo de formulario — `accentColor` nativo de checkbox/radio/range.
+     Un checkbox no pertenece a Reservas ni a Comercio. */
+  --zulu-form-control:  var(--accent);
+
+  /* Superficie seleccionada — fila elegida, día "hoy". Es superficie, no
+     texto: en V2.5 el texto encima va en --zulu-black. */
+  --zulu-surface-selected:  var(--accent-dim);
+
+  /* Plano técnico — API, telemetría, integraciones, logs, estado de
+     conexión. V2.5: cyan-deep #1F6D77 sobre claro, #39C6D8 sobre oscuro.
+     PROTEGIDO: no se mezcla con módulos ni asciende a acento general. */
+  --zulu-technical:        var(--accent);
+  --zulu-technical-dim:    var(--accent-dim);
+  --zulu-technical-border: var(--accent-border);
+
+  /* Estado "activo" / "healthy" — es un RESULTADO, no un acento. Hoy está
+     pintado con el acento; en V2.5 pasa a sage. Apunta al valor viejo a
+     propósito: si acá pusiera --success (verde) V2.1 cambiaría el pixel, y
+     la regla de esta fase es que no cambie ninguno.
+     El resto de la escala de estados ya vive en --success/--warning/--danger. */
+  --zulu-status-active:      var(--accent);
+  --zulu-status-active-dim:  var(--accent-dim);
+
+  /* Aviso informativo — transversal, aparece en cualquier módulo. V2.5:
+     NEUTRO, no cian (decisión del dueño): un toast informativo no debe
+     arrastrar el color del plano técnico a toda la interfaz. */
+  --zulu-notice:         var(--accent);
+  --zulu-notice-border:  var(--accent-border);
+
+  /* Énfasis provisorio — los 3 casos que la auditoría V1 §1.1 marcó como
+     ESTADO mal expresado con color (precio propio vs heredado, métrica
+     destacada, valor de threshold). Token puente: preserva el valor actual
+     para no cambiar el pixel, y marca los call sites para V2.6, donde se
+     decide QUÉ comunica cada uno — no sólo de qué color es. */
+  --zulu-status-emphasis:  var(--accent);
+
+  /* Marca — el wordmark ZULU. V2.5: --zulu-black. */
+  --zulu-brand:  var(--accent);
 
   /* Semánticos */
   --success:        #34d399;
@@ -121,13 +208,13 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--zulu-focus);
     outline-offset: 2px;
     border-radius: var(--r-sm);
   }
 
   ::selection {
-    background: var(--accent-dim);
+    background: var(--zulu-surface-selected);
     color: var(--text-primary);
   }
 
@@ -187,7 +274,7 @@
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    color: var(--accent);
+    color: var(--zulu-brand);
     filter: drop-shadow(0 0 7px rgba(0,224,255,0.24));
   }
   .zulu-mark svg { display: block; width: 100%; height: 100%; }
@@ -204,9 +291,9 @@
     background-color: rgba(255,255,255,0.04);
   }
   .sidebar-link.active {
-    color: var(--accent);
-    background-color: var(--accent-dim);
-    border: 1px solid var(--accent-border);
+    color: var(--zulu-module-context);
+    background-color: var(--zulu-module-context-dim);
+    border: 1px solid var(--zulu-module-context-border);
   }
   .sidebar-link .icon {
     @apply w-[17px] h-[17px] shrink-0;
@@ -218,7 +305,7 @@
     opacity: 1;
   }
   .sidebar-link.active .icon {
-    color: var(--accent);
+    color: var(--zulu-module-context);
   }
 
   .section-title {
@@ -335,8 +422,8 @@
     width: 32px;
     height: 32px;
     border-radius: var(--r-md);
-    background-color: var(--accent-dim);
-    color: var(--accent);
+    background-color: var(--zulu-module-context-dim);
+    color: var(--zulu-module-context);
   }
   .quick-link-label {
     font-size: 14px;
@@ -365,15 +452,15 @@
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold
            rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed;
-    background-color: var(--accent-dark);
+    background-color: var(--zulu-module-context-dark);
     color: #fff;
     border: 1px solid transparent;
     transition: background-color var(--t), box-shadow var(--t), transform var(--t);
   }
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--accent);
+    background-color: var(--zulu-module-context);
     color: #0a0c10;
-    box-shadow: 0 0 0 3px var(--accent-dim);
+    box-shadow: 0 0 0 3px var(--zulu-module-context-dim);
   }
   .btn-primary:active:not(:disabled) { transform: scale(0.98); }
 
@@ -458,8 +545,8 @@
   .input:hover  { border-color: var(--border-lg); }
   .input:focus  {
     outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-dim);
+    border-color: var(--zulu-focus);
+    box-shadow: 0 0 0 3px var(--zulu-focus-dim);
     background-color: rgba(255,255,255,0.05);
   }
   .input:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -494,7 +581,7 @@
   .badge-confirmed { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--info-dim);    color: var(--info);    border: 1px solid var(--info-border); }
   .badge-completed { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--success-dim); color: var(--success); border: 1px solid var(--success-border); }
   .badge-cancelled { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--danger-dim);  color: var(--danger);  border: 1px solid var(--danger-border); }
-  .badge-active    { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--accent-dim);  color: var(--accent);  border: 1px solid var(--accent-border); }
+  .badge-active    { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--zulu-status-active-dim);  color: var(--zulu-status-active);  border: 1px solid var(--zulu-status-active-dim); }
 
   /* ── Response block ── */
   .response-block {
@@ -609,8 +696,8 @@
   }
   .toast.info {
     background: rgba(10, 15, 25, 0.93);
-    border-color: var(--accent-border);
-    color: var(--accent);
+    border-color: var(--zulu-notice-border);
+    color: var(--zulu-notice);
   }
 
   /* ── Spinner ── */
@@ -747,7 +834,7 @@
   }
 
   .zulu .btn-primary:hover:not(:disabled) {
-    box-shadow: 0 0 0 3px var(--accent-dim), 0 0 14px rgba(0, 224, 255, 0.32);
+    box-shadow: 0 0 0 3px var(--zulu-module-context-dim), 0 0 14px rgba(0, 224, 255, 0.32); /* TODO V2.3: rgba = cian viejo hardcodeado */
   }
 
   .zulu .btn-mini:hover:not(:disabled) { filter: brightness(1.2); }
@@ -789,9 +876,9 @@
     background: currentColor;
     box-shadow: 0 0 8px currentColor;
   }
-  .system-rail-healthy   { background: var(--accent-dim);  border: 1px solid var(--accent-border);  color: var(--accent); }
+  .system-rail-healthy   { background: var(--zulu-status-active-dim);  border: 1px solid var(--zulu-status-active-dim);  color: var(--zulu-status-active); }
   .system-rail-healthy i { animation: pulse-dot 2.6s ease-in-out infinite; }
-  .system-rail-syncing   { background: var(--accent-dim);  border: 1px solid var(--accent-border);  color: var(--accent); }
+  .system-rail-syncing   { background: var(--zulu-technical-dim);  border: 1px solid var(--zulu-technical-border);  color: var(--zulu-technical); }
   .system-rail-syncing i { animation: pulse-dot 1s ease-in-out infinite; }
   .system-rail-attention   { background: var(--warning-dim); border: 1px solid var(--warning-border); color: var(--warning); }
   .system-rail-attention i { animation: pulse-dot 1.2s ease-in-out infinite; }

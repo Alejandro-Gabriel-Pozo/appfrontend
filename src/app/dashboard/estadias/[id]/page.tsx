@@ -192,7 +192,7 @@ export default function EstadiaDetailPage() {
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>
           El ID ingresado no corresponde a ninguna estadía activa (ya con check-out o no-show no aparecen acá).
         </p>
-        <Link href="/dashboard/estadias" style={{ color: 'var(--accent)', fontSize: 14 }}>← Volver a Estadías</Link>
+        <Link href="/dashboard/estadias" style={{ color: 'var(--zulu-link)', fontSize: 14 }}>← Volver a Estadías</Link>
       </div>
     )
   }

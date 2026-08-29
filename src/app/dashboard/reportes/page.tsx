@@ -247,7 +247,7 @@ function AccountsReceivableManager() {
                   type="checkbox"
                   checked={policyForm.requiresSenaToConfirm}
                   onChange={e => setPolicyForm(f => ({ ...f, requiresSenaToConfirm: e.target.checked }))}
-                  style={{ accentColor: 'var(--accent)' }}
+                  style={{ accentColor: 'var(--zulu-form-control)' }}
                 />
                 Requiere seña para confirmar
               </label>
@@ -419,8 +419,8 @@ export default function ReportesPage() {
                 <div><label className="label">Hasta</label><input type="datetime-local" value={underTo} onChange={e => setUnderTo(e.target.value)} className="input" /></div>
               </div>
               <div>
-                <label className="label">Threshold de subutilización (%): <span style={{ color: 'var(--accent)' }}>{threshold}%</span></label>
-                <input type="range" min={0} max={100} value={threshold} onChange={e => setThreshold(e.target.value)} className="w-full mt-1" style={{ accentColor: 'var(--accent)' }} />
+                <label className="label">Threshold de subutilización (%): <span style={{ color: 'var(--zulu-status-emphasis)' }}>{threshold}%</span>{/* TODO V2.6: sage dentro de rango, brass cerca del límite, danger fuera */}</label>
+                <input type="range" min={0} max={100} value={threshold} onChange={e => setThreshold(e.target.value)} className="w-full mt-1" style={{ accentColor: 'var(--zulu-form-control)' }} />
               </div>
             </div>
           }

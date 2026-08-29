@@ -95,7 +95,7 @@ export default function RequestPasswordResetPage() {
               </form>
 
               <p className="text-center text-xs mt-5" style={{ color: 'var(--text-tertiary)' }}>
-                <Link href="/login" style={{ color: 'var(--accent)' }}>← Volver a iniciar sesión</Link>
+                <Link href="/login" style={{ color: 'var(--zulu-link)' }}>← Volver a iniciar sesión</Link>
               </p>
             </>
           )}

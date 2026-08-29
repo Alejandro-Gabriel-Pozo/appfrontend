@@ -292,7 +292,7 @@ export default function ServiciosPage() {
                       name="bookingMode"
                       checked={form.bookingMode === opt.value}
                       onChange={() => setForm(f => ({ ...f, bookingMode: opt.value }))}
-                      style={{ accentColor: 'var(--accent)', width: 16, height: 16, marginTop: 2 }}
+                      style={{ accentColor: 'var(--zulu-form-control)', width: 16, height: 16, marginTop: 2 }}
                     />
                     <span>
                       {opt.title}

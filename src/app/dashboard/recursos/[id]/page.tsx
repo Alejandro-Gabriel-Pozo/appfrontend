@@ -159,7 +159,7 @@ export default function RecursoDetailPage() {
         </svg>
         <h2 style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8 }}>Recurso no encontrado</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>El ID ingresado no corresponde a ningún recurso.</p>
-        <Link href="/dashboard/recursos" style={{ color: 'var(--accent)', fontSize: 14 }}>← Volver a Recursos</Link>
+        <Link href="/dashboard/recursos" style={{ color: 'var(--zulu-link)', fontSize: 14 }}>← Volver a Recursos</Link>
       </div>
     )
   }

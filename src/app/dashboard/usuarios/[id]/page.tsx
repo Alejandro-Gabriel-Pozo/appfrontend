@@ -200,7 +200,7 @@ export default function UsuarioDetailPage() {
         </svg>
         <h2 style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8 }}>Usuario no encontrado</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>El ID ingresado no corresponde a ningún usuario.</p>
-        <Link href="/dashboard/usuarios" style={{ color: 'var(--accent)', fontSize: 14 }}>← Volver a Usuarios</Link>
+        <Link href="/dashboard/usuarios" style={{ color: 'var(--zulu-link)', fontSize: 14 }}>← Volver a Usuarios</Link>
       </div>
     )
   }

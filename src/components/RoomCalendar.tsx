@@ -341,7 +341,7 @@ export default function RoomCalendar({
                   key={ms}
                   style={{
                     width: DAY_WIDTH, flexShrink: 0, textAlign: 'center', padding: '8px 4px',
-                    background: isToday ? 'var(--accent-dim)' : undefined,
+                    background: isToday ? 'var(--zulu-surface-selected)' : undefined,
                   }}
                 >
                   <p className="text-xs" style={{ color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>{weekday}</p>

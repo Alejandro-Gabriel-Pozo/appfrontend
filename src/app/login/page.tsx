@@ -290,7 +290,7 @@ export default function LoginPage() {
 
               <p className="text-center text-xs mt-5" style={{ color: 'var(--text-tertiary)' }}>
                 ¿Todavía no tenés negocio?{' '}
-                <Link href="/registro" style={{ color: 'var(--accent)' }}>Registrate</Link>
+                <Link href="/registro" style={{ color: 'var(--zulu-link)' }}>Registrate</Link>
               </p>
             </>
           )}

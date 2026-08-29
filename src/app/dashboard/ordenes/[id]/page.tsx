@@ -199,7 +199,7 @@ export default function OrderDetailPage() {
         </svg>
         <h2 style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8 }}>Orden no encontrada</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>El ID ingresado no corresponde a ninguna orden.</p>
-        <Link href="/dashboard/ordenes" style={{ color: 'var(--accent)', fontSize: 14 }}>← Volver a Órdenes</Link>
+        <Link href="/dashboard/ordenes" style={{ color: 'var(--zulu-link)', fontSize: 14 }}>← Volver a Órdenes</Link>
       </div>
     )
   }
@@ -280,7 +280,7 @@ export default function OrderDetailPage() {
           color: var(--text-primary);
           outline: none;
         }
-        .input-sm:focus { border-color: var(--accent); }
+        .input-sm:focus { border-color: var(--zulu-focus); }
       `}</style>
 
       {/* ── Encabezado ── */}

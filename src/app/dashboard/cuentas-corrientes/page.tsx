@@ -54,7 +54,7 @@ function OrigenCell({ tx }: { tx: FinancialTransaction }) {
   }
   if (tx.orderId) {
     return (
-      <Link href={`/dashboard/ordenes/${tx.orderId}`} className="text-xs" style={{ color: 'var(--accent)' }}>
+      <Link href={`/dashboard/ordenes/${tx.orderId}`} className="text-xs" style={{ color: 'var(--zulu-link)' }}>
         Orden →
       </Link>
     )
@@ -211,7 +211,7 @@ export default function CuentasCorrientesPage() {
                 className="w-full text-left px-4 py-3"
                 style={{
                   borderBottom: '1px solid var(--border)',
-                  background: selected?.id === c.id ? 'var(--accent-dim)' : 'transparent',
+                  background: selected?.id === c.id ? 'var(--zulu-surface-selected)' : 'transparent',
                 }}
               >
                 <p className="text-sm" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{c.fullName}</p>
@@ -357,7 +357,7 @@ export default function CuentasCorrientesPage() {
                         type="checkbox"
                         checked={checked}
                         onChange={e => toggleInvoice(inv, e.target.checked)}
-                        style={{ accentColor: 'var(--accent)' }}
+                        style={{ accentColor: 'var(--zulu-form-control)' }}
                       />
                       <div className="flex-1">
                         <p className="text-sm" style={{ color: 'var(--text-primary)' }}>

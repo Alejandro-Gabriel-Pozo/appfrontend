@@ -248,7 +248,7 @@ export default function RolesPage() {
                           checked={checked}
                           disabled={!allowed && !checked}
                           onChange={() => toggleGroup(g.value)}
-                          style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
+                          style={{ accentColor: 'var(--zulu-form-control)', width: 14, height: 14 }}
                         />
                         {g.label}
                         {!allowed && (

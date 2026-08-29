@@ -287,7 +287,7 @@ export default function ProductoDetailPage() {
         </svg>
         <h2 style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8 }}>Producto no encontrado</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>El ID ingresado no corresponde a ningún producto.</p>
-        <Link href="/dashboard/productos" style={{ color: 'var(--accent)', fontSize: 14 }}>← Volver a Productos</Link>
+        <Link href="/dashboard/productos" style={{ color: 'var(--zulu-link)', fontSize: 14 }}>← Volver a Productos</Link>
       </div>
     )
   }
@@ -361,7 +361,7 @@ export default function ProductoDetailPage() {
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)' }}>
                 <input
                   type="checkbox" name="hasVariants" checked={form.hasVariants ?? false} onChange={handleFormChange}
-                  style={{ accentColor: 'var(--accent)', width: 16, height: 16 }}
+                  style={{ accentColor: 'var(--zulu-form-control)', width: 16, height: 16 }}
                 />
                 Tiene variantes (gestión de stock por variante)
               </label>
@@ -395,7 +395,7 @@ export default function ProductoDetailPage() {
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)' }}>
                   <input
                     type="checkbox" name="assembleOnDemand" checked={form.assembleOnDemand ?? false} onChange={handleFormChange}
-                    style={{ accentColor: 'var(--accent)', width: 16, height: 16, marginTop: 2 }}
+                    style={{ accentColor: 'var(--zulu-form-control)', width: 16, height: 16, marginTop: 2 }}
                   />
                   <span>
                     Armar en vivo al vender (sándwich)

@@ -475,7 +475,7 @@ export default function ReservasPage() {
                   type="checkbox"
                   checked={form.anyResource}
                   onChange={e => setForm(f => ({ ...f, anyResource: e.target.checked, resourceId: '' }))}
-                  style={{ accentColor: 'var(--accent)' }}
+                  style={{ accentColor: 'var(--zulu-form-control)' }}
                 />
                 Cualquier recurso disponible
               </label>
@@ -548,7 +548,7 @@ export default function ReservasPage() {
                           style={{
                             fontSize: 12, padding: '6px 12px', borderRadius: 8,
                             transition: 'background-color 150ms, color 150ms',
-                            background: active ? 'var(--accent)' : 'var(--surface-4)',
+                            background: active ? 'var(--zulu-module-context)' : 'var(--surface-4)',
                             color: active ? '#fff' : 'var(--text-secondary)',
                             border: 'none',
                           }}

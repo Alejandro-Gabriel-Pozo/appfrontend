@@ -40,8 +40,8 @@ export default function TelemetryCard({
     danger: 'var(--danger-dim)',
     info: 'var(--info-dim)',
   }
-  const color = variant ? accentColor[variant] : 'var(--accent)'
-  const dim = variant ? accentDim[variant] : 'var(--accent-dim)'
+  const color = variant ? accentColor[variant] : 'var(--zulu-technical)'
+  const dim = variant ? accentDim[variant] : 'var(--zulu-surface-selected)'
   const variantClass = variant ? ` kpi-card-${variant}` : ''
 
   return (

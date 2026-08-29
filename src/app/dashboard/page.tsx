@@ -65,7 +65,7 @@ function RecentReservations({ reservations, loading }: { reservations: Reservati
         <Link
           href="/dashboard/reservas"
           className="text-xs font-medium"
-          style={{ color: 'var(--accent)' }}
+          style={{ color: 'var(--zulu-status-emphasis)' }} /* TODO V2.6: énfasis tipográfico, no color semántico */
         >
           Ver todas →
         </Link>

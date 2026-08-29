@@ -117,7 +117,7 @@ export default function RegistroPage() {
 
           <p className="text-center text-xs mt-5" style={{ color: 'var(--text-tertiary)' }}>
             ¿Ya tenés cuenta?{' '}
-            <Link href="/login" style={{ color: 'var(--accent)' }}>Iniciá sesión</Link>
+            <Link href="/login" style={{ color: 'var(--zulu-link)' }}>Iniciá sesión</Link>
           </p>
         </div>
 

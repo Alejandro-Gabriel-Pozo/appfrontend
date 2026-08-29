@@ -344,7 +344,7 @@ export default function ClienteDetailPage() {
         </svg>
         <h2 style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8 }}>Cliente no encontrado</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>El ID ingresado no corresponde a ningún cliente.</p>
-        <Link href="/dashboard/clientes" style={{ color: 'var(--accent)', fontSize: 14 }}>← Volver a Clientes</Link>
+        <Link href="/dashboard/clientes" style={{ color: 'var(--zulu-link)', fontSize: 14 }}>← Volver a Clientes</Link>
       </div>
     )
   }
@@ -420,7 +420,7 @@ export default function ClienteDetailPage() {
                   type="checkbox"
                   checked={editForm.active}
                   onChange={e => setEditForm(f => ({ ...f, active: e.target.checked }))}
-                  style={{ accentColor: 'var(--accent)' }}
+                  style={{ accentColor: 'var(--zulu-form-control)' }}
                 />
                 Cliente activo
               </label>
@@ -429,7 +429,7 @@ export default function ClienteDetailPage() {
                   type="checkbox"
                   checked={editForm.enableCurrentAccount}
                   onChange={e => setEditForm(f => ({ ...f, enableCurrentAccount: e.target.checked }))}
-                  style={{ accentColor: 'var(--accent)' }}
+                  style={{ accentColor: 'var(--zulu-form-control)' }}
                 />
                 Habilitar cuenta corriente
               </label>

@@ -291,7 +291,7 @@ export default function VariantesPage() {
                 <tr key={v.id}>
                   <td className="table-cell-primary">{v.name}</td>
                   <td className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{v.sku ?? '—'}</td>
-                  <td className="mono" style={{ fontWeight: 600, color: v.priceOverride !== null ? 'var(--accent)' : 'var(--success)' }}>
+                  <td className="mono" style={{ fontWeight: 600, color: v.priceOverride !== null ? 'var(--zulu-status-emphasis)' /* TODO V2.6: origen del precio, con etiqueta 'Propio'/'Heredado' — no solo color */ : 'var(--success)' }}>
                     {fmt(v.priceOverride, basePrice)}
                     {v.priceOverride !== null && (
                       <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginLeft: 4 }}>(override)</span>

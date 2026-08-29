@@ -312,7 +312,7 @@ export default function ReservaDetailPage() {
         </svg>
         <h2 style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8 }}>Reserva no encontrada</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>El ID ingresado no corresponde a ninguna reserva.</p>
-        <Link href="/dashboard/reservas" style={{ color: 'var(--accent)', fontSize: 14 }}>← Volver a Reservas</Link>
+        <Link href="/dashboard/reservas" style={{ color: 'var(--zulu-link)', fontSize: 14 }}>← Volver a Reservas</Link>
       </div>
     )
   }

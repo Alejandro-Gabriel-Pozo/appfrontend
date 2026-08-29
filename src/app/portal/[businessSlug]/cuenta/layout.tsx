@@ -46,7 +46,7 @@ export default function CuentaLayout({ children }: { children: React.ReactNode }
               key={item.href}
               href={item.href}
               className="sidebar-link"
-              style={pathname.startsWith(item.href) ? { color: 'var(--accent)' } : undefined}
+              style={pathname.startsWith(item.href) ? { color: 'var(--zulu-module-context)' } : undefined}
             >
               {item.label}
             </Link>
