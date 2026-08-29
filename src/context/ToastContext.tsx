@@ -31,17 +31,23 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none" aria-live="polite">
+      {/*
+        V2.6.2a — este componente pintaba con Tailwind crudo
+        (`bg-emerald-600`, `bg-amber-600`...), fuera del sistema de tokens
+        y por debajo de AA: success 3.77 y warning 3.19. Era además un
+        SEGUNDO sistema de toast, con otros colores que el `.toast` del
+        CSS, para el mismo rol -- este lo usan 39 pantallas y el otro una.
+        Ahora los dos usan `.toast-stack` + `.toast`, que es donde vive el
+        contraste medido.
+
+        De paso se va `animate-slide-in`, que era la única pieza viva de
+        `src/styles.css` -- un archivo que no importa nadie, así que la
+        clase no existía y el toast nunca se animó. La animación real la
+        trae `.toast` (`toastIn`).
+      */}
+      <div className="toast-stack" aria-live="polite">
         {toasts.map(t => (
-          <div
-            key={t.id}
-            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm font-medium max-w-xs animate-slide-in ${
-              t.type === 'success' ? 'bg-emerald-600 text-white' :
-              t.type === 'error'   ? 'bg-red-600 text-white'     :
-              t.type === 'warning' ? 'bg-amber-600 text-white'   :
-                                     'bg-slate-700 text-white'
-            }`}
-          >
+          <div key={t.id} className={`toast ${t.type}`}>
             {t.type === 'success' && (
               <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

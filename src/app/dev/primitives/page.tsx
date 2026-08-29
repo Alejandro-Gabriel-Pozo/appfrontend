@@ -22,7 +22,12 @@ import { notFound } from 'next/navigation'
 const BADGES = ['badge-active', 'badge-pending', 'badge-confirmed', 'badge-completed', 'badge-cancelled'] as const
 const METODOS = ['badge-get', 'badge-post', 'badge-del'] as const
 const ALERTAS = ['alert-info', 'alert-warning', 'alert-danger', 'alert-success'] as const
-const TOASTS = ['success', 'error', 'info'] as const
+// Los cuatro tipos que ToastContext puede emitir. `warning` faltaba en el
+// CSS: hasta V2.6.2a caía en `.toast` a secas, sin fondo.
+const TOASTS = ['success', 'error', 'warning', 'info'] as const
+const ICONO_TOAST: Record<(typeof TOASTS)[number], string> = {
+  success: '✓', error: '✕', warning: '!', info: 'i',
+}
 
 /**
  * Consumidores del rojo, sacados del CSS -- no de memoria.
@@ -126,11 +131,11 @@ function Inventario() {
 
       <Bloque
         titulo="Toasts"
-        nota="Regresión de V2.5 corregida acá: tenían fondo oscuro traslúcido compuesto sobre la página, y al invertir la polaridad toast.error cayó a 2.57. Ahora el relleno es opaco, así el contraste no depende del fondo. Se les fuerza position:static -- el resto (relleno, texto, icono) sale del CSS real.">
-        <div style={{ display: 'grid', gap: 8 }}>
+        nota="Regresión de V2.5 corregida acá: tenían fondo oscuro traslúcido compuesto sobre la página, y al invertir la polaridad toast.error cayó a 2.57. Ahora el relleno es opaco, así el contraste no depende del fondo. Desde V2.6.2a ya no hace falta forzar position: la posición vive en .toast-stack y .toast es sólo apariencia, así que esto es exactamente lo que se ve en la app.">
+        <div style={{ display: 'grid', gap: 8, justifyItems: 'start' }}>
           {TOASTS.map(t => (
-            <div key={t} className={`toast ${t}`} style={{ position: 'static' }}>
-              <span aria-hidden style={{ fontWeight: 700 }}>{t === 'success' ? '✓' : t === 'error' ? '✕' : 'i'}</span>
+            <div key={t} className={`toast ${t}`}>
+              <span aria-hidden style={{ fontWeight: 700 }}>{ICONO_TOAST[t]}</span>
               toast {t} — texto de ejemplo
             </div>
           ))}

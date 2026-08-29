@@ -94,13 +94,16 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* V2.6.2a: `.toast` ya no se posiciona solo — el contenedor es `.toast-stack`. */}
       {toast && (
-        <div className={`toast ${toast.type}`}>
-          {toast.type === 'success'
-            ? <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
-            : <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M15 9l-6 6M9 9l6 6"/></svg>
-          }
-          {toast.msg}
+        <div className="toast-stack" aria-live="polite">
+          <div className={`toast ${toast.type}`}>
+            {toast.type === 'success'
+              ? <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+              : <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M15 9l-6 6M9 9l6 6"/></svg>
+            }
+            {toast.msg}
+          </div>
         </div>
       )}
     </div>

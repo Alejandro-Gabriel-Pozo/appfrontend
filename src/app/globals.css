@@ -836,24 +836,38 @@
      fondo opaco) y el borde queda transparente: los *-border son claros,
      pensados para superficies *-soft, y sobre relleno oscuro dibujaban un
      halo (4.20 / 4.24 / 10.85). La separacion la da --shadow-lg. */
+  /* V2.6.2a — la posicion se separa de la apariencia.
+     Antes `.toast` era `fixed bottom-6 right-6` y se posicionaba solo, asi
+     que dos toasts a la vez se apilaban uno encima del otro. ToastContext
+     resolvia eso con su propio contenedor y sus propios colores, y por eso
+     terminaron existiendo DOS sistemas de toast con contrastes distintos.
+     Ahora `.toast-stack` es el unico que posiciona y `.toast` es solo
+     apariencia; los dos consumidores usan el mismo par. */
+  .toast-stack {
+    @apply fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2;
+    pointer-events: none;
+  }
   .toast {
-    @apply fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3
-           rounded-xl text-sm font-medium;
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium;
     border: 1px solid transparent;
     box-shadow: var(--shadow-lg);
     animation: toastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+    pointer-events: auto;
     /* Sin esto un mensaje largo se estira hasta casi tocar el borde
-       izquierdo (medido: 6px de margen a 419px de ancho). El otro sistema
-       de toasts -- ToastContext.tsx -- ya usa max-w-xs; esta regla no tenia
-       tope. El calc() garantiza 24px de aire de los dos lados. */
+       izquierdo (medido: 6px de margen a 419px de ancho).
+       El calc() garantiza 24px de aire de los dos lados. */
     max-width: min(24rem, calc(100vw - 3rem));
   }
   .toast.success {
-    background: var(--zulu-sage-strong);   /* 5.14 AA vs blanco */
+    background: var(--zulu-sage-strong);   /*  5.14 AA  vs blanco */
     color: var(--zulu-white);
   }
   .toast.error {
-    background: var(--zulu-danger);        /* 6.57 AA vs blanco */
+    background: var(--zulu-danger);        /*  6.57 AA  vs blanco */
+    color: var(--zulu-white);
+  }
+  .toast.warning {
+    background: var(--zulu-brass-strong);  /*  5.88 AA  vs blanco */
     color: var(--zulu-white);
   }
   .toast.info {

@@ -95,17 +95,21 @@ hexes son distintos (brass `#B8892E` acá vs `#B8935F` en Bastión).
    sistema, no un `#RRGGBB` en la página. Hoy hay 21 en 10 archivos: es
    deuda registrada, no un precedente.
 2. **Cero clases Tailwind de color crudas** (`bg-slate-800`, `text-emerald-400`).
-   Medido el 29/08/2026 (V2.6.1): hay **93**, y **no** están concentradas en
-   `app/superadmin/*` — ahí vive el 31% (29). El 69% restante está repartido:
-   `styles.css` 24, `app/admin` 11, `ApiSection.tsx` 10, `ResourceLockPicker`
-   y `UpgradePrompt` 6 cada uno, `ToastContext.tsx` 4. *(Este punto decía "69,
-   concentradas en `app/superadmin/*`" y las dos mitades eran falsas. Contarlas
-   de nuevo antes de citar el número.)*
-   Dos consecuencias que importan más que el número: `ToastContext.tsx` es el
-   toast que usa toda la app y pinta con `bg-emerald-600`/`bg-amber-600`, fuera
-   del sistema de tokens y por debajo de AA (3.77 / 3.19). Y `src/styles.css`
-   **no lo importa nadie** — es un sistema de diseño oscuro entero, muerto, que
-   redefine `.card`, `.input`, `.btn-primary` y `.badge-*` con otros valores.
+   Medido el 29/08/2026 (V2.6.1): eran **93**, y **no** estaban concentradas en
+   `app/superadmin/*` — ahí vive un tercio. *(Este punto decía "69, concentradas
+   en `app/superadmin/*`" y las dos mitades eran falsas. Contarlas de nuevo
+   antes de citar el número, y contarlas ignorando comentarios: un comentario
+   que documenta una clase ya sacada la vuelve a sumar.)*
+   Después de V2.6.2a quedan **89**: `superadmin` 29 (33%), `styles.css` 24,
+   `app/admin` 11, `ApiSection.tsx` 10, `ResourceLockPicker` y `UpgradePrompt`
+   6 cada uno, `dashboard` 2, `ApiBlock.tsx` 1.
+   `ToastContext.tsx` bajó de 4 a 0 en V2.6.2a: era el toast que usa toda la
+   app, pintaba con `bg-emerald-600`/`bg-amber-600` por debajo de AA (3.77 /
+   3.19), y ahora usa `.toast-stack` + `.toast` como el resto.
+   Queda pendiente `src/styles.css`, que **no lo importa nadie** — un sistema
+   de diseño oscuro entero, muerto, que redefine `.card`, `.input`,
+   `.btn-primary` y `.badge-*` con otros valores. Aporta 24 de las 89. Su
+   única pieza viva era `animate-slide-in`, y dejó de serlo en V2.6.2a.
 3. **Color nunca como única señal de estado.** Todo estado lleva label y
    punto o icono, además del color.
 4. **No reasignar `.btn-mini-clay` / `.btn-mini-sage` sin revisar sus call
