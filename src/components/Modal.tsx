@@ -40,8 +40,12 @@ export default function Modal({ open, onClose, title, size = 'max-w-md', childre
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className={`relative w-full ${size} rounded-xl shadow-2xl`}
+        className={`relative w-full ${size} rounded-xl`}
         style={{
+          /* V2.6.3: usaba `shadow-2xl` de Tailwind, o sea que la superficie
+             más elevada del producto no pasaba por la escala del sistema.
+             Rol = superficie flotante -> --shadow-lg. */
+          boxShadow: 'var(--shadow-lg)',
           background: 'var(--surface-2)',
           border: '1px solid var(--border-md, var(--zulu-overlay-08))',
           maxHeight: '90dvh',

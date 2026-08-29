@@ -38,7 +38,15 @@ export default function AdminPage() {
   return (
     <div className="zulu min-h-screen" style={{ background: 'var(--bg)' }}>
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-xl border transition-all
+        // V2.6.3: `shadow-xl` de Tailwind -> escala del sistema. El rol no es
+        // "card elevada" sino superficie FLOTANTE (un toast), así que va
+        // --shadow-lg, el mismo nivel que usa `.toast`.
+        // OJO: este es un TERCER sistema de toast, con colores Tailwind
+        // oscuros propios (bg-emerald-900/90, bg-red-900/90). No se unifica
+        // acá porque V2.6.3 es sólo elevación; queda anotado.
+        <div
+          style={{ boxShadow: 'var(--shadow-lg)' }}
+          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-medium border transition-all
           ${toast.type === 'ok'
             ? 'bg-emerald-900/90 text-emerald-300 border-emerald-700/50'
             : 'bg-red-900/90 text-red-300 border-red-700/50'

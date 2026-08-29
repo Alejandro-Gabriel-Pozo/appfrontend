@@ -342,10 +342,23 @@
   --r-lg: 12px;
   --r-xl: 16px;
 
-  /* Sombras toneadas */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
-  --shadow-md: 0 4px 14px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.22);
-  --shadow-lg: 0 12px 36px rgba(0,0,0,0.45), 0 4px 14px rgba(0,0,0,0.28);
+  /* Elevación — V2.6.3 (29/08/2026), recalibrada para la base clara.
+     Los alfas anteriores eran .30/.20, .35/.22 y .45/.28. Estaban bien para
+     la página navy: negro sobre casi-negro no se ve, y las tres sombras
+     medían 1.03-1.04 de visibilidad, o sea que apenas existían. Subir el
+     alfa era la única forma de que se notaran.
+     Al invertir la polaridad ese mismo alfa pasó a 3.19 / 3.80 / 5.64 sobre
+     #F5F4EF: de invisible a halo gris. Un factor de 3 a 5, sin que nadie
+     tocara la escala.
+     Referencia: la sombra MÁS CHICA de acá era 0.44 de alfa efectivo (son
+     dos capas apiladas), contra 0.05 de la más chica de Tailwind y 0.25 de
+     la más grande.
+     Se cambian sólo los alfas -- la geometría es la misma, así que la
+     progresión relativa entre los tres niveles se conserva:
+     visibilidad 1.25 < 1.43 < 1.71. */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 14px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+  --shadow-lg: 0 12px 36px rgba(0,0,0,0.16), 0 4px 14px rgba(0,0,0,0.08);
 
   /* Transición estándar */
   --t: 150ms cubic-bezier(0.16, 1, 0.3, 1);
