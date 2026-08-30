@@ -32,7 +32,7 @@ export const negocioHosteleria: BusinessContext = {
   terminology: {
     'resource.singular': 'Habitación',
     'resource.plural': 'Habitaciones',
-    'booking.singular': 'Reserva',
+    'reservation.singular': 'Reserva',
     'customer.singular': 'Huésped',
     'staff.singular': 'Personal',
   },
@@ -40,15 +40,16 @@ export const negocioHosteleria: BusinessContext = {
   locale: 'es-AR',
   currency: 'ARS',
   timezone: 'America/Argentina/Buenos_Aires',
-  navigation: [
-    { moduleKey: null, label: 'Resumen', href: '/dashboard', contextColor: 'NEUTRAL' },
-    { moduleKey: 'ALOJAMIENTO', label: 'Reservas', href: '/dashboard/reservas', contextColor: 'BRASS' },
-    { moduleKey: 'ALOJAMIENTO', label: 'Habitaciones', href: '/dashboard/recursos', contextColor: 'BRASS' },
-    { moduleKey: 'HOUSEKEEPING', label: 'Housekeeping', href: '/dashboard/housekeeping', contextColor: 'SAGE' },
-    { moduleKey: 'POS_RESTAURANTE', label: 'Órdenes', href: '/dashboard/ordenes', contextColor: 'CLAY' },
-    { moduleKey: 'FACTURACION', label: 'Facturación', href: '/dashboard/empresa', contextColor: 'CLAY' },
-    { moduleKey: 'REPORTES', label: 'Reportes', href: '/dashboard/reportes', contextColor: 'NEUTRAL' },
-  ],
+  // Valores reales de `modules.context_color` en producción (29/08/2026).
+  // Emitido para los 6 del catálogo, no sólo los habilitados.
+  moduleColors: {
+    ALOJAMIENTO: 'BRASS',
+    POS_RESTAURANTE: 'CLAY',
+    FACTURACION: 'CLAY',
+    HOUSEKEEPING: 'SAGE',
+    CUENTAS_CORRIENTES: 'NEUTRAL',
+    REPORTES: 'NEUTRAL',
+  },
 }
 
 /**
@@ -69,12 +70,17 @@ export const negocioSinClasificar: BusinessContext = {
   locale: 'es-AR',
   currency: 'ARS',
   timezone: 'America/Argentina/Buenos_Aires',
-  navigation: [
-    { moduleKey: null, label: 'Resumen', href: '/dashboard', contextColor: 'NEUTRAL' },
-    { moduleKey: 'ALOJAMIENTO', label: 'Reservas', href: '/dashboard/reservas', contextColor: 'NEUTRAL' },
-    { moduleKey: 'ALOJAMIENTO', label: 'Recursos', href: '/dashboard/recursos', contextColor: 'NEUTRAL' },
-    { moduleKey: 'REPORTES', label: 'Reportes', href: '/dashboard/reportes', contextColor: 'NEUTRAL' },
-  ],
+  // Sin clasificar -> NEUTRAL en todo (§5.5.3). La regla vive en
+  // `resolveCapabilities()` del backend: con `industryKey === null` aplana
+  // todos los colores a NEUTRAL, y `moduleColors` sólo proyecta eso.
+  moduleColors: {
+    ALOJAMIENTO: 'NEUTRAL',
+    POS_RESTAURANTE: 'NEUTRAL',
+    FACTURACION: 'NEUTRAL',
+    HOUSEKEEPING: 'NEUTRAL',
+    CUENTAS_CORRIENTES: 'NEUTRAL',
+    REPORTES: 'NEUTRAL',
+  },
 }
 
 /** Comercio — para ver clay como color de contexto dominante. */
@@ -88,17 +94,11 @@ export const negocioComercio: BusinessContext = {
   terminology: {
     'resource.singular': 'Mesa',
     'resource.plural': 'Mesas',
-    'booking.singular': 'Turno',
+    'reservation.singular': 'Turno',
     'customer.singular': 'Cliente',
   },
-  navigation: [
-    { moduleKey: null, label: 'Resumen', href: '/dashboard', contextColor: 'NEUTRAL' },
-    { moduleKey: 'POS_RESTAURANTE', label: 'Órdenes', href: '/dashboard/ordenes', contextColor: 'CLAY' },
-    { moduleKey: 'POS_RESTAURANTE', label: 'Productos', href: '/dashboard/productos', contextColor: 'CLAY' },
-    { moduleKey: 'ALOJAMIENTO', label: 'Turnos', href: '/dashboard/turnos', contextColor: 'BRASS' },
-    { moduleKey: 'FACTURACION', label: 'Facturación', href: '/dashboard/empresa', contextColor: 'CLAY' },
-    { moduleKey: 'REPORTES', label: 'Reportes', href: '/dashboard/reportes', contextColor: 'NEUTRAL' },
-  ],
+  // `moduleColors` viene del spread de `negocioHosteleria`: el color del
+  // catálogo no depende del rubro, sólo de `modules.context_color`.
 }
 
 /** Fuente de mock, con demora opcional para poder VER el estado `loading`. */

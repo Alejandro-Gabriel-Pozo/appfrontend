@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import { BusinessContextProvider, useBusinessContextState, useModuloVisible } from '@/lib/business-context/provider'
 import { errorSource, mockSource, negocioComercio, negocioHosteleria, negocioSinClasificar } from '@/lib/business-context/sources'
-import type { ContextColor, NavigationItem } from '@/lib/business-context/types'
+import type { BusinessContext, ContextColor, ModuleKey } from '@/lib/business-context/types'
 
 /**
  * Banco del shell — V3, capa visual.
@@ -32,7 +32,51 @@ const TOKEN_DE_COLOR: Record<ContextColor, string> = {
   NEUTRAL: 'var(--zulu-gray)',
 }
 
-function ItemDeNav({ item, activo }: { item: NavigationItem; activo: boolean }) {
+/**
+ * Catálogo de navegación — LOCAL al frontend (decisión D-A, 30/08/2026). El
+ * backend no emite labels ni rutas: manda `enabledModules`, `terminology` y
+ * `moduleColors`, y el shell arma con eso. Espejo reducido del array `NAV`
+ * de `src/app/dashboard/layout.tsx`.
+ */
+interface ItemCatalogo {
+  moduleKey: ModuleKey | null   // null = ítem transversal, sin gate de módulo
+  href: string
+  label: string                 // fallback si no hay término
+  termKey?: string              // clave de terminología para el label
+}
+
+const CATALOGO_NAV: ItemCatalogo[] = [
+  { moduleKey: null,              href: '/dashboard',             label: 'Resumen' },
+  { moduleKey: 'ALOJAMIENTO',     href: '/dashboard/reservas',    label: 'Reservas',  termKey: 'reservation.plural' },
+  { moduleKey: 'ALOJAMIENTO',     href: '/dashboard/recursos',    label: 'Recursos',  termKey: 'resource.plural' },
+  { moduleKey: 'HOUSEKEEPING',    href: '/dashboard/housekeeping', label: 'Housekeeping' },
+  { moduleKey: 'POS_RESTAURANTE', href: '/dashboard/ordenes',     label: 'Órdenes' },
+  { moduleKey: 'FACTURACION',     href: '/dashboard/empresa',     label: 'Facturación' },
+  { moduleKey: 'REPORTES',        href: '/dashboard/reportes',    label: 'Reportes' },
+]
+
+interface ItemRender {
+  moduleKey: ModuleKey | null
+  href: string
+  label: string
+  contextColor: ContextColor
+}
+
+/**
+ * `catálogo local × terminology × moduleColors`. El filtro por módulo lo hace
+ * `useModuloVisible` dentro de cada `ItemDeNav` (fail-open), así que acá se
+ * componen todos y ninguno se descarta todavía.
+ */
+function componerNav(ctx: BusinessContext | null): ItemRender[] {
+  return CATALOGO_NAV.map((item) => ({
+    moduleKey: item.moduleKey,
+    href: item.href,
+    label: (item.termKey && ctx?.terminology[item.termKey]) || item.label,
+    contextColor: (item.moduleKey && ctx?.moduleColors[item.moduleKey]) || 'NEUTRAL',
+  }))
+}
+
+function ItemDeNav({ item, activo }: { item: ItemRender; activo: boolean }) {
   // Fail-open: mientras carga o si falló, se muestra igual.
   const visible = useModuloVisible(item.moduleKey)
   if (!visible) return null
@@ -66,8 +110,9 @@ function ItemDeNav({ item, activo }: { item: NavigationItem; activo: boolean }) 
 function Shell() {
   const estado = useBusinessContextState()
 
-  const items: NavigationItem[] =
-    estado.status === 'ready' ? estado.context.navigation : []
+  // Compuesta desde el catálogo local. Con contexto en `ready`; con `null` en
+  // loading/error, que da labels de fallback y color NEUTRAL.
+  const items = componerNav(estado.status === 'ready' ? estado.context : null)
 
   const rubro =
     estado.status !== 'ready' ? null
@@ -100,14 +145,14 @@ function Shell() {
         )}
 
         {estado.status === 'ready' && items.map((it, i) => (
-          <ItemDeNav key={it.href + i} item={it} activo={i === 1} />
+          <ItemDeNav key={it.href} item={it} activo={i === 1} />
         ))}
 
         {estado.status === 'error' && (
           <>
-            {/* Fail-open: el shell muestra la navegación completa. */}
-            {negocioHosteleria.navigation.map((it, i) => (
-              <ItemDeNav key={it.href + i} item={{ ...it, contextColor: 'NEUTRAL' }} activo={i === 1} />
+            {/* Fail-open: el shell muestra la navegación completa, en NEUTRAL. */}
+            {items.map((it, i) => (
+              <ItemDeNav key={it.href} item={it} activo={i === 1} />
             ))}
           </>
         )}
@@ -135,7 +180,7 @@ function Shell() {
           {estado.status === 'ready' && (
             <div className="card" style={{ padding: 16 }}>
               <div style={{ fontSize: 12, opacity: .6 }}>
-                {estado.context.terminology['booking.singular'] ?? 'Reserva'} · {estado.context.terminology['customer.singular'] ?? 'Cliente'}
+                {estado.context.terminology['reservation.singular'] ?? 'Reserva'} · {estado.context.terminology['customer.singular'] ?? 'Cliente'}
               </div>
               <div className="mono" style={{ fontSize: 22, fontWeight: 600, marginTop: 4 }}>$284.500</div>
               <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 10 }}>

@@ -10,6 +10,15 @@
  * que después obligue a rehacerla. Cuando la Fase 4 exponga
  * `GET /api/business/context`, lo único que cambia es la FUENTE — ver
  * `provider.tsx`.
+ *
+ * ## Decisión D-A (dueño, 30/08/2026): el payload NO lleva `navigation`
+ *
+ * El backend expone capacidades efectivas, colores, terminología y grupos de
+ * permiso. La navegación —labels visibles, rutas, iconos, `managementOnly`—
+ * es catálogo de presentación del frontend: vive en el shell, no en el
+ * contrato. El sidebar se compone con
+ * `catálogo local × enabledModules × terminology × moduleColors`, que es como
+ * `src/app/dashboard/layout.tsx` (array `NAV`) ya lo arma hoy.
  */
 
 /** Los 6 de `ModuleKey` en `app-main/src/types/enums.ts`. */
@@ -30,13 +39,6 @@ export type ContextColor = 'BRASS' | 'CLAY' | 'SAGE' | 'NEUTRAL'
 /** De dónde salió que el módulo esté prendido — la cascada de §5.4. */
 export type ModuleSource = 'PRESET' | 'SUPERADMIN' | 'TENANT'
 
-export interface NavigationItem {
-  moduleKey: ModuleKey | null   // null = ítem transversal, sin módulo que lo gatee
-  label: string
-  href: string
-  contextColor: ContextColor
-}
-
 export interface BusinessContext {
   businessId: string
 
@@ -54,6 +56,19 @@ export interface BusinessContext {
   enabledModules: ModuleKey[]
   moduleSources: Partial<Record<ModuleKey, ModuleSource>>
 
+  /**
+   * Color de contexto EFECTIVO por módulo. Enum cerrado, elegido por
+   * Superadmin (`modules.context_color`). Emitido para TODOS los módulos del
+   * catálogo, no sólo los habilitados — el color no depende de si el módulo
+   * está prendido. Reemplaza a `navigation[].contextColor` del contrato viejo
+   * (D-A).
+   *
+   * Con `industryKey === null` (negocio sin clasificar) TODOS los valores son
+   * `NEUTRAL` (§5.5.3). La regla la aplica `resolveCapabilities()` en el
+   * backend; el frontend sólo lee lo que llega.
+   */
+  moduleColors: Record<ModuleKey, ContextColor>
+
   /** Ya resuelta por la cascada tenant -> industry -> system. */
   terminology: Record<string, string>
 
@@ -68,8 +83,6 @@ export interface BusinessContext {
   locale: string
   currency: string
   timezone: string
-
-  navigation: NavigationItem[]
 }
 
 /**
