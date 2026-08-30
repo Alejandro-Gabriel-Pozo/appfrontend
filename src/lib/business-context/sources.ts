@@ -1,3 +1,5 @@
+'use client'
+import { apiFetch, extractErrorMessage } from '@/lib/http'
 import type { BusinessContext, BusinessContextSource } from './types'
 
 /**
@@ -112,16 +114,79 @@ export function errorSource(mensaje = 'No se pudo cargar el contexto'): Business
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Fuente real — todavía NO existe.
-//
-// `GET /api/business/context` llega con la Fase 4 del plan de separación de
-// dominios. Hasta entonces esta función no se implementa a medias con
-// `/api/business/modules` + valores inventados: eso sería exactamente la
-// navegación hardcodeada que V3 tiene prohibido crear.
+// Fuente real — `GET /api/business/context` (Fase 4 Bloque 4B, `9119a50`).
 // ─────────────────────────────────────────────────────────────────────────
 
-export function endpointSource(): BusinessContextSource {
-  return () => Promise.reject(
-    new Error('GET /api/business/context todavía no existe — llega con la Fase 4'),
+// Enums cerrados del contrato. Como `Set<string>` a propósito: `.has(x)` toma
+// un `string` directo, sin castear `x` al tipo del enum (la validación es el
+// `.has`, no un `as`).
+const CONTEXT_COLORS: ReadonlySet<string> = new Set(['BRASS', 'CLAY', 'SAGE', 'NEUTRAL'])
+const MODULE_SOURCES: ReadonlySet<string> = new Set(['PRESET', 'SUPERADMIN', 'TENANT'])
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+function isStringOrNull(v: unknown): boolean {
+  return v === null || typeof v === 'string'
+}
+function everyString(v: unknown): boolean {
+  return Array.isArray(v) && v.every((x) => typeof x === 'string')
+}
+
+/**
+ * ¿El JSON del endpoint tiene la forma de `BusinessContext`?
+ *
+ * Valida TIPOS y DOMINIOS de valor: `moduleColors` sólo con `ContextColor`,
+ * `moduleSources` sólo con `ModuleSource`, `enabledModules`/`permissionGroups`
+ * arrays de string, `terminology` objeto (no-array) de string, `locale` /
+ * `currency` / `timezone` string, `industryKey` / `industryName` string|null.
+ *
+ * LENIENTE con las CLAVES de módulo: si el backend agrega un módulo nuevo al
+ * catálogo, el guard no falla — el shell sólo renderiza las claves que su
+ * catálogo local conoce. Lo que NO se acepta es un color o una fuente fuera
+ * del enum.
+ */
+export function isBusinessContext(v: unknown): v is BusinessContext {
+  if (!isRecord(v)) return false
+  return (
+    typeof v.businessId === 'string' &&
+    isStringOrNull(v.industryKey) &&
+    isStringOrNull(v.industryName) &&
+    everyString(v.enabledModules) &&
+    isRecord(v.moduleSources) && Object.values(v.moduleSources).every((s) => typeof s === 'string' && MODULE_SOURCES.has(s)) &&
+    isRecord(v.moduleColors)  && Object.values(v.moduleColors).every((c) => typeof c === 'string' && CONTEXT_COLORS.has(c)) &&
+    isRecord(v.terminology)   && Object.values(v.terminology).every((t) => typeof t === 'string') &&
+    everyString(v.permissionGroups) &&
+    typeof v.locale === 'string' &&
+    typeof v.currency === 'string' &&
+    typeof v.timezone === 'string'
   )
+}
+
+/**
+ * Fuente real. `apiFetch` ya hace same-origin, `credentials: 'include'`
+ * (cookie httpOnly de sesión), retry en 503 para GET, y redirección a
+ * `/login` ante `TOKEN_EXPIRED`/`UNAUTHORIZED`. Acá sólo se agrega:
+ *
+ * - normalizar la rejección de `apiFetch` (un objeto plano `ApiError`, no un
+ *   `Error`) a un `Error` con mensaje legible — si no, el provider haría
+ *   `new Error(String(objeto))` = `"[object Object]"`;
+ * - rechazar con `Error` legible si el JSON no cumple `isBusinessContext`.
+ *
+ * Cualquier rejection -> `provider` la mapea a `{ status: 'error' }`
+ * (fail-open). Una resolución válida -> `{ status: 'ready' }`.
+ */
+export function endpointSource(): BusinessContextSource {
+  return async (): Promise<BusinessContext> => {
+    let raw: unknown
+    try {
+      raw = await apiFetch<unknown>('/api/business/context')
+    } catch (e) {
+      throw e instanceof Error ? e : new Error(extractErrorMessage(e))
+    }
+    if (!isBusinessContext(raw)) {
+      throw new Error('GET /api/business/context devolvió un contexto con forma inesperada')
+    }
+    return raw
+  }
 }
