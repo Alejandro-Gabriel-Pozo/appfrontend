@@ -147,6 +147,27 @@ const NAV: NavItem[] = [
   },
 ]
 
+/**
+ * Color de contexto del ítem ACTIVO como valor del enum cerrado, nunca un
+ * color. Se emite en `data-context-color`; `globals.css` lo traduce a
+ * `--zulu-module-context` dentro del `<li>`.
+ *
+ *   sin `moduleKey`             -> null       (no se emite atributo; barra/glow por defecto = BRASS)
+ *   con `moduleKey`, ctx null   -> 'NEUTRAL'  (loading | error; plan §5.5.2)
+ *   con `moduleKey`, ctx ready  -> moduleColors[key] si es del enum; si no, 'NEUTRAL'
+ */
+function contextColorDe(
+  item: NavItem,
+  ctx: ReturnType<typeof useBusinessContext>,
+): 'BRASS' | 'CLAY' | 'SAGE' | 'NEUTRAL' | null {
+  if (!item.moduleKey) return null
+  if (!ctx) return 'NEUTRAL'
+  const raw = (ctx.moduleColors as Record<string, string>)[item.moduleKey]
+  return raw === 'BRASS' || raw === 'CLAY' || raw === 'SAGE' || raw === 'NEUTRAL'
+    ? raw
+    : 'NEUTRAL'
+}
+
 export default function NavList({
   pathname,
   isManagement,
@@ -175,8 +196,10 @@ export default function NavList({
             pathname === item.href ||
             (item.href !== '/dashboard' && pathname.startsWith(item.href))
 
+          const contextColor = active ? contextColorDe(item, ctx) : null
+
           return (
-            <li key={item.href}>
+            <li key={item.href} data-context-color={contextColor ?? undefined}>
               <Link
                 href={item.href}
                 style={{
@@ -187,7 +210,7 @@ export default function NavList({
                   borderRadius: 8,
                   fontSize: 13.5,
                   fontWeight: active ? 600 : 400,
-                  color: active ? 'var(--zulu-module-context)' : 'var(--text-secondary)',
+                  color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
                   background: active ? 'var(--zulu-surface-selected)' : 'transparent',
                   textDecoration: 'none',
                   transition: 'all 150ms ease',

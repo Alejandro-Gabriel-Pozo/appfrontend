@@ -1151,6 +1151,27 @@
     --zulu-technical-border: rgba(34,211,238,0.30);
   }
 
+  /* V3-b — color de contexto por módulo en el ítem ACTIVO del nav. NavList
+     emite `data-context-color` con el enum cerrado (BRASS|CLAY|SAGE|NEUTRAL);
+     acá se traduce redefiniendo SÓLO `--zulu-module-context` (barra
+     indicadora + glow) en el subárbol del `<li>`. Etiqueta e icono van en
+     `--text-primary` y no leen este token; `--zulu-surface-selected` no se
+     redefine. BRASS = `var(--zulu-brass)`, el mismo default de este scope.
+     Un override en el `<li>` no sube al ancestro ni salta a hermanos: no
+     alcanza al chip de avatar, al topbar ni a los toggles. */
+  .zulu-shell-dark li[data-context-color='BRASS'] {
+    --zulu-module-context: var(--zulu-brass);
+  }
+  .zulu-shell-dark li[data-context-color='CLAY'] {
+    --zulu-module-context: var(--zulu-clay);
+  }
+  .zulu-shell-dark li[data-context-color='SAGE'] {
+    --zulu-module-context: var(--zulu-sage);
+  }
+  .zulu-shell-dark li[data-context-color='NEUTRAL'] {
+    --zulu-module-context: var(--zulu-gray);
+  }
+
   .zulu h1, .zulu h2, .zulu h3 {
     font-family: var(--font-zulu-display, 'Space Grotesk', sans-serif);
     color: var(--text-primary);
