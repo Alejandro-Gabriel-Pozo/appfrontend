@@ -7,7 +7,7 @@ import { productsApi, companiesApi, extractErrorMessage } from '@/lib/api'
 import { isApiError } from '@/lib/apiErrors'
 import { useToast } from '@/context/ToastContext'
 import ConfirmDialog from '@/components/ConfirmDialog'
-import { useBusinessModules } from '@/hooks/useBusinessModules'
+import { useModuloVisible } from '@/lib/business-context/provider'
 import type { Product, CreateProductInput, UpdateProductInput, ProductType, CompanyLink } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
@@ -105,7 +105,7 @@ export default function ProductoDetailPage() {
   const { mutateAsync: updateProduct } = useUpdate<Product>()
   const { mutateAsync: deleteProductMutation } = useDelete<Product>()
   const invalidate = useInvalidate()
-  const modules = useBusinessModules()
+  const mostrarFiscal = useModuloVisible('FACTURACION')
 
   const [product, setProduct] = useState<Product | null>(null)
   const [components, setComponents] = useState<Product[]>([])
@@ -407,7 +407,7 @@ export default function ProductoDetailPage() {
                 </label>
               )}
 
-              {(modules === null || modules['FACTURACION'] !== false) && (
+              {mostrarFiscal && (
                 <details className="card" style={{ padding: 0 }}>
                   <summary style={{ cursor: 'pointer', padding: '10px 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     Datos fiscales (AFIP/ARCA)

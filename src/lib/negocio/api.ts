@@ -33,14 +33,6 @@ export const businessHoursApi = {
   remove: (id: string) => apiFetch<void>(`/api/business-hours/${id}`, { method: 'DELETE' }),
 }
 
-// ─── Módulos habilitados (entitlements) ──────────────────────────────────────
-// Record dinámico a propósito, en vez de un enum duplicado del backend:
-// la fuente de verdad de qué module_key existen es la tabla `modules` en
-// app-main — acá solo se consume lo que venga.
-export const businessModulesApi = {
-  get: () => apiFetch<{ modules: Record<string, boolean> }>('/api/business/modules'),
-}
-
 // ─── Límites de plan del negocio (L, 23/08/2026) ─────────────────────────────
 // `null` en los numéricos = sin límite, 'ALL' en las listas = sin
 // restricción — mismo contrato que PlanLimits (app-main/src/config/plan-limits.ts).

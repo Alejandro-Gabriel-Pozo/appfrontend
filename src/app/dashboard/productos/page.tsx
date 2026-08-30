@@ -6,7 +6,7 @@ import { useTable, useCreate, useInvalidate } from '@refinedev/core'
 import { extractErrorMessage, productsApi, wasteReasonsApi, consumptionDestinationsApi } from '@/lib/api'
 import type { Product, CreateProductInput, WasteReason, ConsumptionDestination, ProductType } from '@/lib/types'
 import { useToast } from '@/context/ToastContext'
-import { useBusinessModules } from '@/hooks/useBusinessModules'
+import { useModuloVisible } from '@/lib/business-context/provider'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
 // Acento clay (POS_RESTAURANTE).
@@ -60,7 +60,7 @@ const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
 function ProductModal({ onClose }: { onClose: () => void }) {
   const { toast } = useToast()
   const { mutateAsync: createProduct } = useCreate<Product>()
-  const modules = useBusinessModules()
+  const mostrarFiscal = useModuloVisible('FACTURACION')
 
   const [form, setForm] = useState<ProductFormState>({ ...EMPTY_CREATE })
   const [loading, setLoading] = useState(false)
@@ -207,7 +207,7 @@ function ProductModal({ onClose }: { onClose: () => void }) {
             </label>
           )}
 
-          {(modules === null || modules['FACTURACION'] !== false) && (
+          {mostrarFiscal && (
             <details className="card" style={{ padding: 0 }}>
               <summary style={{ cursor: 'pointer', padding: '10px 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Datos fiscales (AFIP/ARCA)
