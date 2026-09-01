@@ -6,6 +6,7 @@ import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import RoomCalendar, { todayUTCMidnightMs, VISIBLE_DAYS, MS_PER_DAY } from '@/components/RoomCalendar'
 import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
+import { useNumeroOperativo, SIN_NUMERO } from '@/lib/business-context/numero-operativo'
 import type { ReservationStatus, RatePlan } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
@@ -90,6 +91,8 @@ export default function ReservasPage() {
     actionLoading, doAction: doScreenAction,
     getResourceName,
   } = useReservationsScreen(true, view === 'calendar' ? 'off' : 'server', view === 'calendar' ? calendarRange : undefined)
+
+  const { cargando: cargandoNumero, formatearReserva } = useNumeroOperativo()
 
   // Modal nueva reserva
   const [modalOpen, setModalOpen] = useState(false)
@@ -322,6 +325,7 @@ export default function ReservasPage() {
             <table className="table">
               <thead>
                 <tr>
+                  <th>N.º</th>
                   <th>Cliente</th>
                   <th>Recurso</th>
                   <th>Check-in</th>
@@ -334,6 +338,11 @@ export default function ReservasPage() {
               <tbody>
                 {paginated.map(r => (
                   <tr key={r.id} onClick={() => router.push(`/dashboard/reservas/${r.id}`)} style={{ cursor: 'pointer' }}>
+                    <td className="mono" style={{ fontSize: 12 }}>
+                      {cargandoNumero
+                        ? <span className="skeleton" style={{ display: 'inline-block', width: 76, height: 12 }} />
+                        : (formatearReserva(r.reservationNumber) ?? SIN_NUMERO)}
+                    </td>
                     <td>
                       <p className="table-cell-primary">{r.customer.fullName}</p>
                       <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{r.customer.email}</p>

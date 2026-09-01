@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { customersApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
+import { useNumeroOperativo, SIN_NUMERO } from '@/lib/business-context/numero-operativo'
 import type { Customer } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
@@ -27,6 +28,7 @@ export default function ClientesPage() {
   const customers = result.data
   const loading = tableQuery.isLoading
   const { mutateAsync: createCustomer } = useCreate<Customer>()
+  const { cargando: cargandoNumero, formatearCliente } = useNumeroOperativo()
   const [search, setSearch] = useState('')
   // G1 (23/08/2026) — si lo que se tipeó son solo dígitos (7+, forma de un
   // CUIT/DNI), se busca contra customer_tax_profiles en el backend en vez
@@ -126,6 +128,7 @@ export default function ClientesPage() {
           <table className="table">
             <thead>
               <tr>
+                <th>N.º</th>
                 <th>Nombre</th>
                 <th>Email</th>
                 <th>Tipo</th>
@@ -136,6 +139,11 @@ export default function ClientesPage() {
             <tbody>
               {filtered.map(c => (
                 <tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => router.push(`/dashboard/clientes/${c.id}`)}>
+                  <td className="mono" style={{ fontSize: 12 }}>
+                    {cargandoNumero
+                      ? <span className="skeleton" style={{ display: 'inline-block', width: 76, height: 12 }} />
+                      : (formatearCliente(c.customerNumber) ?? SIN_NUMERO)}
+                  </td>
                   <td className="table-cell-primary">{c.fullName}</td>
                   <td className="mono" style={{ fontSize: 12 }}>{c.email}</td>
                   <td><span className="badge-completed">{KIND_LABEL[c.kind ?? 'INDIVIDUAL']}</span></td>

@@ -5,6 +5,7 @@ import { customersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
+import { useNumeroOperativo, SIN_NUMERO } from '@/lib/business-context/numero-operativo'
 import type { ReservationStatus } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
@@ -56,6 +57,8 @@ export default function TurnosPage() {
     actionLoading, doAction: doScreenAction,
     getResourceName,
   } = useReservationsScreen(false)
+
+  const { cargando: cargandoNumero, formatearReserva } = useNumeroOperativo()
 
   // Modal nuevo turno
   const [modalOpen, setModalOpen] = useState(false)
@@ -198,6 +201,7 @@ export default function TurnosPage() {
             <table className="table">
               <thead>
                 <tr>
+                  <th>N.º</th>
                   <th>Cliente</th>
                   <th>Recurso</th>
                   <th>Inicio</th>
@@ -210,6 +214,11 @@ export default function TurnosPage() {
               <tbody>
                 {paginated.map(r => (
                   <tr key={r.id} onClick={() => router.push(`/dashboard/turnos/${r.id}`)} style={{ cursor: 'pointer' }}>
+                    <td className="mono" style={{ fontSize: 12 }}>
+                      {cargandoNumero
+                        ? <span className="skeleton" style={{ display: 'inline-block', width: 76, height: 12 }} />
+                        : (formatearReserva(r.reservationNumber) ?? SIN_NUMERO)}
+                    </td>
                     <td>
                       <p className="table-cell-primary">{r.customer.fullName}</p>
                       <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{r.customer.email}</p>

@@ -5,6 +5,7 @@ import { customersApi, customerAccountApi, extractErrorMessage } from '@/lib/api
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import FacturarButton from '@/components/FacturarButton'
+import { useNumeroOperativo } from '@/lib/business-context/numero-operativo'
 import type { Customer, CustomerStatement, TransactionType, TransactionStatus, OutstandingInvoice, FinancialTransaction } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
@@ -45,10 +46,18 @@ function fmtDate(iso: string) {
 // excluyentes en la práctica -- ningún sitio de creación real setea
 // reservationId y orderId a la vez.
 function OrigenCell({ tx }: { tx: FinancialTransaction }) {
+  // D6 C2 (01/09/2026): antes armaba "#123" a mano. Ahora usa el helper
+  // único con el prefijo real del tenant ("RES-000123"). Sin rama de
+  // `cargando` a propósito (decisión del dueño, C6.1): mientras el
+  // contexto carga se ve "Reserva" y el sufijo aparece cuando está listo
+  // -- nunca miente diciendo "sin número", pero tampoco bloquea la celda
+  // con un esqueleto en medio de una frase.
+  const { formatearReserva } = useNumeroOperativo()
   if (tx.reservationId) {
+    const numero = formatearReserva(tx.reservationNumber)
     return (
       <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-        Reserva{tx.reservationNumber != null ? ` #${tx.reservationNumber}` : ''}
+        Reserva{numero ? ` ${numero}` : ''}
       </span>
     )
   }
