@@ -85,10 +85,25 @@ export function resolverNumeroOperativo(
  * `BusinessContext` actual. Usa `useBusinessContextState()` (no
  * `useBusinessContext()`, que colapsa `loading` y `error` en el mismo
  * `null`) porque las dos pantallas necesitan distinguirlos.
+ *
+ * `cargando` (D6 C1, 01/09/2026): sin esto, `loading` y "`ready` sin
+ * número" son indistinguibles desde el valor de `formatearX` — los dos
+ * devuelven `null`. Si una pantalla hiciera `formatearCliente(n) ??
+ * SIN_NUMERO` sin mirar `cargando`, mostraría `—` mientras carga y después
+ * PARPADEARÍA a `CLI-000045` — el bug que el diseño de tres estados
+ * (`loading`/`ready`/`error`) existe para evitar, reintroducido acá.
+ *
+ * Regla de uso para las pantallas: `?? SIN_NUMERO` solo dentro de una rama
+ * con `cargando === false` (mostrar esqueleto mientras `cargando === true`,
+ * como ya hace `dashboard/clientes/page.tsx`). `error` a propósito NO se
+ * expone como rama separada: ya está resuelto dentro del resolver
+ * (degrada a `#123` vía `formatearNumeroCrudo`) — la pantalla no necesita
+ * ni debe decidir política de contexto por su cuenta.
  */
 export function useNumeroOperativo() {
   const estado = useBusinessContextState()
   return {
+    cargando: estado.status === 'loading',
     formatearReserva: (n: number | null | undefined) =>
       resolverNumeroOperativo(estado, (ctx) => ctx.reservationNumberPrefix, n),
     formatearCliente: (n: number | null | undefined) =>
