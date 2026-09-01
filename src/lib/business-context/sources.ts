@@ -42,6 +42,8 @@ export const negocioHosteleria: BusinessContext = {
   locale: 'es-AR',
   currency: 'ARS',
   timezone: 'America/Argentina/Buenos_Aires',
+  reservationNumberPrefix: 'RES',
+  customerNumberPrefix: 'CLI',
   // Valores reales de `modules.context_color` en producción (29/08/2026).
   // Emitido para los 6 del catálogo, no sólo los habilitados.
   moduleColors: {
@@ -72,6 +74,8 @@ export const negocioSinClasificar: BusinessContext = {
   locale: 'es-AR',
   currency: 'ARS',
   timezone: 'America/Argentina/Buenos_Aires',
+  reservationNumberPrefix: 'RES',
+  customerNumberPrefix: 'CLI',
   // Sin clasificar -> NEUTRAL en todo (§5.5.3). La regla vive en
   // `resolveCapabilities()` del backend: con `industryKey === null` aplana
   // todos los colores a NEUTRAL, y `moduleColors` sólo proyecta eso.
@@ -99,6 +103,10 @@ export const negocioComercio: BusinessContext = {
     'reservation.singular': 'Turno',
     'customer.singular': 'Cliente',
   },
+  // Prefijo propio, no heredado del spread: si `negocioHosteleria` fuera el
+  // único fixture con prefijos reales, el banco visual nunca ejercitaría un
+  // valor no-default para `reservationNumberPrefix`.
+  reservationNumberPrefix: 'TUR',
   // `moduleColors` viene del spread de `negocioHosteleria`: el color del
   // catálogo no depende del rubro, sólo de `modules.context_color`.
 }
@@ -145,6 +153,12 @@ function everyString(v: unknown): boolean {
  * catálogo, el guard no falla — el shell sólo renderiza las claves que su
  * catálogo local conoce. Lo que NO se acepta es un color o una fuente fuera
  * del enum.
+ *
+ * También LENIENTE con claves de nivel superior que no conoce: no hace
+ * `Object.keys(v).length === N`, así que un campo nuevo que el backend
+ * agregue después de D6 no rompe este guard (a costa de no detectar una
+ * fuga por sí solo — esa responsabilidad es del backend, ver
+ * `app-main/src/platform/business-context.routes.test.ts`).
  */
 export function isBusinessContext(v: unknown): v is BusinessContext {
   if (!isRecord(v)) return false
@@ -159,7 +173,9 @@ export function isBusinessContext(v: unknown): v is BusinessContext {
     everyString(v.permissionGroups) &&
     typeof v.locale === 'string' &&
     typeof v.currency === 'string' &&
-    typeof v.timezone === 'string'
+    typeof v.timezone === 'string' &&
+    typeof v.reservationNumberPrefix === 'string' &&
+    typeof v.customerNumberPrefix === 'string'
   )
 }
 

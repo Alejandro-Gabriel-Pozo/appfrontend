@@ -83,6 +83,15 @@ export interface BusinessContext {
   locale: string
   currency: string
   timezone: string
+
+  /**
+   * Prefijos de numeración operativa (D6, 01/09/2026). `NOT NULL` en
+   * `business_profile` (`app-main/src/db/schema.sql:2762-2763`), por eso van
+   * como `string` sin `| null`. Formateo canónico en `numero-operativo.ts` —
+   * ninguna pantalla arma `RES-000123`/`CLI-000045` por su cuenta.
+   */
+  reservationNumberPrefix: string
+  customerNumberPrefix: string
 }
 
 /**
