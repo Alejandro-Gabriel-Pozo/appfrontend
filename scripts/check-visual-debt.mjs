@@ -41,6 +41,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { buscarColores } from './lib/find-colors.mjs';
 import { conservarSolo } from './lib/scan-source.mjs';
+import { esPantallaVisual } from './lib/es-pantalla-visual.mjs';
 
 const SRC = new URL('../src/', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const IGNORE = new Set(['node_modules', '.next', 'dist']);
@@ -148,10 +149,16 @@ const REGLAS = [
     // V2.6.2c de 4 a 0: el banner de dead-letter pasó a los tokens danger
     // y la sombra de RoomCalendar a --shadow-md. Vuelve a 0: si aparece un
     // color nuevo en una pantalla, falla.
+    //
+    // 01/09/2026: filtro angostado de `isTsx` a `esPantallaVisual` — un
+    // `*.test.ts` no es una pantalla y no puede pintar nada, pero un string
+    // como `'#123'` (fallback numérico de D6, ver `numero-operativo.ts`) es
+    // un hex de 3 dígitos sintácticamente válido. Exclusión angosta a esta
+    // regla sola: las demás siguen mirando `.ts`/`.tsx` sin filtrar.
     nombre: 'color crudo en pantallas (.ts/.tsx)',
     fase: 'saldada en V2.6.2c',
     max: 0,
-    hits: () => colores(isTsx, 'js'),
+    hits: () => colores(esPantallaVisual, 'js'),
     ayuda: 'Si falta un token, agregalo al sistema — no un color en la pantalla.',
   },
   {
