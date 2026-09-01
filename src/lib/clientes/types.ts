@@ -21,6 +21,18 @@ export interface CustomerRate {
 export interface Customer {
   id: string
   businessId: string
+  /**
+   * Identidad operativa (D6, 01/09/2026): `number | null`, a propósito
+   * ASIMÉTRICO con `Reservation.reservationNumber` (que es obligatorio).
+   * `customer_number` se excluye deliberadamente del `ON CONFLICT DO
+   * UPDATE` en `app-main/src/clientes-finanzas/sql.customer.repository.ts`
+   * para que un PATCH no lo pise con `NULL`, y hay clientes anteriores a la
+   * columna. No "uniformar" este campo con el de `Reservation` — la
+   * asimetría es intencional, no un descuido. Se presenta vía
+   * `useNumeroOperativo()` en `@/lib/business-context/numero-operativo`,
+   * que ya maneja `null` como ausencia legítima (nunca revienta).
+   */
+  customerNumber: number | null
   fullName: string
   email: string
   kind?: 'INDIVIDUAL' | 'COMPANY'

@@ -2,6 +2,15 @@ export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLET
 
 export interface Reservation {
   id: string
+  /**
+   * Identidad operativa (D6, 01/09/2026): entero secuencial, obligatorio,
+   * emitido por `app-main/src/api/mappers/reservation.mapper.ts` en TODAS
+   * las rutas (incluido el portal de clientes) — nunca `undefined`. Se
+   * presenta con prefijo vía `useNumeroOperativo()` en
+   * `@/lib/business-context/numero-operativo`; ninguna pantalla debe
+   * concatenar `RES-` a mano.
+   */
+  reservationNumber: number
   resourceId: string
   customer: { id: string; fullName?: string; email?: string }
   startTime: string
