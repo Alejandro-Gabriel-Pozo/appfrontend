@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "lint:visual": "node scripts/check-visual-debt.mjs",
-    "test:visual": "node --test scripts/lib/*.test.mjs"
+    "test:visual": "node --test scripts/lib/*.test.mjs",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@refinedev/core": "^5.0.12",
@@ -30,7 +31,8 @@
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
     "ts-prune": "^0.10.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "@types/react": "19.2.18",
