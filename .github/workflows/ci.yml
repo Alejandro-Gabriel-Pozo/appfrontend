@@ -1,0 +1,104 @@
+name: CI
+
+# D6 — Bloque 1 (01/09/2026). Este repo no tenía ningún gate automático:
+# ni lint, ni tests, ni typecheck corrían en ningún lado salvo a mano. Es el
+# repo que auto-deploya a producción (Vercel) al pushear a `main`, así que
+# era el de MENOR control automatizado siendo el de MAYOR exposición.
+#
+# Gate INFORMATIVO por ahora, a propósito (decisión del dueño, C5): esta
+# Action corre en paralelo al deploy de Vercel, sin relación entre sí — un
+# push dispara los dos al mismo tiempo, y esta puede terminar en rojo con el
+# deploy ya en producción. Convertirla en gate real (bloquear el merge/push)
+# requiere branch protection + PRs obligatorios en GitHub, configuración
+# manual fuera de este repo — no código. Ver runbook cuando se decida dar
+# ese paso.
+#
+# Sin --max-warnings=0 a propósito: hoy hay 3 warnings preexistentes
+# (check-visual-debt.mjs, categorias/page.tsx, http.ts) y convertirlos en
+# error mezclaría este bloque con una limpieza de deuda que no es su
+# alcance. Bloque aparte si se quiere llevar a 0.
+#
+# Acciones fijadas por tag (@v4), no por SHA — mismo criterio que
+# app-main/.github/workflows/ci.yml, que tampoco fija por SHA. No hay
+# política de SHA-pinning en este proyecto; se deja como decisión informada,
+# no como alcance ampliado en silencio.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # ------------------------------------------------------------
+  # Job 1 — Typecheck & build
+  # ------------------------------------------------------------
+  typecheck-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'   # alineado al runtime real de Vercel (Settings → Node.js Version), verificado 01/09/2026
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+        # Sin secretos: NEXT_PUBLIC_API_URL ausente degrada rewrites() a []
+        # en next.config.js (compila igual, solo sin el proxy same-origin);
+        # el resto de los `process.env` del código son NEXT_PUBLIC_* con
+        # manejo explícito de ausencia o NODE_ENV, que Next fija solo.
+
+  # ------------------------------------------------------------
+  # Job 2 — Lint (higiene de archivo + regla de sistema visual)
+  # ------------------------------------------------------------
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Deuda visual (gate ZULU Hub)
+        run: npm run lint:visual
+
+  # ------------------------------------------------------------
+  # Job 3 — Tests (dos runners distintos: vitest y node --test)
+  # ------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Tests unitarios
+        run: npm run test:unit
+
+      - name: Tests del escáner de deuda visual
+        run: npm run test:visual

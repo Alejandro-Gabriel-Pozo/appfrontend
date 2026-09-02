@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "lint:visual": "node scripts/check-visual-debt.mjs",
     "test:visual": "node --test scripts/lib/*.test.mjs",
     "test:unit": "vitest run"
