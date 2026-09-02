@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { resourcesApi, reservationsApi } from '@/lib/api'
 import TelemetryCard from '@/components/TelemetryCard'
 import SignalBadge from '@/components/SignalBadge'
-
-type Reservation = { id?: string | number; status?: string; created_at?: string; resource_id?: string | number }
-type Resource     = { id?: string | number; name?: string; active?: boolean }
+import { useNumeroOperativo, SIN_NUMERO } from '@/lib/business-context/numero-operativo'
+import type { Reservation } from '@/lib/reservas/types'
+import type { Resource } from '@/lib/recursos/types'
 
 function QuickLink({
   href,
@@ -30,8 +30,18 @@ function QuickLink({
   )
 }
 
-function RecentReservations({ reservations, loading }: { reservations: Reservation[]; loading: boolean }) {
+function RecentReservations({
+  reservations,
+  resources,
+  loading,
+}: {
+  reservations: Reservation[]
+  resources: Resource[]
+  loading: boolean
+}) {
   const recent = reservations.slice(0, 5)
+  const { cargando: cargandoNumero, formatearReserva } = useNumeroOperativo()
+  const getResourceName = (id: string) => resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
 
   const statusState: Record<string, 'confirmed' | 'pending' | 'completed' | 'cancelled'> = {
     CONFIRMED: 'confirmed',
@@ -98,7 +108,7 @@ function RecentReservations({ reservations, loading }: { reservations: Reservati
           <table className="table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th>N.º</th>
                 <th>Recurso</th>
                 <th>Fecha</th>
                 <th>Estado</th>
@@ -107,12 +117,14 @@ function RecentReservations({ reservations, loading }: { reservations: Reservati
             <tbody>
               {recent.map((r, i) => (
                 <tr key={r.id ?? i}>
-                  <td className="table-cell-mono">#{String(r.id ?? i + 1).slice(-4)}</td>
-                  <td className="table-cell-primary">{r.resource_id ? `Recurso ${r.resource_id}` : '—'}</td>
+                  <td className="table-cell-mono">
+                    {cargandoNumero
+                      ? <span className="skeleton" style={{ display: 'inline-block', width: 76, height: 12 }} />
+                      : (formatearReserva(r.reservationNumber) ?? SIN_NUMERO)}
+                  </td>
+                  <td className="table-cell-primary">{getResourceName(r.resourceId)}</td>
                   <td style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>
-                    {r.created_at
-                      ? new Date(r.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
-                      : '—'}
+                    {new Date(r.startTime).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
                   </td>
                   <td>
                     <SignalBadge
@@ -232,7 +244,7 @@ export default function DashboardHome() {
 
       {/* Últimas reservas */}
       <div className="mt-8">
-        <RecentReservations reservations={reservations} loading={loading} />
+        <RecentReservations reservations={reservations} resources={resources} loading={loading} />
       </div>
 
       {/* Quick links */}
