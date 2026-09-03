@@ -67,7 +67,7 @@ export default function OrderDetailPage() {
   const [savingNotes, setSavingNotes]   = useState(false)
 
   // Nuevo ítem
-  const [newItem, setNewItem] = useState({ productId: '', quantity: 1, unitPrice: 0 })
+  const [newItem, setNewItem] = useState({ productId: '', quantity: 1 })
   const [addingItem, setAddingItem] = useState(false)
   const [removingItem, setRemovingItem] = useState<string | null>(null)
 
@@ -136,15 +136,16 @@ export default function OrderDetailPage() {
     if (!newItem.productId || newItem.quantity < 1) return
     setAddingItem(true)
     try {
+      // ORDER-11: sin `unitPrice`. El backend lo rechaza para PRODUCT y por
+      // eso agregar un ítem fallaba siempre.
       await ordersApi.addItem(id, {
         itemType:  'PRODUCT',
         productId: newItem.productId,
         quantity:  newItem.quantity,
-        unitPrice: newItem.unitPrice,
       })
       // El backend devuelve el OrderItem; recargamos la orden completa
       await load()
-      setNewItem({ productId: '', quantity: 1, unitPrice: 0 })
+      setNewItem({ productId: '', quantity: 1 })
       toast('Ítem agregado', 'success')
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
@@ -502,7 +503,7 @@ export default function OrderDetailPage() {
                   value={newItem.productId}
                   onChange={e => {
                     const prod = products.find(p => p.id === e.target.value)
-                    setNewItem(n => ({ ...n, productId: e.target.value, unitPrice: prod?.basePrice ?? 0 }))
+                    setNewItem(n => ({ ...n, productId: e.target.value }))
                   }}
                 >
                   <option value="">Seleccioná un producto…</option>
@@ -518,16 +519,6 @@ export default function OrderDetailPage() {
                   placeholder="Cant."
                   value={newItem.quantity}
                   onChange={e => setNewItem(n => ({ ...n, quantity: Number(e.target.value) }))}
-                />
-                <input
-                  type="number"
-                  className="input-sm"
-                  style={{ width: 100 }}
-                  min={0}
-                  step={0.01}
-                  placeholder="Precio"
-                  value={newItem.unitPrice || ''}
-                  onChange={e => setNewItem(n => ({ ...n, unitPrice: Number(e.target.value) }))}
                 />
                 <button
                   className="btn-action btn-confirm"

@@ -49,7 +49,17 @@ export interface CreateOrderItemInput {
   productVariantId?: string | null
   reservationId?: string | null
   quantity: number
-  unitPrice: number
+  /**
+   * ORDER-11 (03/09/2026) — SOLO para `RESERVATION`.
+   *
+   * Para `PRODUCT` y `PRODUCT_VARIANT` el backend lo **rechaza con 400**
+   * desde el 22/08/2026 (D9-Parte 2, `CreateOrderItemSchema`): el precio lo
+   * resuelve el servidor con el precio base del producto más la tarifa
+   * especial del cliente si corresponde. Mandarlo hacía que el alta de orden
+   * y el alta de ítem fallaran siempre — el módulo de órdenes no era
+   * recorrible desde el panel.
+   */
+  unitPrice?: number
 }
 
 export interface CreateOrderInput {

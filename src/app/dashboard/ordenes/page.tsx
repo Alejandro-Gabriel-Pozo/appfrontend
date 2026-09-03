@@ -74,7 +74,7 @@ export default function OrdenesPage() {
   const [modalOpen, setModalOpen]   = useState(false)
   const [form, setForm]             = useState(EMPTY_FORM)
   const [draftItems, setDraftItems] = useState<DraftItem[]>([])
-  const [newItem, setNewItem]       = useState({ productId: '', quantity: 1, unitPrice: 0 })
+  const [newItem, setNewItem]       = useState({ productId: '', quantity: 1 })
   const [submitting, setSubmitting] = useState(false)
 
   // Clientes/productos no están migrados a esta pantalla — se siguen
@@ -142,17 +142,25 @@ export default function OrdenesPage() {
         productId:   prod.id,
         productName: prod.name,
         quantity:    newItem.quantity,
-        unitPrice:   newItem.unitPrice || prod.basePrice,
+        // ORDER-11: el precio base es solo REFERENCIA para el borrador. El
+        // precio real lo resuelve el servidor al crear la orden (puede
+        // aplicar una tarifa especial del cliente) y no se manda en el body.
+        unitPrice:   prod.basePrice,
       },
     ])
-    setNewItem({ productId: '', quantity: 1, unitPrice: 0 })
+    setNewItem({ productId: '', quantity: 1 })
   }
 
   function removeDraftItem(i: number) {
     setDraftItems(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  const draftTotal = draftItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+  /**
+   * ORDER-11: es un ESTIMADO, no el total. Se calcula con el precio base de
+   * cada producto; el servidor puede aplicar una tarifa especial del cliente
+   * al crear la orden, y el total real sale de la respuesta.
+   */
+  const draftTotalEstimado = draftItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
 
   // ─── Crear orden ────────────────────────────────────────────────────────
   async function handleCreate(e: React.FormEvent) {
@@ -168,11 +176,12 @@ export default function OrdenesPage() {
         toast('Cliente no encontrado. Crealo primero en la sección Clientes.', 'error')
         return
       }
+      // ORDER-11: sin `unitPrice`. El backend lo rechaza para PRODUCT desde
+      // el 22/08 y por eso el alta fallaba siempre.
       const items: CreateOrderItemInput[] = draftItems.map(i => ({
         itemType:  'PRODUCT',
         productId: i.productId,
         quantity:  i.quantity,
-        unitPrice: i.unitPrice,
       }))
       await createOrder({
         resource: 'ordenes',
@@ -196,7 +205,7 @@ export default function OrdenesPage() {
   function openModal() {
     setForm(EMPTY_FORM)
     setDraftItems([])
-    setNewItem({ productId: '', quantity: 1, unitPrice: 0 })
+    setNewItem({ productId: '', quantity: 1 })
     setModalOpen(true)
   }
 
@@ -389,14 +398,15 @@ export default function OrdenesPage() {
           {/* Agregar ítem */}
           <div>
             <label className="label">Ítems de la orden</label>
+            <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
+              El precio final lo calcula el servidor al crear la orden: precio
+              del producto más la tarifa especial del cliente, si tiene una.
+            </p>
             <div className="flex gap-2 mb-2">
               <select
                 className="input flex-1"
                 value={newItem.productId}
-                onChange={e => {
-                  const prod = products.find(p => p.id === e.target.value)
-                  setNewItem(n => ({ ...n, productId: e.target.value, unitPrice: prod?.basePrice ?? 0 }))
-                }}
+                onChange={e => setNewItem(n => ({ ...n, productId: e.target.value }))}
               >
                 <option value="">Producto…</option>
                 {products.filter(p => p.active).map(p => (
@@ -410,15 +420,6 @@ export default function OrdenesPage() {
                 placeholder="Cant."
                 value={newItem.quantity}
                 onChange={e => setNewItem(n => ({ ...n, quantity: Number(e.target.value) }))}
-              />
-              <input
-                type="number"
-                className="input w-28"
-                min={0}
-                step={0.01}
-                placeholder="Precio"
-                value={newItem.unitPrice || ''}
-                onChange={e => setNewItem(n => ({ ...n, unitPrice: Number(e.target.value) }))}
               />
               <button
                 type="button"
@@ -437,7 +438,7 @@ export default function OrdenesPage() {
                   <li key={i} className="flex items-center justify-between px-3 py-2 rounded-lg text-sm" style={{ background: 'var(--surface-4)' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>{item.productName}</span>
                     <span className="mono" style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
-                      {item.quantity} × {fmtMoney(item.unitPrice)}
+                      {item.quantity} × {fmtMoney(item.unitPrice)} aprox.
                     </span>
                     <button
                       type="button"
@@ -457,7 +458,7 @@ export default function OrdenesPage() {
 
             {draftItems.length > 0 && (
               <p className="text-right text-sm mt-2" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                Total: {fmtMoney(draftTotal)}
+                Total estimado: {fmtMoney(draftTotalEstimado)}
               </p>
             )}
           </div>

@@ -23,7 +23,9 @@ export const ordersApi = {
   serve:       (id: string)                    => apiFetch<Order>(`/api/orders/${id}/serve`,    { method: 'POST' }),
   updateNotes: (id: string, notes: string | null) =>
     apiFetch<Order>(`/api/orders/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes }) }),
-  addItem: (id: string, body: { itemType: string; productId?: string | null; productVariantId?: string | null; reservationId?: string | null; quantity: number; unitPrice: number }) =>
+  // ORDER-11: `unitPrice` sale de la firma para PRODUCT/PRODUCT_VARIANT — el
+  // servidor lo resuelve y el backend rechaza el body si viene.
+  addItem: (id: string, body: { itemType: string; productId?: string | null; productVariantId?: string | null; reservationId?: string | null; quantity: number }) =>
     apiFetch<OrderItem>(`/api/orders/${id}/items`, { method: 'POST', body: JSON.stringify(body) }),
   removeItem: (id: string, itemId: string) =>
     apiFetch<void>(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' }),
