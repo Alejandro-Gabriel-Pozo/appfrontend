@@ -14,7 +14,8 @@ export type { CustomerTag, CustomerRate, Customer, CustomerStatement, CustomerLi
 export type { CustomerTaxProfile, CustomerTaxProfileAddress, UpsertCustomerTaxProfileInput, TaxpayerLookupResult } from './clientes/types'
 export type {
   TransactionType, TransactionStatus, FinancialTransaction,
-  AccountsReceivableStatus, AccountReceivable, AccountsReceivableReportRow,
+  AccountsReceivableStatus, AccountReceivable, AccountReceivableMarkCollectedResult,
+  AccountsReceivableReportRow,
   OutstandingInvoice,
   InvoicingScope, InvoicingTrigger, CycleFrequency, BillingPolicy, UpsertBillingPolicyInput,
 } from './finanzas/types'

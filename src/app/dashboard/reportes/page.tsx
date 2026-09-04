@@ -152,8 +152,24 @@ function AccountsReceivableManager() {
   async function handleMarkCollected(ar: AccountReceivable) {
     setActionLoading(ar.id)
     try {
-      await accountsReceivableApi.markCollected(ar.id)
-      toast('Marcado como cobrado', 'success')
+      const result = await accountsReceivableApi.markCollected(ar.id)
+      // H-A (05/09/2026) -- si la factura vinculada ya estaba cubierta por
+      // otro camino de cobro, `collection` viaja en la respuesta. No se usa
+      // fmtMoney acá a propósito para el mensaje con decimales -- fmtMoney
+      // redondea a entero y fuerza ARS, deuda preexistente de esta pantalla
+      // (ver toda la tabla), no se corrige en este cambio.
+      if (result.collection) {
+        const { appliedAmount, excessAmount } = result.collection
+        const money = (n: number) => n.toLocaleString('es-AR', { style: 'currency', currency: ar.currency, minimumFractionDigits: 2 })
+        toast(
+          appliedAmount === 0
+            ? 'La factura ya estaba cobrada por otro camino — no se registró ningún pago nuevo. La cuenta quedó marcada como cobrada.'
+            : `Cobro parcial: se aplicaron ${money(appliedAmount)}. El resto (${money(excessAmount)}) ya estaba cubierto por otro camino y no se volvió a registrar.`,
+          'warning',
+        )
+      } else {
+        toast('Marcado como cobrado', 'success')
+      }
       loadEntries(companyId)
     } catch (err) {
       toast(extractErrorMessage(err), 'error')

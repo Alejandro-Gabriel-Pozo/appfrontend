@@ -1,6 +1,6 @@
 'use client'
 import { apiFetch } from '../http'
-import type { AccountReceivable } from './types'
+import type { AccountReceivable, AccountReceivableMarkCollectedResult } from './types'
 
 // ─── Cuentas por cobrar (F1-Pieza 3, 23/08/2026) ───────────────────────────
 // La creación de la fila vive en staysApi.transferToReceivable (lib/estadias/api.ts,
@@ -14,7 +14,11 @@ export const accountsReceivableApi = {
       method: 'POST',
       ...(invoiceRef && { body: JSON.stringify({ invoiceRef }) }),
     }),
-  /** FACTURADO → COBRADO. Crea el PAYMENT que cierra la deuda de la empresa. */
+  /**
+   * FACTURADO → COBRADO. Crea el PAYMENT que cierra la deuda de la empresa
+   * -- salvo que la factura vinculada ya estuviera cubierta por otro
+   * camino de cobro (`collection` en la respuesta, ver H-A).
+   */
   markCollected: (id: string) =>
-    apiFetch<AccountReceivable>(`/api/accounts-receivable/${id}/mark-collected`, { method: 'POST' }),
+    apiFetch<AccountReceivableMarkCollectedResult>(`/api/accounts-receivable/${id}/mark-collected`, { method: 'POST' }),
 }

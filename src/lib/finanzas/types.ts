@@ -53,6 +53,22 @@ export interface AccountReceivable {
   invoiceRef?: string | null
 }
 
+/**
+ * H-A (05/09/2026) — respuesta de `markCollected()` cuando detecta que la
+ * factura vinculada ya estaba cubierta parcial o totalmente por otro
+ * camino de cobro. `collection` es aditivo, no persistido -- solo viaja en
+ * la llamada que detecta la colisión; un reintento devuelve
+ * `AccountReceivable` sin este campo (no es idempotente en contenido, ver
+ * docblock del backend).
+ */
+export interface AccountReceivableMarkCollectedResult extends AccountReceivable {
+  collection?: {
+    invoiceId: string
+    appliedAmount: number
+    excessAmount: number
+  }
+}
+
 export interface AccountsReceivableReportRow {
   companyCustomerId: string
   companyName: string
