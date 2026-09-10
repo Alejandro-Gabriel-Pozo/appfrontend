@@ -128,8 +128,15 @@ export const platformApi = {
       }),
   },
 
-  // L (23/08/2026) — catálogo global de los 5 roles de fábrica. Editar acá
-  // NO afecta negocios ya provisionados, solo los que se creen después.
+  // L (23/08/2026) — catálogo global de los 5 roles de fábrica. Corrección
+  // 09/09/2026 (gate architecture-governor): editar acá SÍ afecta a
+  // negocios ya provisionados -- un backfill del backend (corre en cada
+  // arranque del proceso, no solo al deployar) propaga cada grupo
+  // agregado a TODOS los negocios existentes que tengan ese rol de
+  // sistema. Sacar un grupo no revoca nada de los que ya lo tenían, y si
+  // el par era parte del seed original ni siquiera persiste el guardado
+  // (vuelve en el próximo arranque). Ver roles-de-fabrica/page.tsx para
+  // el mensaje completo que se le muestra al superadmin.
   rolePresets: {
     list: () => platformFetch<PlatformRolePreset[]>('/platform/role-presets'),
     update: (name: string, permissionGroups: string[]) =>
