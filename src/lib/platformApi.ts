@@ -77,6 +77,14 @@ export interface PlatformRolePreset {
   permissionGroups: string[]
 }
 
+// PRESET-REVOKE-001 Parte 2 (10/09/2026) -- el PUT devuelve cuántas filas
+// de role_permission_groups tocó la propagación a negocios existentes
+// (0 en las dos si el guardado no cambió nada respecto del catálogo).
+export interface PlatformRolePresetUpdateResult extends PlatformRolePreset {
+  propagatedGranted: number
+  propagatedRevoked: number
+}
+
 // ─── API ────────────────────────────────────────────────────────────────
 export const platformApi = {
   login: (email: string, password: string) =>
@@ -128,19 +136,22 @@ export const platformApi = {
       }),
   },
 
-  // L (23/08/2026) — catálogo global de los 5 roles de fábrica. Corrección
-  // 09-10/09/2026 (gate architecture-governor): editar acá SÍ afecta a
-  // negocios ya provisionados -- un backfill del backend (corre en cada
-  // arranque del proceso, no solo al deployar) propaga cada grupo
-  // agregado a TODOS los negocios existentes que tengan ese rol de
-  // sistema. Sacar un grupo no revoca nada de los que ya lo tenían, y si
-  // el par era parte del seed original ni siquiera persiste el guardado
-  // (vuelve en el próximo arranque). Ver roles-de-fabrica/page.tsx para
-  // el mensaje completo que se le muestra al superadmin.
+  // L (23/08/2026) — catálogo global de los 5 roles de fábrica.
+  // **Corrección 10/09/2026 (PRESET-REVOKE-001 Parte 1+2, gate
+  // architecture-governor)**: editar acá propaga AL INSTANTE, en las DOS
+  // direcciones, a TODOS los negocios existentes que tengan ese rol de
+  // sistema -- agregar Y sacar, dentro del mismo PUT, no en el próximo
+  // arranque. Ya no es asimétrico ni depende de un reinicio del proceso
+  // (esa era la versión anterior de este comentario y de la pantalla).
+  // Un rol de sistema tampoco se puede customizar por negocio individual
+  // (`PUT /api/roles/:id` lo rechaza con 409 desde el mismo bloque) --
+  // este catálogo es la ÚNICA vía de cambiar qué puede hacer un rol de
+  // fábrica. Ver roles-de-fabrica/page.tsx para el mensaje completo que
+  // se le muestra al superadmin.
   rolePresets: {
     list: () => platformFetch<PlatformRolePreset[]>('/platform/role-presets'),
     update: (name: string, permissionGroups: string[]) =>
-      platformFetch<PlatformRolePreset>(`/platform/role-presets/${name}`, {
+      platformFetch<PlatformRolePresetUpdateResult>(`/platform/role-presets/${name}`, {
         method: 'PUT',
         body: JSON.stringify({ permissionGroups }),
       }),

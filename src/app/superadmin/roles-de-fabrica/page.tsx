@@ -43,7 +43,14 @@ export default function SuperadminRolePresetsPage() {
     try {
       const updated = await platformApi.rolePresets.update(p.name, p.permissionGroups)
       setPresets(prev => prev.map(x => x.name === p.name ? updated : x))
-      toast(`Preset ${p.name} actualizado`, 'success')
+      // PRESET-REVOKE-001 Parte 2 (10/09/2026) -- el radio real del click,
+      // no solo "se guardó": cuántas filas de role_permission_groups
+      // cambiaron en negocios existentes.
+      const { propagatedGranted: granted, propagatedRevoked: revoked } = updated
+      const detail = granted === 0 && revoked === 0
+        ? 'sin cambios en negocios existentes'
+        : `${granted} alta(s), ${revoked} baja(s) en negocios existentes`
+      toast(`Preset ${p.name} actualizado -- ${detail}`, 'success')
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
     } finally {
@@ -64,16 +71,21 @@ export default function SuperadminRolePresetsPage() {
             style={{ background: 'var(--danger-dim)', border: '1px solid var(--danger-border)', color: 'var(--danger)' }}
           >
             <span>
-              <strong>Tildar un grupo no se puede deshacer desde acá.</strong> En el próximo
-              arranque del servidor (cada deploy, y también cada reinicio) se copia al rol de
-              fábrica de <strong>todos los negocios que ya existen</strong>. Destildarlo después
-              no se lo saca a ninguno: el backfill solo agrega, nunca borra, y los roles de
-              fábrica no son editables desde el panel del negocio — sacárselo a uno existente
-              exige tocar la base de plataforma a mano.
+              <strong>Tildar o destildar acá cambia TODOS los negocios que ya existen, al
+              instante.</strong> Guardar este preset propaga en las dos direcciones dentro
+              del mismo click — agregar un grupo lo suma a todos los roles de fábrica con
+              ese nombre; sacarlo se lo saca a todos, incluidas personalizaciones que un
+              negocio hubiera hecho antes de que esto se bloqueara. No hay reinicio de
+              servidor de por medio ni asimetría entre agregar y sacar.
               <br />
-              <strong>Destildar un grupo que viene de fábrica no persiste:</strong> vuelve solo
-              en el próximo arranque. Solo persiste destildar un grupo que se agregó desde esta
-              pantalla, y aun así únicamente para los negocios que se creen de ahora en adelante.
+              <strong>Los negocios ya no pueden customizar sus propios roles de fábrica</strong> —
+              este catálogo es la única forma de cambiar qué puede hacer OWNER, ADMIN,
+              RECEPTIONIST, HOUSEKEEPING o WAITER.
+              <br />
+              <strong>Cuidado con vaciar OWNER sin MANAGEMENT</strong> — deja a todos los
+              negocios sin acceso a sus propias pantallas de roles y usuarios, al instante.
+              Recuperación: ver &quot;Recuperar un preset de roles vaciado por error&quot; en el
+              runbook de deploy.
             </span>
           </div>
         </div>
