@@ -129,7 +129,7 @@ export const platformApi = {
   },
 
   // L (23/08/2026) — catálogo global de los 5 roles de fábrica. Corrección
-  // 09/09/2026 (gate architecture-governor): editar acá SÍ afecta a
+  // 09-10/09/2026 (gate architecture-governor): editar acá SÍ afecta a
   // negocios ya provisionados -- un backfill del backend (corre en cada
   // arranque del proceso, no solo al deployar) propaga cada grupo
   // agregado a TODOS los negocios existentes que tengan ese rol de
