@@ -86,7 +86,10 @@ export interface BusinessContext {
 
   /**
    * Prefijos de numeración operativa (D6, 01/09/2026). `NOT NULL` en
-   * `business_profile` (`app-main/src/db/schema.sql:2762-2763`), por eso van
+   * `business_profile` (`app-main/src/db/schema.sql`, columnas
+   * `customer_number_prefix`/`reservation_number_prefix` -- cita por
+   * nombre, no línea, desde SCHEMA-ANCHOR-DRIFT-001 10/09/2026: esta
+   * cita decía `:2762-2763`, que ya apuntaba a otra cosa), por eso van
    * como `string` sin `| null`. Formateo canónico en `numero-operativo.ts` —
    * ninguna pantalla arma `RES-000123`/`CLI-000045` por su cuenta.
    */
