@@ -16,7 +16,9 @@ export interface Role {
   id: string
   businessId: string
   name: string
-  /** Uno de los 5 roles seedeados al crear el negocio — no se puede desactivar */
+  /** Uno de los 5 roles seedeados al crear el negocio — no se puede
+   *  desactivar ni renombrar (backend: RoleService.deactivateRole()/
+   *  renameRole(), guard isSystem agregado 10/09/2026). */
   isSystem: boolean
   active: boolean
   permissionGroups: string[]
