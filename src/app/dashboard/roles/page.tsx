@@ -12,9 +12,14 @@ import type { Role } from '@/lib/types'
 // Modal/ConfirmDialog compartidos — esta pantalla sigue esa convención, no
 // la de clientes/page.tsx.
 
-// L (23/08/2026) — 8 grupos fijos en código (app-main/src/security/roles.ts).
+// L (23/08/2026) — 9 grupos fijos en código (app-main/src/security/roles.ts).
 // CUSTOMER_ONLY queda afuera: es exclusivo de clientes del portal, nunca
-// aplica a un rol de STAFF armado acá.
+// aplica a un rol de STAFF armado acá. EMISOR_NOTA_CREDITO sumado el
+// 09/09/2026 (gate architecture-governor) -- el grupo se agregó al backend
+// el 07/09/2026 para el escape fiscal de cancelación con Nota de Crédito y
+// nunca se propagó acá: un negocio PRO/ENTERPRISE (sin restricción de plan,
+// ver GET /api/business/plan-limits) no tenía forma de armar un rol custom
+// con ese grupo desde el panel, aunque el backend ya lo permitía.
 const PERMISSION_GROUPS: { value: string; label: string }[] = [
   { value: 'OWNER_ONLY', label: 'Solo propietario' },
   { value: 'MANAGEMENT', label: 'Gestión' },
@@ -22,6 +27,7 @@ const PERMISSION_GROUPS: { value: string; label: string }[] = [
   { value: 'FRONT_DESK', label: 'Mostrador' },
   { value: 'HOUSEKEEPING_AND_MANAGEMENT', label: 'Housekeeping' },
   { value: 'ORDERS', label: 'Órdenes (POS)' },
+  { value: 'EMISOR_NOTA_CREDITO', label: 'Emisor de Nota de Crédito' },
   { value: 'BOOKING', label: 'Reservas' },
 ]
 

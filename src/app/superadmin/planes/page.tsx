@@ -4,13 +4,18 @@ import { platformApi, type PlatformPlanLimits } from '@/lib/platformApi'
 import { extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 
-// L (23/08/2026) — 8 grupos fijos en código (app-main/src/security/roles.ts).
+// L (23/08/2026) — 9 grupos fijos en código (app-main/src/security/roles.ts).
 // Agregar un grupo nuevo siempre es un cambio de backend, así que esta
 // lista se mantiene a mano en sync con esa fuente — no hay endpoint que la
-// devuelva dinámicamente hoy.
+// devuelva dinámicamente hoy. EMISOR_NOTA_CREDITO sumado el 09/09/2026
+// (gate architecture-governor) -- agregado al backend el 07/09/2026,
+// nunca propagado acá. `plan_limit_allowed_permission_groups` se lee vivo
+// en cada request (assertPermissionGroupsAllowedInPlan), no se copia a
+// tenants -- a diferencia de los presets de roles-de-fabrica/page.tsx,
+// que SÍ propagan por backfill (ver ese archivo, sin tocar en este bloque).
 const PERMISSION_GROUPS = [
   'OWNER_ONLY', 'MANAGEMENT', 'STAFF', 'FRONT_DESK',
-  'HOUSEKEEPING_AND_MANAGEMENT', 'ORDERS', 'CUSTOMER_ONLY', 'BOOKING',
+  'HOUSEKEEPING_AND_MANAGEMENT', 'ORDERS', 'EMISOR_NOTA_CREDITO', 'CUSTOMER_ONLY', 'BOOKING',
 ]
 
 // Roles asignables vía POST/PUT /api/users — OWNER queda afuera a
