@@ -4,11 +4,18 @@ import { platformApi, type PlatformRolePreset } from '@/lib/platformApi'
 import { extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 
-// Mismo motivo que superadmin/planes/page.tsx: 8 grupos fijos en código
+// Mismo motivo que superadmin/planes/page.tsx: 9 grupos fijos en código
 // (app-main/src/security/roles.ts), sin endpoint que los liste dinámicamente.
+// EMISOR_NOTA_CREDITO sumado el 11/09/2026 (gate architecture-governor,
+// ROLES-CATALOG-DRIFT-001 bloque B): el grupo existe en el backend desde el
+// 07/09/2026 y el seed ya lo asigna a los presets OWNER/ADMIN/RECEPTIONIST,
+// pero sin checkbox el superadmin no podía verlo ni revocarlo -- y desde
+// PRESET-REVOKE-001 Parte 1 este catálogo es la ÚNICA vía de cambiar los
+// permisos de un rol de sistema.
 const PERMISSION_GROUPS = [
   'OWNER_ONLY', 'MANAGEMENT', 'STAFF', 'FRONT_DESK',
-  'HOUSEKEEPING_AND_MANAGEMENT', 'ORDERS', 'CUSTOMER_ONLY', 'BOOKING',
+  'HOUSEKEEPING_AND_MANAGEMENT', 'ORDERS', 'EMISOR_NOTA_CREDITO',
+  'CUSTOMER_ONLY', 'BOOKING',
 ]
 
 function toggle(list: string[], value: string): string[] {
