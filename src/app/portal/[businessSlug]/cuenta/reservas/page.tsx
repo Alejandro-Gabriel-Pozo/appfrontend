@@ -18,11 +18,14 @@ import type {
 } from '@/lib/types'
 
 const STATUS_BADGE: Record<ReservationStatus, string> = {
-  PENDING: 'badge-pending', CONFIRMED: 'badge-confirmed', COMPLETED: 'badge-completed', CANCELLED: 'badge-cancelled',
+  PENDING: 'badge-pending', CONFIRMED: 'badge-confirmed', COMPLETED: 'badge-completed', CANCELLED: 'badge-cancelled', EXPIRED: 'badge-expired',
 }
 const STATUS_LABEL: Record<ReservationStatus, string> = {
-  PENDING: 'Pendiente', CONFIRMED: 'Confirmada', COMPLETED: 'Completada', CANCELLED: 'Cancelada',
+  PENDING: 'Pendiente', CONFIRMED: 'Confirmada', COMPLETED: 'Completada', CANCELLED: 'Cancelada', EXPIRED: 'Vencida',
 }
+// EXPIRED a propósito NO entra acá (RESERVATION-STATUS-EXPIRED-FRONTEND-01,
+// gate architecture-governor 11/09/2026) -- una reserva ya vencida no tiene
+// sentido "cancelarla", el cliente no debe ver la acción.
 const CANCELLABLE: ReservationStatus[] = ['PENDING', 'CONFIRMED']
 
 function toLocalInput(iso: string): string {

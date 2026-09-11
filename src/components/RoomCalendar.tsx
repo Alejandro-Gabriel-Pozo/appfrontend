@@ -30,7 +30,7 @@ const RESOURCE_COL_WIDTH = 160
 export const VISIBLE_DAYS = 7
 export const MS_PER_DAY = 86_400_000
 
-const STATUS_BAR_STYLE: Record<Exclude<ReservationStatus, 'CANCELLED'>, { bg: string; border: string; text: string }> = {
+const STATUS_BAR_STYLE: Record<Exclude<ReservationStatus, 'CANCELLED' | 'EXPIRED'>, { bg: string; border: string; text: string }> = {
   PENDING:   { bg: 'var(--warning-dim)', border: 'var(--warning)', text: 'var(--warning)' },
   CONFIRMED: { bg: 'var(--info-dim)',    border: 'var(--info)',    text: 'var(--info)' },
   COMPLETED: { bg: 'var(--success-dim)', border: 'var(--success-border)', text: 'var(--success)' },
@@ -208,10 +208,17 @@ export default function RoomCalendar({
     [weekStartMs],
   )
 
-  // CANCELLED no ocupa lugar real — no se dibuja en el tape chart (mismo
-  // criterio que cualquier PMS: una reserva cancelada libera la habitación).
+  // CANCELLED y EXPIRED no ocupan lugar real — no se dibujan en el tape
+  // chart (mismo criterio que cualquier PMS: una reserva cancelada o
+  // vencida libera la habitación). EXPIRED sumado acá el 11/09/2026
+  // (RESERVATION-STATUS-EXPIRED-FRONTEND-01, gate `architecture-governor`)
+  // -- antes caía al fallback STATUS_BAR_STYLE.PENDING y se dibujaba como
+  // si fuera una reserva pendiente real, ocupando lugar libre. Mismo
+  // criterio que el backend: `NON_BLOCKING_STATUSES`
+  // (app-main/src/tests/domain/availability.property.test.ts) ya incluye
+  // EXPIRED junto a CANCELLED/COMPLETED.
   const visibleReservations = useMemo(
-    () => reservations.filter(r => r.status !== 'CANCELLED'),
+    () => reservations.filter(r => r.status !== 'CANCELLED' && r.status !== 'EXPIRED'),
     [reservations],
   )
 
@@ -415,7 +422,7 @@ export default function RoomCalendar({
                       if (endIdx <= 0 || startIdx >= VISIBLE_DAYS) return null // fuera de la semana visible
                       const visStart = Math.max(0, startIdx)
                       const visEnd = Math.min(VISIBLE_DAYS, endIdx)
-                      const style = STATUS_BAR_STYLE[r.status as Exclude<ReservationStatus, 'CANCELLED'>] ?? STATUS_BAR_STYLE.PENDING
+                      const style = STATUS_BAR_STYLE[r.status as Exclude<ReservationStatus, 'CANCELLED' | 'EXPIRED'>] ?? STATUS_BAR_STYLE.PENDING
                       return (
                         <ReservationBar
                           key={r.id}
@@ -437,7 +444,7 @@ export default function RoomCalendar({
                       if (!r) return null
                       const visStart = Math.max(0, dragPreview.startIdx)
                       const visEnd = Math.min(VISIBLE_DAYS, dragPreview.endIdx)
-                      const style = STATUS_BAR_STYLE[r.status as Exclude<ReservationStatus, 'CANCELLED'>] ?? STATUS_BAR_STYLE.PENDING
+                      const style = STATUS_BAR_STYLE[r.status as Exclude<ReservationStatus, 'CANCELLED' | 'EXPIRED'>] ?? STATUS_BAR_STYLE.PENDING
                       return (
                         <div
                           style={{

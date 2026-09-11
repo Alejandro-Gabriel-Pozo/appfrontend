@@ -24,12 +24,14 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
   CONFIRMED: 'Confirmada',
   CANCELLED: 'Cancelada',
   COMPLETED: 'Completada',
+  EXPIRED: 'Vencida',
 }
 const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
   PENDING: 'badge-pending',
   CONFIRMED: 'badge-confirmed',
   CANCELLED: 'badge-cancelled',
   COMPLETED: 'badge-completed',
+  EXPIRED: 'badge-expired',
 }
 
 function fmt(iso: string) {

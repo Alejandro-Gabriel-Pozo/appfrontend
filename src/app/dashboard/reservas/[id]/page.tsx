@@ -25,6 +25,7 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
   CONFIRMED: 'Confirmada',
   CANCELLED: 'Cancelada',
   COMPLETED: 'Completada',
+  EXPIRED: 'Vencida',
 }
 
 const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
@@ -32,6 +33,7 @@ const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
   CONFIRMED: 'badge-confirmed',
   CANCELLED: 'badge-cancelled',
   COMPLETED: 'badge-completed',
+  EXPIRED: 'badge-expired',
 }
 
 const SCHEDULE_STATUS_LABEL: Record<'PENDING' | 'APPROVED' | 'REJECTED', string> = {

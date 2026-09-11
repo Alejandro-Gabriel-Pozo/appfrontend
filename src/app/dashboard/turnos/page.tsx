@@ -19,6 +19,7 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
   CONFIRMED: 'Confirmada',
   CANCELLED: 'Cancelada',
   COMPLETED: 'Completada',
+  EXPIRED: 'Vencida',
 }
 
 const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
@@ -26,9 +27,10 @@ const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
   CONFIRMED: 'badge-confirmed',
   CANCELLED: 'badge-cancelled',
   COMPLETED: 'badge-completed',
+  EXPIRED: 'badge-expired',
 }
 
-const ALL_STATUSES: ReservationStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']
+const ALL_STATUSES: ReservationStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'EXPIRED']
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false })

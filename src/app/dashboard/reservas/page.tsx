@@ -18,19 +18,22 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
   CONFIRMED: 'Confirmada',
   CANCELLED: 'Cancelada',
   COMPLETED: 'Completada',
+  EXPIRED: 'Vencida',
 }
 
 // Semáforo de estado: pending=warning, confirmed=info, completed=success,
-// cancelled=danger — badge-* ya vive en globals.css y toma esa paleta
-// automáticamente dentro del scope .zulu.
+// cancelled=danger, expired=neutro (distinto de cancelled a propósito,
+// RESERVATION-STATUS-EXPIRED-FRONTEND-01) — badge-* ya vive en globals.css
+// y toma esa paleta automáticamente dentro del scope .zulu.
 const STATUS_BADGE_CLASS: Record<ReservationStatus, string> = {
   PENDING: 'badge-pending',
   CONFIRMED: 'badge-confirmed',
   CANCELLED: 'badge-cancelled',
   COMPLETED: 'badge-completed',
+  EXPIRED: 'badge-expired',
 }
 
-const ALL_STATUSES: ReservationStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']
+const ALL_STATUSES: ReservationStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'EXPIRED']
 
 // Reservas es 100% alojamiento (E1, 18/08/2026) — toda reserva acá es por
 // noche/día calendario, nunca por hora exacta. Se muestra y edita en UTC,

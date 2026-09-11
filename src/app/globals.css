@@ -805,6 +805,14 @@
   .badge-completed { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--success-dim); color: var(--text-primary); border: 1px solid var(--success-border); }
   .badge-cancelled { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--danger-dim);  color: var(--text-primary);  border: 1px solid var(--danger-border); }
   .badge-active    { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--zulu-status-active-dim);  color: var(--text-primary);  border: 1px solid var(--zulu-status-active-dim); }
+  /* EXPIRED (11/09/2026, RESERVATION-STATUS-EXPIRED-FRONTEND-01) -- a propósito
+     NO reusa --danger-dim/badge-cancelled: el backend distingue EXPIRED de
+     CANCELLED a propósito (domain/reservation.entities.ts, terminal pero no
+     bloqueante de disponibilidad) y conflacionarlos visualmente hubiera sido
+     exactamente el error que la regla 4 de la sección ZULU Hub de CLAUDE.md
+     prohíbe. Compuesta solo con tokens existentes, sin hex/Tailwind crudo --
+     --surface-4 ya está documentado como "superficie hundida / chip neutro". */
+  .badge-expired   { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--surface-4); color: var(--text-primary); border: 1px solid var(--border); }
 
   /* ── Response block ── */
   /* V2.6.2c — otra isla oscura que sobrevivió a la inversión.
@@ -1197,7 +1205,8 @@
   .zulu .badge-confirmed,
   .zulu .badge-completed,
   .zulu .badge-cancelled,
-  .zulu .badge-active {
+  .zulu .badge-active,
+  .zulu .badge-expired {
     font-family: var(--font-zulu-mono, 'IBM Plex Mono', monospace);
     letter-spacing: 0.02em;
   }
