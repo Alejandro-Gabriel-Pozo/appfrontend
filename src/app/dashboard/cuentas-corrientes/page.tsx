@@ -84,6 +84,16 @@ export default function CuentasCorrientesPage() {
   const [statement, setStatement] = useState<CustomerStatement | null>(null)
   const [loadingStatement, setLoadingStatement] = useState(false)
 
+  // INVOICE-CHARGES-BUTTON-DEADEND-01 (11/09/2026, opción B) -- lookup
+  // financialTransactionId -> invoiceId de la consolidada, para el link
+  // preciso de FacturarButton. Ausente/vacío con un backend viejo -- el
+  // botón cae solo, no hace falta un guard acá.
+  const coveredInvoiceIdByFt = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of statement?.coveredByConsolidatedInvoices ?? []) map.set(c.financialTransactionId, c.invoiceId)
+    return map
+  }, [statement])
+
   const [payOpen, setPayOpen] = useState(false)
   const [payAmount, setPayAmount] = useState('')
   const [payNotes, setPayNotes] = useState('')
@@ -306,6 +316,7 @@ export default function CuentasCorrientesPage() {
                               financialTransactionId={tx.id}
                               coveredByConsolidated={statement.coveredByConsolidatedTransactionIds?.includes(tx.id) ?? false}
                               customerId={tx.customerId}
+                              coveredByInvoiceId={coveredInvoiceIdByFt.get(tx.id)}
                             />
                           )}
                         </td>

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { customersApi, invoicesApi, extractErrorMessage } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
@@ -35,6 +35,13 @@ function FacturacionContent() {
   const [invoices, setInvoices] = useState<InvoiceWithLabel[]>([])
   const [loadingInvoices, setLoadingInvoices] = useState(false)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+  // INVOICE-CHARGES-BUTTON-DEADEND-01 (11/09/2026, opción B) -- ?invoiceId=
+  // llega desde FacturarButton cuando el backend manda coveredByInvoiceId.
+  // Ausente (deploy viejo, o el link genérico sin invoiceId) -- ninguna
+  // fila se resalta, misma pantalla de antes.
+  const highlightInvoiceId = searchParams?.get('invoiceId') ?? null
+  const highlightRowRef = useRef<HTMLTableRowElement | null>(null)
 
   // Sin filtro `currentAccountEnabled` a propósito -- a diferencia de
   // Cuentas Corrientes, acá cualquier cliente (individual o empresa) puede
@@ -81,6 +88,14 @@ function FacturacionContent() {
       if (match) void loadInvoices(match)
     })
   }, [searchParams, customers, loadingCustomers, selected, loadInvoices])
+
+  // Scrollea a la fila resaltada una vez que las facturas terminaron de
+  // cargar -- separado del efecto de preselección de arriba (ese resuelve
+  // EL CLIENTE, este resuelve LA FILA dentro de la tabla ya cargada).
+  useEffect(() => {
+    if (!highlightInvoiceId || loadingInvoices) return
+    highlightRowRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [highlightInvoiceId, loadingInvoices, invoices])
 
   async function handleDownloadPdf(invoice: InvoiceWithLabel) {
     setDownloadingId(invoice.id)
@@ -174,7 +189,11 @@ function FacturacionContent() {
               </thead>
               <tbody>
                 {invoices.map(inv => (
-                  <tr key={inv.id}>
+                  <tr
+                    key={inv.id}
+                    ref={inv.id === highlightInvoiceId ? highlightRowRef : undefined}
+                    style={inv.id === highlightInvoiceId ? { background: 'var(--zulu-surface-selected)' } : undefined}
+                  >
                     <td className="mono" style={{ fontSize: 12 }}>{fmtDate(inv.createdAt)}</td>
                     <td>{inv.cbteTipoLabel ?? `Comprobante tipo ${inv.cbteTipo}`}</td>
                     <td className="mono">{inv.cbteNro ?? '—'}</td>

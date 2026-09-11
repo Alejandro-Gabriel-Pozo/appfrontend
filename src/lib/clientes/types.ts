@@ -61,6 +61,18 @@ export interface CustomerStatement {
    * mostrando CAE+PDF o "Reintentar factura", sin cambios).
    */
   coveredByConsolidatedTransactionIds?: string[]
+  /**
+   * INVOICE-CHARGES-BUTTON-DEADEND-01 (11/09/2026, gate architecture-governor,
+   * opción B) — para cada `financialTransactionId` cubierto por una
+   * consolidada viva (mismo criterio que `coveredByConsolidatedTransactionIds`
+   * de arriba), el `invoiceId` exacto de esa consolidada. Permite armar un
+   * link preciso cargo→factura en vez de mandar a la lista completa del
+   * cliente. Opcional a propósito (mismo precedente que `cbteTipoLabel?`
+   * en otros tipos de facturación) — durante la ventana de deploy, un
+   * backend viejo no lo manda; el consumidor tiene que degradar al link
+   * genérico si falta, no asumir que siempre viene.
+   */
+  coveredByConsolidatedInvoices?: Array<{ financialTransactionId: string; invoiceId: string }>
 }
 
 export interface CustomerListFilters {

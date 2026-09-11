@@ -92,6 +92,9 @@ export default function ReservaDetailPage() {
   // respuesta que ya trae chargeTransactionId (getStatement()), sin
   // request extra.
   const [chargeCoveredByConsolidated, setChargeCoveredByConsolidated] = useState(false)
+  // INVOICE-CHARGES-BUTTON-DEADEND-01 (11/09/2026, opción B) -- invoiceId
+  // exacto de la consolidada, para el link preciso de FacturarButton.
+  const [chargeCoveredByInvoiceId, setChargeCoveredByInvoiceId] = useState<string | undefined>(undefined)
 
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
@@ -116,7 +119,7 @@ export default function ReservaDetailPage() {
   // reusa el estado de cuenta del cliente (ya trae reservationId por
   // movimiento) en vez de sumar una ruta nueva solo para este botón.
   const refreshChargeTransaction = useCallback(async (r: Reservation) => {
-    if (r.status !== 'CONFIRMED' && r.status !== 'COMPLETED') { setChargeTransactionId(null); setChargeCoveredByConsolidated(false); return }
+    if (r.status !== 'CONFIRMED' && r.status !== 'COMPLETED') { setChargeTransactionId(null); setChargeCoveredByConsolidated(false); setChargeCoveredByInvoiceId(undefined); return }
     try {
       const statement = await customerAccountApi.getStatement(r.customer.id)
       const charge = statement.transactions.find(
@@ -124,9 +127,13 @@ export default function ReservaDetailPage() {
       )
       setChargeTransactionId(charge?.id ?? null)
       setChargeCoveredByConsolidated(charge ? (statement.coveredByConsolidatedTransactionIds?.includes(charge.id) ?? false) : false)
+      setChargeCoveredByInvoiceId(
+        charge ? statement.coveredByConsolidatedInvoices?.find(c => c.financialTransactionId === charge.id)?.invoiceId : undefined,
+      )
     } catch {
       setChargeTransactionId(null)
       setChargeCoveredByConsolidated(false)
+      setChargeCoveredByInvoiceId(undefined)
     }
   }, [])
 
@@ -511,6 +518,7 @@ export default function ReservaDetailPage() {
                     financialTransactionId={chargeTransactionId}
                     coveredByConsolidated={chargeCoveredByConsolidated}
                     customerId={reservation.customer.id}
+                    coveredByInvoiceId={chargeCoveredByInvoiceId}
                   />
                 </div>
               )}

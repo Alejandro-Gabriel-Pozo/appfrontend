@@ -37,22 +37,25 @@ export default function FacturarButton({
    * acción de crear desaparece cuando la cobertura ya está completa.
    *
    * **`INVOICE-CHARGES-FACTURACION-SCREEN-01` (11/09/2026) -- ya
-   * ENCONTRABLE, todavía no PRECISO.** Antes de este bloque no había
-   * ningún camino desde acá al comprobante real (`INVOICE-CHARGES-BUTTON-DEADEND-01`).
-   * Ahora el texto es un link a `/dashboard/facturacion?customerId=`
-   * (pantalla nueva, `GET /api/invoices?customerId=`) -- el usuario llega
-   * a la lista de comprobantes del cliente y tiene que escanearla, no hay
-   * todavía un link DIRECTO cargo→factura (eso requiere exponer
-   * `InvoiceRepository.resolveInvoiceLinkage()` por HTTP, bloque aparte,
-   * backend + contrato cruzado, sin decidir todavía).
+   * ENCONTRABLE. `INVOICE-CHARGES-BUTTON-DEADEND-01` (11/09/2026, opción B)
+   * -- ahora también PRECISO cuando el padre pasa `coveredByInvoiceId`**:
+   * el link suma `&invoiceId=` y la pantalla de facturación resalta esa
+   * fila puntual, en vez de dejar al usuario escanear la lista completa.
+   * `coveredByInvoiceId` es opcional a propósito -- durante la ventana de
+   * deploy un backend viejo no manda `coveredByConsolidatedInvoices`
+   * (`lib/clientes/types.ts`), y sin él el link cae al comportamiento
+   * anterior (solo `customerId`), nunca roto.
    */
   coveredByConsolidated = false,
   /** Necesario solo para el link de arriba -- ambos call-sites ya lo tienen en scope. */
   customerId,
+  /** El `invoiceId` exacto de la consolidada que cubre este cargo, si el padre lo tiene (ver docblock arriba). */
+  coveredByInvoiceId,
 }: {
   financialTransactionId: string
   coveredByConsolidated?: boolean
   customerId?: string
+  coveredByInvoiceId?: string
 }) {
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(false)
@@ -137,9 +140,17 @@ export default function FacturarButton({
   if (coveredByConsolidated && !invoice) {
     // Sin customerId (no debería pasar en los 2 call-sites reales, pero es
     // un prop opcional) cae al texto plano -- nunca un link roto.
-    return customerId ? (
-      <Link href={`/dashboard/facturacion?customerId=${encodeURIComponent(customerId)}`} className="text-xs" style={{ color: 'var(--zulu-link)' }}>
-        Facturado (consolidado) — ver facturas
+    // Con coveredByInvoiceId (backend nuevo), el link suma &invoiceId= para
+    // que la pantalla resalte esa fila puntual -- sin él (deploy viejo),
+    // cae al link genérico anterior, nunca roto.
+    const href = customerId
+      ? `/dashboard/facturacion?customerId=${encodeURIComponent(customerId)}${
+          coveredByInvoiceId ? `&invoiceId=${encodeURIComponent(coveredByInvoiceId)}` : ''
+        }`
+      : null
+    return href ? (
+      <Link href={href} className="text-xs" style={{ color: 'var(--zulu-link)' }}>
+        Facturado (consolidado) — ver factura
       </Link>
     ) : (
       <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Facturado (consolidado)</span>
