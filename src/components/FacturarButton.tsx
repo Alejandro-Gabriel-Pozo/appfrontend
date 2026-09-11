@@ -33,8 +33,16 @@ export default function FacturarButton({
    * viva (`ISSUED`/`PENDING`/`FAILED_UNCERTAIN`, nunca `REJECTED` — una
    * consolidada rechazada libera el cargo, sigue siendo facturable acá).
    * Oculta el botón por completo -- mismo criterio que ERPNext/Odoo: la
-   * acción de crear desaparece cuando la cobertura ya está completa, el
-   * comprobante existente se consulta por otra vía (no por este botón).
+   * acción de crear desaparece cuando la cobertura ya está completa.
+   *
+   * **Deuda declarada (`INVOICE-CHARGES-BUTTON-DEADEND-01`, 11/09/2026):**
+   * a diferencia de ERPNext/Odoo, acá el comprobante existente NO se
+   * puede consultar por ninguna otra vía todavía -- ni número, ni CAE, ni
+   * PDF, desde ninguna pantalla. El backend ya expone lo necesario
+   * (`GET /api/invoices?customerId=`, `InvoiceRepository.getByCustomerId()`),
+   * pero `invoicesApi` (`lib/facturacion/api.ts`) no tiene un consumidor
+   * que liste facturas por cliente. Callejón sin salida de información,
+   * a propósito documentado, no resuelto en este bloque.
    */
   coveredByConsolidated = false,
 }: {
