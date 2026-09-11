@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { invoicesApi, extractErrorMessage } from '@/lib/api'
 import type { Invoice } from '@/lib/types'
 
@@ -35,19 +36,23 @@ export default function FacturarButton({
    * Oculta el botón por completo -- mismo criterio que ERPNext/Odoo: la
    * acción de crear desaparece cuando la cobertura ya está completa.
    *
-   * **Deuda declarada (`INVOICE-CHARGES-BUTTON-DEADEND-01`, 11/09/2026):**
-   * a diferencia de ERPNext/Odoo, acá el comprobante existente NO se
-   * puede consultar por ninguna otra vía todavía -- ni número, ni CAE, ni
-   * PDF, desde ninguna pantalla. El backend ya expone lo necesario
-   * (`GET /api/invoices?customerId=`, `InvoiceRepository.getByCustomerId()`),
-   * pero `invoicesApi` (`lib/facturacion/api.ts`) no tiene un consumidor
-   * que liste facturas por cliente. Callejón sin salida de información,
-   * a propósito documentado, no resuelto en este bloque.
+   * **`INVOICE-CHARGES-FACTURACION-SCREEN-01` (11/09/2026) -- ya
+   * ENCONTRABLE, todavía no PRECISO.** Antes de este bloque no había
+   * ningún camino desde acá al comprobante real (`INVOICE-CHARGES-BUTTON-DEADEND-01`).
+   * Ahora el texto es un link a `/dashboard/facturacion?customerId=`
+   * (pantalla nueva, `GET /api/invoices?customerId=`) -- el usuario llega
+   * a la lista de comprobantes del cliente y tiene que escanearla, no hay
+   * todavía un link DIRECTO cargo→factura (eso requiere exponer
+   * `InvoiceRepository.resolveInvoiceLinkage()` por HTTP, bloque aparte,
+   * backend + contrato cruzado, sin decidir todavía).
    */
   coveredByConsolidated = false,
+  /** Necesario solo para el link de arriba -- ambos call-sites ya lo tienen en scope. */
+  customerId,
 }: {
   financialTransactionId: string
   coveredByConsolidated?: boolean
+  customerId?: string
 }) {
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(false)
@@ -130,7 +135,15 @@ export default function FacturarButton({
   // probabilidad), el estado real recién obtenido manda sobre el flag
   // pasado por el padre al montar.
   if (coveredByConsolidated && !invoice) {
-    return <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Facturado (consolidado)</span>
+    // Sin customerId (no debería pasar en los 2 call-sites reales, pero es
+    // un prop opcional) cae al texto plano -- nunca un link roto.
+    return customerId ? (
+      <Link href={`/dashboard/facturacion?customerId=${encodeURIComponent(customerId)}`} className="text-xs" style={{ color: 'var(--zulu-link)' }}>
+        Facturado (consolidado) — ver facturas
+      </Link>
+    ) : (
+      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Facturado (consolidado)</span>
+    )
   }
 
   return (

@@ -1,6 +1,6 @@
 'use client'
 import { apiFetch } from '../http'
-import type { AfipCredentialsStatus, Invoice } from './types'
+import type { AfipCredentialsStatus, Invoice, InvoiceWithLabel } from './types'
 
 // ─── Certificado AFIP (WSAA/WSFEv1) ────────────────────────────────────────
 // Cuelga de /api/business-profile porque es config del emisor, pero en un
@@ -25,6 +25,9 @@ export const invoicesApi = {
   get: (id: string) => apiFetch<Invoice>(`/api/invoices/${id}`),
   listByFinancialTransaction: (financialTransactionId: string) =>
     apiFetch<Invoice[]>(`/api/invoices?financialTransactionId=${encodeURIComponent(financialTransactionId)}`),
+  /** INVOICE-CHARGES-FACTURACION-SCREEN-01 (11/09/2026) -- única llamada que trae `cbteTipoLabel`. */
+  listByCustomer: (customerId: string) =>
+    apiFetch<InvoiceWithLabel[]>(`/api/invoices?customerId=${encodeURIComponent(customerId)}`),
   // PDF binario -- no pasa por apiFetch (esa función siempre hace res.json()).
   // /api/* es same-origin (rewrite de next.config.js a NEXT_PUBLIC_API_URL,
   // ver comentario en lib/http.ts), así que la cookie de sesión viaja sola.

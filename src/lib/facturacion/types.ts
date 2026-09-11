@@ -15,13 +15,33 @@ export interface Invoice {
   businessId: string
   /** `null` = factura consolidada (C1-Fase C, 23/08/2026) -- cubre N cargos, no una sola FinancialTransaction. */
   financialTransactionId: string | null
+  customerId: string
   status: InvoiceStatus
   ptoVta: number
   cbteTipo: number
   cbteNro: number | null
   cae: string | null
   caeVto: string | null
+  impTotal: number
   errorMessage: string | null
   createdAt: string
   issuedAt: string | null
+}
+
+/**
+ * `INVOICE-CHARGES-FACTURACION-SCREEN-01` (11/09/2026) -- `cbteTipoLabel`
+ * SOLO viaja en la respuesta de `GET /api/invoices?customerId=`
+ * (`invoices.routes.ts`, la única rama que la agrega) -- opcional a
+ * propósito, no en `Invoice` base: los otros 4 endpoints que devuelven
+ * `Invoice`/`Invoice[]` (`request`, `requestConsolidated`, `get`,
+ * `listByFinancialTransaction`) nunca la traen, y declararla requerida en
+ * `Invoice` haría que el compilador asuma un campo que en runtime es
+ * `undefined` en esos 4 caminos. También queda `undefined` durante la
+ * ventana de deploy si el backend viejo (sin este campo) responde antes
+ * de que termine de desplegar -- todo consumidor debe usar
+ * `?? \`Comprobante tipo ${inv.cbteTipo}\`` como fallback, nunca asumir
+ * que está presente.
+ */
+export interface InvoiceWithLabel extends Invoice {
+  cbteTipoLabel?: string
 }

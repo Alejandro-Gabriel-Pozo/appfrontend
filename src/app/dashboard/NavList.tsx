@@ -86,6 +86,17 @@ const NAV: NavItem[] = [
     moduleKey: 'CUENTAS_CORRIENTES',
   },
   {
+    // INVOICE-CHARGES-FACTURACION-SCREEN-01 (11/09/2026) -- listado de
+    // comprobantes por cliente. moduleKey coincide con ModuleKey.FACTURACION
+    // del backend, aunque el GET real no lo exija (solo las mutaciones de
+    // emisión están gateadas -- gating de menú por coherencia, no por
+    // necesidad técnica de la lectura).
+    href: '/dashboard/facturacion',
+    label: 'Facturación',
+    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+    moduleKey: 'FACTURACION',
+  },
+  {
     href: '/dashboard/productos',
     label: 'Productos',
     icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',

@@ -505,7 +505,11 @@ export default function ReservaDetailPage() {
               {chargeTransactionId && (
                 <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
                   <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Comprobante AFIP</p>
-                  <FacturarButton financialTransactionId={chargeTransactionId} coveredByConsolidated={chargeCoveredByConsolidated} />
+                  <FacturarButton
+                    financialTransactionId={chargeTransactionId}
+                    coveredByConsolidated={chargeCoveredByConsolidated}
+                    customerId={reservation.customer.id}
+                  />
                 </div>
               )}
 

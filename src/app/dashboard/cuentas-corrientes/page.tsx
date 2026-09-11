@@ -305,6 +305,7 @@ export default function CuentasCorrientesPage() {
                             <FacturarButton
                               financialTransactionId={tx.id}
                               coveredByConsolidated={statement.coveredByConsolidatedTransactionIds?.includes(tx.id) ?? false}
+                              customerId={tx.customerId}
                             />
                           )}
                         </td>
