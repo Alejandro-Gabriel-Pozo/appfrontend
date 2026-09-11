@@ -302,7 +302,10 @@ export default function CuentasCorrientesPage() {
                               (pendientes-2026-08-18.md punto T), y un cargo
                               VOIDED/FAILED tampoco corresponde facturarlo. */}
                           {tx.type === 'CHARGE' && tx.status !== 'VOIDED' && tx.status !== 'FAILED' && (
-                            <FacturarButton financialTransactionId={tx.id} />
+                            <FacturarButton
+                              financialTransactionId={tx.id}
+                              coveredByConsolidated={statement.coveredByConsolidatedTransactionIds?.includes(tx.id) ?? false}
+                            />
                           )}
                         </td>
                       </tr>

@@ -48,6 +48,19 @@ export interface CustomerStatement {
   customerId: string
   balance: number
   transactions: FinancialTransaction[]
+  /**
+   * INVOICE-CHARGES-GUARD-FRONTEND-02 (11/09/2026) — ids de `FinancialTransaction`
+   * (siempre `type: 'CHARGE'`) cubiertos por una factura CONSOLIDADA viva
+   * (`ISSUED`/`PENDING`/`FAILED_UNCERTAIN`, nunca `REJECTED` — una
+   * consolidada rechazada libera el cargo). Ausente por completo (no `[]`)
+   * cuando el negocio no tiene el módulo FACTURACION habilitado — el
+   * backend no calcula el dato en ese caso (ver `customers.routes.ts`,
+   * `app-main`). Consumido por `FacturarButton` para ocultar el botón
+   * SOLO en este caso puntual — no toca el resto de los estados (factura
+   * individual propia `ISSUED`/`PENDING`/`FAILED_UNCERTAIN` siguen
+   * mostrando CAE+PDF o "Reintentar factura", sin cambios).
+   */
+  coveredByConsolidatedTransactionIds?: string[]
 }
 
 export interface CustomerListFilters {

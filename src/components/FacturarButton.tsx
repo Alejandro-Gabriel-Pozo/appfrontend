@@ -10,12 +10,37 @@ import type { Invoice } from '@/lib/types'
  *
  * POST /api/invoices es idempotente por `financialTransactionId`
  * (`invoice.service.ts`, idempotencyKey `invoice:${financialTransactionId}`)
- * — reintentar el click en una factura ya emitida devuelve la misma
- * factura, nunca pide un CAE duplicado. Por eso este componente no
- * pre-consulta el estado al montar (evita N+1 en una tabla con muchos
- * cargos): el propio click hace de "consultar o crear" a la vez.
+ * — reintentar el click en una factura ya emitida POR ESTE MISMO CAMINO
+ * devuelve la misma factura, nunca pide un CAE duplicado. Por eso este
+ * componente no pre-consulta el estado al montar (evita N+1 en una tabla
+ * con muchos cargos): el propio click hace de "consultar o crear" a la vez.
+ *
+ * **Corrección 11/09/2026 (INVOICE-CHARGES-GUARD-FRONTEND-02) — esa
+ * idempotencia NO cubre el camino CONSOLIDADO**: un cargo ya facturado por
+ * una consolidada (`POST /api/invoices/consolidated`, otra clave de
+ * idempotencia) no tiene ninguna fila que este componente pueda descubrir
+ * clickeando — hacerlo pediría un segundo CAE real. Por eso el padre
+ * (`cuentas-corrientes`/`reservas/[id]`) pasa `coveredByConsolidated`,
+ * calculado en el backend (`GET /customers/:id/account`,
+ * `coveredByConsolidatedTransactionIds`) ANTES de montar este botón — la
+ * única pre-consulta que existe, y es bulk (una sola query para toda la
+ * tabla), no N+1 por fila.
  */
-export default function FacturarButton({ financialTransactionId }: { financialTransactionId: string }) {
+export default function FacturarButton({
+  financialTransactionId,
+  /**
+   * `true` cuando el cargo ya está cubierto por una factura CONSOLIDADA
+   * viva (`ISSUED`/`PENDING`/`FAILED_UNCERTAIN`, nunca `REJECTED` — una
+   * consolidada rechazada libera el cargo, sigue siendo facturable acá).
+   * Oculta el botón por completo -- mismo criterio que ERPNext/Odoo: la
+   * acción de crear desaparece cuando la cobertura ya está completa, el
+   * comprobante existente se consulta por otra vía (no por este botón).
+   */
+  coveredByConsolidated = false,
+}: {
+  financialTransactionId: string
+  coveredByConsolidated?: boolean
+}) {
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -89,6 +114,15 @@ export default function FacturarButton({ financialTransactionId }: { financialTr
         )}
       </div>
     )
+  }
+
+  // INVOICE-CHARGES-GUARD-FRONTEND-02 -- solo si TODAVÍA no hay `invoice`
+  // en el estado local: si el usuario ya clickeó en esta sesión (ej. la
+  // cobertura cambió DESPUÉS de cargar la pantalla, carrera de baja
+  // probabilidad), el estado real recién obtenido manda sobre el flag
+  // pasado por el padre al montar.
+  if (coveredByConsolidated && !invoice) {
+    return <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Facturado (consolidado)</span>
   }
 
   return (
