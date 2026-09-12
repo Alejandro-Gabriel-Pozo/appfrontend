@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api'
 type InputDef = {
   key: string
   label: string
-  type?: 'text' | 'email' | 'password' | 'number' | 'datetime-local'
+  type?: 'text' | 'email' | 'password' | 'number' | 'datetime-local' | 'date'
   placeholder?: string
   options?: string[]
   required?: boolean
@@ -102,7 +102,7 @@ export default function ApiBlock({
       {hasInputs && open && (
         <div className="px-4 pb-4 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3" style={{ borderTop: '1px solid var(--border)' }}>
           {inputs.map(inp => (
-            <div key={inp.key} className={inp.type === 'datetime-local' ? 'sm:col-span-1' : ''}>
+            <div key={inp.key} className={inp.type === 'datetime-local' || inp.type === 'date' ? 'sm:col-span-1' : ''}>
               <label className="label">
                 {inp.label}{inp.required && <span className="text-red-400 ml-0.5">*</span>}
               </label>

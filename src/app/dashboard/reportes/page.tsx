@@ -341,6 +341,12 @@ function AccountsReceivableManager() {
   )
 }
 
+// REPORTS-DATEONLY-MISMATCH-001 (12/09/2026) — los 5 rangos de fecha de
+// esta pantalla usaban `type="datetime-local"`, pero los endpoints de
+// `/api/reports/*` validan con `dateOnlySchema` (YYYY-MM-DD estricto,
+// `app-main/src/api/schemas/common.schemas.ts`). Ninguna combinación de
+// fecha+hora podía pasar la validación — los 5 reportes devolvían 400
+// siempre. Mismo bug, mismo fix, en `app/admin/page.tsx` (3 bloques).
 export default function ReportesPage() {
   const [occFrom, setOccFrom] = useState('')
   const [occTo, setOccTo] = useState('')
@@ -379,8 +385,8 @@ export default function ReportesPage() {
           }}
           formContent={
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="label">Desde</label><input type="datetime-local" value={occFrom} onChange={e => setOccFrom(e.target.value)} className="input" /></div>
-              <div><label className="label">Hasta</label><input type="datetime-local" value={occTo} onChange={e => setOccTo(e.target.value)} className="input" /></div>
+              <div><label className="label">Desde</label><input type="date" value={occFrom} onChange={e => setOccFrom(e.target.value)} className="input" /></div>
+              <div><label className="label">Hasta</label><input type="date" value={occTo} onChange={e => setOccTo(e.target.value)} className="input" /></div>
             </div>
           }
         />
@@ -396,8 +402,8 @@ export default function ReportesPage() {
           formContent={
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="label">Desde</label><input type="datetime-local" value={sumFrom} onChange={e => setSumFrom(e.target.value)} className="input" /></div>
-                <div><label className="label">Hasta</label><input type="datetime-local" value={sumTo} onChange={e => setSumTo(e.target.value)} className="input" /></div>
+                <div><label className="label">Desde</label><input type="date" value={sumFrom} onChange={e => setSumFrom(e.target.value)} className="input" /></div>
+                <div><label className="label">Hasta</label><input type="date" value={sumTo} onChange={e => setSumTo(e.target.value)} className="input" /></div>
               </div>
               <div><label className="label">Límite de resultados</label><input type="number" value={sumLimit} onChange={e => setSumLimit(e.target.value)} min={1} max={100} className="input" /></div>
             </div>
@@ -414,8 +420,8 @@ export default function ReportesPage() {
           }}
           formContent={
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="label">Desde</label><input type="datetime-local" value={catFrom} onChange={e => setCatFrom(e.target.value)} className="input" /></div>
-              <div><label className="label">Hasta</label><input type="datetime-local" value={catTo} onChange={e => setCatTo(e.target.value)} className="input" /></div>
+              <div><label className="label">Desde</label><input type="date" value={catFrom} onChange={e => setCatFrom(e.target.value)} className="input" /></div>
+              <div><label className="label">Hasta</label><input type="date" value={catTo} onChange={e => setCatTo(e.target.value)} className="input" /></div>
             </div>
           }
         />
@@ -431,8 +437,8 @@ export default function ReportesPage() {
           formContent={
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="label">Desde</label><input type="datetime-local" value={underFrom} onChange={e => setUnderFrom(e.target.value)} className="input" /></div>
-                <div><label className="label">Hasta</label><input type="datetime-local" value={underTo} onChange={e => setUnderTo(e.target.value)} className="input" /></div>
+                <div><label className="label">Desde</label><input type="date" value={underFrom} onChange={e => setUnderFrom(e.target.value)} className="input" /></div>
+                <div><label className="label">Hasta</label><input type="date" value={underTo} onChange={e => setUnderTo(e.target.value)} className="input" /></div>
               </div>
               <div>
                 {/*
@@ -469,8 +475,8 @@ export default function ReportesPage() {
                 Agrupa las transferencias a cuenta por cobrar por empresa, para el cierre de mes. La emisión de la factura sigue siendo manual.
               </p>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="label">Desde</label><input type="datetime-local" value={arFrom} onChange={e => setArFrom(e.target.value)} className="input" /></div>
-                <div><label className="label">Hasta</label><input type="datetime-local" value={arTo} onChange={e => setArTo(e.target.value)} className="input" /></div>
+                <div><label className="label">Desde</label><input type="date" value={arFrom} onChange={e => setArFrom(e.target.value)} className="input" /></div>
+                <div><label className="label">Hasta</label><input type="date" value={arTo} onChange={e => setArTo(e.target.value)} className="input" /></div>
               </div>
             </div>
           }

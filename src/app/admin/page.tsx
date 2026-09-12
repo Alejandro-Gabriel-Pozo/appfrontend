@@ -174,40 +174,40 @@ export default function AdminPage() {
               <ApiBlock method="GET" label="Reporte de ocupación"
                 buildUrl={v => {
                   const params = new URLSearchParams()
-                  if (v.from) params.set('from', new Date(v.from).toISOString())
-                  if (v.to) params.set('to', new Date(v.to).toISOString())
+                  if (v.from) params.set('from', v.from)
+                  if (v.to) params.set('to', v.to)
                   return `${BASE}/api/reports/occupancy?${params}`
                 }}
                 inputs={[
-                  { key: 'from', label: 'Desde', type: 'datetime-local', required: true },
-                  { key: 'to', label: 'Hasta', type: 'datetime-local', required: true },
+                  { key: 'from', label: 'Desde', type: 'date', required: true },
+                  { key: 'to', label: 'Hasta', type: 'date', required: true },
                 ]}
               />
               <ApiBlock method="GET" label="Resumen"
                 buildUrl={v => {
                   const params = new URLSearchParams()
-                  if (v.from) params.set('from', new Date(v.from).toISOString())
-                  if (v.to) params.set('to', new Date(v.to).toISOString())
+                  if (v.from) params.set('from', v.from)
+                  if (v.to) params.set('to', v.to)
                   if (v.limit) params.set('limit', v.limit)
                   return `${BASE}/api/reports/occupancy/summary?${params}`
                 }}
                 inputs={[
-                  { key: 'from', label: 'Desde', type: 'datetime-local', required: true },
-                  { key: 'to', label: 'Hasta', type: 'datetime-local', required: true },
+                  { key: 'from', label: 'Desde', type: 'date', required: true },
+                  { key: 'to', label: 'Hasta', type: 'date', required: true },
                   { key: 'limit', label: 'Límite (default 5)', type: 'number', placeholder: '5' },
                 ]}
               />
               <ApiBlock method="GET" label="Recursos subutilizados"
                 buildUrl={v => {
                   const params = new URLSearchParams()
-                  if (v.from) params.set('from', new Date(v.from).toISOString())
-                  if (v.to) params.set('to', new Date(v.to).toISOString())
+                  if (v.from) params.set('from', v.from)
+                  if (v.to) params.set('to', v.to)
                   if (v.threshold) params.set('threshold', v.threshold)
                   return `${BASE}/api/reports/occupancy/underutilized?${params}`
                 }}
                 inputs={[
-                  { key: 'from', label: 'Desde', type: 'datetime-local', required: true },
-                  { key: 'to', label: 'Hasta', type: 'datetime-local', required: true },
+                  { key: 'from', label: 'Desde', type: 'date', required: true },
+                  { key: 'to', label: 'Hasta', type: 'date', required: true },
                   { key: 'threshold', label: 'Umbral % (0-100, default 30)', type: 'number', placeholder: '30' },
                 ]}
               />
