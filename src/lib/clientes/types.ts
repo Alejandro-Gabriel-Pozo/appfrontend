@@ -7,13 +7,40 @@ export interface CustomerTag {
   name: string
 }
 
+/**
+ * CRASH-CUSTOMER-RATE-RENDER-01 (12/09/2026) — forma REAL de la respuesta
+ * de `GET /api/customers/:id/rates` (ver
+ * `app-main/src/clientes-finanzas/sql.customer-rate.repository.ts::rowToRate()`
+ * y `customer-rate.repository.ts::CustomerRate`), no la que este tipo
+ * declaraba antes (`price: number` no opcional — mentía: el backend nunca
+ * manda `price` en la respuesta, solo `fixedPrice`, y puede ser `null`).
+ *
+ * Desde D9-Parte 1 (`docs/diseno-scope-multinivel-tarifas-2026-08-22.md`,
+ * app-main) el scope de una tarifa es exactamente UNO de cinco
+ * (`resourceId`/`serviceId`/`productId`/`categoryId`/`bucket`,
+ * `chk_customer_rate_scope`) y el precio es exactamente UNO de tres
+ * (`fixedPrice`/`discountPercentage`/`rateCatalogId`,
+ * `chk_customer_rate_pricing_mode`) — todos opcionales acá a propósito,
+ * ningún `!` en el consumidor.
+ */
 export interface CustomerRate {
   id: string
   businessId: string
   customerId: string
   resourceId: string | null
   serviceId: string | null
-  price: number
+  /** Nivel ÍTEM — tarifa de producto (D9-Parte 1/2, app-main). */
+  productId: string | null
+  /** Nivel CATEGORÍA — FK a `resource_categories`. */
+  categoryId: string | null
+  /** Nivel BUCKET — `'ALOJAMIENTO'|'TURNOS'|'SERVICIOS'|'PRODUCTOS'`. */
+  bucket: string | null
+  /** Modo (A): monto fijo. Excluyente con `discountPercentage`/`rateCatalogId`. */
+  fixedPrice: number | null
+  /** Modo (B)/(C): % de descuento efectivo (propio o resuelto desde `rate_catalog`). */
+  discountPercentage: number | null
+  /** Modo (C): de qué entrada de `rate_catalog` sale el % de arriba. */
+  rateCatalogId: string | null
   active: boolean
   notes?: string | null
 }

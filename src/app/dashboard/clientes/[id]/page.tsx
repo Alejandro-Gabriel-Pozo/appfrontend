@@ -20,6 +20,14 @@ const KIND_LABEL: Record<'INDIVIDUAL' | 'COMPANY', string> = {
   COMPANY: 'Empresa',
 }
 
+/** `customer_rates.bucket` (app-main/src/db/schema.sql) — usado por getRateScopeLabel(). */
+const BUCKET_LABEL: Record<string, string> = {
+  ALOJAMIENTO: 'Alojamiento',
+  TURNOS: 'Turnos',
+  SERVICIOS: 'Servicios',
+  PRODUCTOS: 'Productos',
+}
+
 function Skeleton({ h = 20, w = '100%', radius = 8 }: { h?: number; w?: number | string; radius?: number }) {
   return <div className="skeleton" style={{ height: h, width: w, borderRadius: radius }} />
 }
@@ -273,6 +281,32 @@ export default function ClienteDetailPage() {
 
   const getResourceName = (rid: string) => resources.find(r => r.id === rid)?.name ?? rid.slice(0, 8) + '…'
   const getServiceName = (sid: string) => services.find(s => s.id === sid)?.name ?? sid.slice(0, 8) + '…'
+
+  /**
+   * CRASH-CUSTOMER-RATE-RENDER-01 (12/09/2026) — `customer_rates` soporta 5
+   * scopes (`chk_customer_rate_scope` en app-main/src/db/schema.sql):
+   * recurso, servicio, producto, categoría o bucket. Antes el render
+   * asumía que siempre había `resourceId` o `serviceId` (`getServiceName(rate.serviceId!)`)
+   * y reventaba con `null` en los otros 3 casos. Acá no hay catálogo de
+   * productos/categorías cargado en esta pantalla (fuera de alcance del
+   * fix — solo mostrar, no editar esos modos), así que esos 3 casos
+   * muestran el tipo de scope como texto, no un nombre resuelto.
+   */
+  const getRateScopeLabel = (rate: CustomerRate): { name: string; typeLabel: string } => {
+    if (rate.resourceId) return { name: getResourceName(rate.resourceId), typeLabel: 'recurso' }
+    if (rate.serviceId) return { name: getServiceName(rate.serviceId), typeLabel: 'servicio' }
+    if (rate.productId) return { name: 'Producto', typeLabel: 'producto' }
+    if (rate.categoryId) return { name: 'Categoría', typeLabel: 'categoría' }
+    if (rate.bucket) return { name: BUCKET_LABEL[rate.bucket] ?? rate.bucket, typeLabel: 'grupo' }
+    return { name: 'Regla de catálogo', typeLabel: 'catálogo' }
+  }
+
+  /** Modo (A) fijo, (B)/(C) % — nunca `rate.price` (no existe en la respuesta real, ver lib/clientes/types.ts). */
+  const getRatePriceLabel = (rate: CustomerRate): string => {
+    if (rate.fixedPrice !== null) return `$${rate.fixedPrice.toLocaleString('es-AR')}`
+    if (rate.discountPercentage !== null) return `${rate.discountPercentage}% desc.`
+    return 'Regla de catálogo'
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -581,20 +615,23 @@ export default function ClienteDetailPage() {
               {rates.length === 0 && (
                 <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Sin tarifas especiales — usa el precio de catálogo.</p>
               )}
-              {rates.map(rate => (
-                <div key={rate.id} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'var(--surface-4)', border: '1px solid var(--border)' }}>
-                  <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                    {rate.resourceId ? getResourceName(rate.resourceId) : getServiceName(rate.serviceId!)}
-                    <span className="text-xs ml-2" style={{ color: 'var(--text-tertiary)' }}>{rate.resourceId ? 'recurso' : 'servicio'}</span>
+              {rates.map(rate => {
+                const scope = getRateScopeLabel(rate)
+                return (
+                  <div key={rate.id} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'var(--surface-4)', border: '1px solid var(--border)' }}>
+                    <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      {scope.name}
+                      <span className="text-xs ml-2" style={{ color: 'var(--text-tertiary)' }}>{scope.typeLabel}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm mono" style={{ color: 'var(--success)' }}>{getRatePriceLabel(rate)}</span>
+                      <button type="button" onClick={() => setRateToRemove(rate)} style={{ color: 'var(--text-tertiary)' }} aria-label="Quitar tarifa especial">
+                        ×
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm mono" style={{ color: 'var(--success)' }}>${rate.price.toLocaleString('es-AR')}</span>
-                    <button type="button" onClick={() => setRateToRemove(rate)} style={{ color: 'var(--text-tertiary)' }} aria-label="Quitar tarifa especial">
-                      ×
-                    </button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
             <form onSubmit={handleAddRate} className="space-y-2">
               <div className="flex gap-2">
