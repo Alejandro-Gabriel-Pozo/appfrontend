@@ -29,6 +29,13 @@ export interface CheckInInput {
 export interface CheckOutInput {
   notes?: string
   nextCleaningShift?: Shift
+  /**
+   * MANAGEMENT fuerza el check-out pese a saldo pendiente (12/09/2026,
+   * caso 3 de app-main/docs/investigacion-decisiones-bloqueado-2026-09-12.md).
+   * El backend igual valida el rol — esto solo evita mostrar un botón
+   * que el backend va a rechazar.
+   */
+  overridePendingBalance?: boolean
 }
 
 // ─── Folio de estadía (A1, paso 6) ─────────────────────────────────────────────

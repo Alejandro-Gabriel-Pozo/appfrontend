@@ -54,6 +54,7 @@ export default function EstadiaDetailPage() {
   const [transferring, setTransferring] = useState(false)
 
   const [confirmNoShow, setConfirmNoShow] = useState(false)
+  const [confirmBalanceOverride, setConfirmBalanceOverride] = useState(false)
   const [noShowing, setNoShowing] = useState(false)
 
   const companies = customers.filter(c => c.kind === 'COMPANY')
@@ -108,13 +109,18 @@ export default function EstadiaDetailPage() {
   const getResourceName = (rid: string) => resources.find(r => r.id === rid)?.name ?? rid.slice(0, 8) + '…'
   const getCustomerName = (cid: string) => customers.find(c => c.id === cid)?.fullName ?? cid.slice(0, 8) + '…'
 
-  async function handleCheckOut() {
+  // `overridePendingBalance` solo lo manda el flujo del ConfirmDialog de
+  // saldo pendiente (ver más abajo) — nunca por default, el backend valida
+  // MANAGEMENT igual (A6.6), esto solo evita mostrar un botón que el
+  // backend va a rechazar.
+  async function handleCheckOut(overridePendingBalance?: boolean) {
     if (!stay) return
     setCheckingOut(true)
     try {
       await staysApi.checkOut(stay.id, {
         ...(checkOutForm.notes && { notes: checkOutForm.notes }),
         ...(checkOutForm.nextCleaningShift && { nextCleaningShift: checkOutForm.nextCleaningShift }),
+        ...(overridePendingBalance && { overridePendingBalance: true }),
       })
       toast('Check-out realizado — se planificó la limpieza', 'success')
       invalidate({ resource: 'estadias', invalidates: ['list'] })
@@ -128,6 +134,7 @@ export default function EstadiaDetailPage() {
       loadFolio()
     } finally {
       setCheckingOut(false)
+      setConfirmBalanceOverride(false)
     }
   }
 
@@ -269,7 +276,9 @@ export default function EstadiaDetailPage() {
                 {folio.balance > 0 ? (
                   <>
                     <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>
-                      Hay que saldar este monto antes de hacer check-out.
+                      {isManagement
+                        ? 'Hay que saldar este monto, transferirlo a cuenta por cobrar, o podés forzar el check-out y dejarlo registrado.'
+                        : 'Hay que saldar este monto antes de hacer check-out.'}
                     </p>
                     {isManagement ? (
                       <button type="button" onClick={() => setTransferOpen(o => !o)} className="btn-mini btn-mini-neutral mt-3">
@@ -344,16 +353,33 @@ export default function EstadiaDetailPage() {
               <textarea className="input" rows={2} value={checkOutForm.notes} onChange={e => setCheckOutForm(f => ({ ...f, notes: e.target.value }))} />
             </div>
             <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Al confirmar se crea automáticamente la tarea de limpieza post-checkout.</p>
-            <button
-              type="button"
-              onClick={handleCheckOut}
-              disabled={checkingOut || loadingFolio || (folio?.balance ?? 0) > 0}
-              className="btn-primary w-full"
-              title={(folio?.balance ?? 0) > 0 ? 'Saldá o transferí el saldo antes de continuar' : undefined}
-            >
-              {checkingOut ? <span className="spinner" /> : null}
-              Confirmar check-out
-            </button>
+            {(() => {
+              const hasPendingBalance = (folio?.balance ?? 0) > 0
+              // 12/09/2026 (caso 3, app-main/docs/investigacion-decisiones-bloqueado-2026-09-12.md)
+              // — warn-and-override: con saldo pendiente, MANAGEMENT puede
+              // forzar el check-out (abre el ConfirmDialog de abajo) en vez
+              // de quedar bloqueado sin salida. FRONT_DESK sin MANAGEMENT
+              // sigue viendo el botón deshabilitado — el backend igual lo
+              // rechazaría (A6.6), no tiene sentido dejarlo intentar.
+              return (
+                <button
+                  type="button"
+                  onClick={() => (hasPendingBalance && isManagement ? setConfirmBalanceOverride(true) : handleCheckOut())}
+                  disabled={checkingOut || loadingFolio || (hasPendingBalance && !isManagement)}
+                  className="btn-primary w-full"
+                  title={
+                    hasPendingBalance
+                      ? (isManagement
+                        ? 'Hay saldo pendiente — se te va a pedir confirmación para forzar el check-out'
+                        : 'Saldá el saldo, transferilo a cuenta por cobrar, o pedile a un encargado que fuerce el check-out')
+                      : undefined
+                  }
+                >
+                  {checkingOut ? <span className="spinner" /> : null}
+                  {hasPendingBalance && isManagement ? 'Forzar check-out con saldo pendiente' : 'Confirmar check-out'}
+                </button>
+              )
+            })()}
           </div>
         </div>
 
@@ -380,6 +406,17 @@ export default function EstadiaDetailPage() {
         confirmLabel="Marcar no show"
         variant="danger"
         loading={noShowing}
+      />
+
+      <ConfirmDialog
+        open={confirmBalanceOverride}
+        onClose={() => setConfirmBalanceOverride(false)}
+        onConfirm={() => handleCheckOut(true)}
+        title="¿Forzar el check-out con saldo pendiente?"
+        description={`La estadía tiene un saldo pendiente de ${fmtMoney(folio?.balance ?? 0)}. Vas a hacer el check-out sin cobrarlo ni transferirlo a cuenta por cobrar — queda registrado que vos lo autorizaste.`}
+        confirmLabel="Forzar check-out"
+        variant="danger"
+        loading={checkingOut}
       />
     </div>
   )
