@@ -317,6 +317,11 @@ export default function CuentasCorrientesPage() {
                               coveredByConsolidated={statement.coveredByConsolidatedTransactionIds?.includes(tx.id) ?? false}
                               customerId={tx.customerId}
                               coveredByInvoiceId={coveredInvoiceIdByFt.get(tx.id)}
+                              // INVOICE-CHARGES-GUARD-FRONTEND-RESIDUE-001 --
+                              // `selected` YA ES el cliente dueño de todo el
+                              // statement (esta pantalla es un estado de
+                              // cuenta por cliente) -- sin fetch nuevo.
+                              customerKind={selected.kind}
                             />
                           )}
                         </td>

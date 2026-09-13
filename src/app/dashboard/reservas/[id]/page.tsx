@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { useUpdate, useInvalidate } from '@refinedev/core'
 import Link from 'next/link'
-import { reservationsApi, resourcesApi, bookableServicesApi, customerAccountApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
+import { reservationsApi, resourcesApi, bookableServicesApi, customerAccountApi, customersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { isApiError } from '@/lib/apiErrors'
 import { useToast } from '@/context/ToastContext'
 import { useIsManagement } from '@/hooks/useAuthRole'
@@ -95,6 +95,14 @@ export default function ReservaDetailPage() {
   // INVOICE-CHARGES-BUTTON-DEADEND-01 (11/09/2026, opción B) -- invoiceId
   // exacto de la consolidada, para el link preciso de FacturarButton.
   const [chargeCoveredByInvoiceId, setChargeCoveredByInvoiceId] = useState<string | undefined>(undefined)
+  // INVOICE-CHARGES-GUARD-FRONTEND-RESIDUE-001 (13/09/2026) -- a diferencia
+  // de Cuentas Corrientes, acá `reservation.customer` es la representación
+  // mínima de bounded context (`{ id, fullName?, email? }`, sin `kind`) --
+  // hace falta un fetch aparte a `GET /api/customers/:id` para saber si es
+  // COMPANY. Se resuelve en `refreshChargeTransaction`, junto al resto del
+  // estado del cargo, no en `load()`, porque solo hace falta cuando el
+  // botón Facturar puede llegar a mostrarse.
+  const [chargeCustomerKind, setChargeCustomerKind] = useState<'INDIVIDUAL' | 'COMPANY' | undefined>(undefined)
 
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
@@ -119,9 +127,30 @@ export default function ReservaDetailPage() {
   // reusa el estado de cuenta del cliente (ya trae reservationId por
   // movimiento) en vez de sumar una ruta nueva solo para este botón.
   const refreshChargeTransaction = useCallback(async (r: Reservation) => {
-    if (r.status !== 'CONFIRMED' && r.status !== 'COMPLETED') { setChargeTransactionId(null); setChargeCoveredByConsolidated(false); setChargeCoveredByInvoiceId(undefined); return }
+    if (r.status !== 'CONFIRMED' && r.status !== 'COMPLETED') {
+      setChargeTransactionId(null); setChargeCoveredByConsolidated(false); setChargeCoveredByInvoiceId(undefined)
+      setChargeCustomerKind(undefined)
+      return
+    }
     try {
-      const statement = await customerAccountApi.getStatement(r.customer.id)
+      // INVOICE-CHARGES-GUARD-FRONTEND-RESIDUE-001 -- `kind` en paralelo con
+      // el statement, ambos gateados por el mismo `r.customer.id`. No es una
+      // pantalla migrada a Refine (fetch directo ya era el patrón acá), así
+      // que sumar un segundo fetch no rompe ninguna convención -- ver
+      // docblock del state de arriba. `allSettled`, no `all`: `kind` es
+      // opcional a propósito (ver docblock de `customerKind` en
+      // `FacturarButton`) -- si SOLO ese fetch falla, no tiene que tirar
+      // abajo el resto del estado del cargo (que sí es indispensable para
+      // el botón). Antes de este cambio compartían el mismo `try`, y una
+      // falla nueva y ajena (leer el cliente) hubiera ocultado el botón
+      // Facturar entero -- un radio de fallo que no existía hasta agregar
+      // este fetch.
+      const [statementResult, customerResult] = await Promise.allSettled([
+        customerAccountApi.getStatement(r.customer.id),
+        customersApi.get(r.customer.id),
+      ])
+      if (statementResult.status === 'rejected') throw statementResult.reason
+      const statement = statementResult.value
       const charge = statement.transactions.find(
         tx => tx.type === 'CHARGE' && tx.reservationId === r.id && tx.status !== 'VOIDED' && tx.status !== 'FAILED',
       )
@@ -130,10 +159,12 @@ export default function ReservaDetailPage() {
       setChargeCoveredByInvoiceId(
         charge ? statement.coveredByConsolidatedInvoices?.find(c => c.financialTransactionId === charge.id)?.invoiceId : undefined,
       )
+      setChargeCustomerKind(customerResult.status === 'fulfilled' ? customerResult.value.kind : undefined)
     } catch {
       setChargeTransactionId(null)
       setChargeCoveredByConsolidated(false)
       setChargeCoveredByInvoiceId(undefined)
+      setChargeCustomerKind(undefined)
     }
   }, [])
 
@@ -519,6 +550,7 @@ export default function ReservaDetailPage() {
                     coveredByConsolidated={chargeCoveredByConsolidated}
                     customerId={reservation.customer.id}
                     coveredByInvoiceId={chargeCoveredByInvoiceId}
+                    customerKind={chargeCustomerKind}
                   />
                 </div>
               )}
