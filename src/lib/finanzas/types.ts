@@ -34,7 +34,16 @@ export interface OutstandingInvoice {
 
 // ─── Folio de estadía / Cuentas por cobrar (A1, paso 6) ────────────────────────
 
-export type AccountsReceivableStatus = 'PENDIENTE_FACTURAR' | 'FACTURADO' | 'COBRADO'
+// REVERTIDO agregado 14/09/2026 (Bloque 3c-iii, app-main) -- mismo modo de
+// falla que ROLES-CATALOG-DRIFT-001: el backend agregó este 4º estado a
+// `AccountsReceivableStatus` en app-main/src/clientes-finanzas/
+// accounts-receivable.repository.ts (Bloque 3c-ii, `reverseTransfer()`)
+// y este catálogo quedó atrás -- precondición dura del gate
+// `architecture-governor` de implementación antes de exponer la ruta
+// `POST /:id/reverse`. Ver también AR_STATUS_LABEL más abajo en
+// dashboard/reportes/page.tsx, que sin esto renderizaba una celda en
+// blanco para toda fila revertida.
+export type AccountsReceivableStatus = 'PENDIENTE_FACTURAR' | 'FACTURADO' | 'COBRADO' | 'REVERTIDO'
 
 export interface AccountReceivable {
   id: string

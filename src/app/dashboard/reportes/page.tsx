@@ -18,6 +18,11 @@ const AR_STATUS_LABEL: Record<AccountsReceivableStatus, string> = {
   PENDIENTE_FACTURAR: 'Pendiente de facturar',
   FACTURADO: 'Facturado',
   COBRADO: 'Cobrado',
+  // 14/09/2026 (Bloque 3c-iii, app-main) -- sin esta clave, una fila
+  // revertida real renderizaba AR_STATUS_LABEL['REVERTIDO'] === undefined,
+  // celda en blanco sin crash. Decisión §7.8 del ADR de City Ledger:
+  // mostrar, con estado visible, no esconder que hubo una corrección.
+  REVERTIDO: 'Revertido',
 }
 
 /**
