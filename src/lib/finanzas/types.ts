@@ -86,6 +86,10 @@ export interface AccountsReceivableReportRow {
   pendingAmount: number
   invoicedAmount: number
   collectedAmount: number
+  /** 14/09/2026 (Bloque 3c-iii, app-main) -- suma de filas REVERTIDO. Sin
+   *  este campo, pendingAmount + invoicedAmount + collectedAmount dejaba
+   *  de sumar totalAmount en cuanto existiera una fila revertida real. */
+  revertedAmount: number
 }
 
 // ─── BillingPolicy (C1-Fase C, 23/08/2026) ─────────────────────────────────
