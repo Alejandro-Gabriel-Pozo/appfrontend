@@ -31,7 +31,7 @@ export type {
   ResourceLock, RatePlan, CreateRatePlanInput, UpdateRatePlanInput,
   ServiceSchedule, CreateServiceScheduleInput, UpdateServiceScheduleInput,
 } from './servicios/types'
-export type { ReservationStatus, Reservation } from './reservas/types'
+export type { ReservationStatus, Reservation, CancelReservationWithCreditNoteResult, AccountsReceivableWarningEntry } from './reservas/types'
 export type { HousekeepingStatus, Shift, HousekeepingTask, LateCheckout, CreateHousekeepingTaskInput } from './housekeeping/types'
 export type { MaintenanceWindow, CreateMaintenanceWindowInput } from './maintenance-windows/types'
 export type { StayStatus, Stay, CheckInInput, CheckOutInput, StayFolio } from './estadias/types'
