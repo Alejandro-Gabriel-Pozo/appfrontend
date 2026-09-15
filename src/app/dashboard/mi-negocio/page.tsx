@@ -131,7 +131,6 @@ function FiscalProfileSection() {
   const locked = alreadyConfirmed && !isOwner
   const [legalName, setLegalName] = useState('')
   const [taxId, setTaxId] = useState('')
-  const [taxIdType, setTaxIdType] = useState('')
   const [taxCondition, setTaxCondition] = useState('')
   const [addressLine1, setAddressLine1] = useState('')
   const [addressCity, setAddressCity] = useState('')
@@ -150,7 +149,6 @@ function FiscalProfileSection() {
         const profile = await businessProfileApi.get()
         setLegalName(profile.legalName ?? '')
         setTaxId(profile.taxId ?? '')
-        setTaxIdType(profile.taxIdType ?? '')
         setTaxCondition(profile.taxCondition ?? '')
         setAddressLine1(profile.fiscalAddressLine1 ?? '')
         setAddressCity(profile.fiscalAddressCity ?? '')
@@ -176,7 +174,10 @@ function FiscalProfileSection() {
       await businessProfileApi.update({
         legalName: legalName.trim() || null,
         taxId: taxId.trim() || null,
-        taxIdType: taxIdType.trim() || null,
+        // D-15 (15/09/2026, app-main/docs/decisiones-auditoria-fase2-2026-09-15.md
+        // §9): el emisor es CUIT-only -- ya no es un campo editable, así
+        // que no se manda como parte del payload de update (el backend
+        // solo acepta el literal 'CUIT' si se manda, y no lo exige).
         taxCondition: taxCondition.trim() || null,
         fiscalAddressLine1: addressLine1.trim() || null,
         fiscalAddressCity: addressCity.trim() || null,
@@ -230,10 +231,14 @@ function FiscalProfileSection() {
           </div>
           <div className="flex-1">
             <label className="label">Tipo de documento</label>
+            {/* D-15 (15/09/2026, app-main/docs/decisiones-auditoria-fase2-2026-09-15.md
+                §9): el emisor es CUIT-only -- deja de ser un input editable.
+                `disabled` en vez de sacar el campo del layout, para que la
+                fila siga leyéndose igual que antes de este cambio (CUIT +
+                tipo de documento lado a lado). */}
             <input
-              type="text" className="input" value={taxIdType}
-              onChange={e => setTaxIdType(e.target.value)}
-              placeholder="CUIT"
+              type="text" className="input" value="CUIT" disabled
+              title="El emisor de este negocio factura siempre con CUIT"
             />
           </div>
         </div>

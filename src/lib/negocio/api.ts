@@ -11,7 +11,12 @@ export const businessProfileApi = {
     defaultCheckOutTime?: string
     legalName?: string | null
     taxId?: string | null
-    taxIdType?: string | null
+    // D-15 (15/09/2026, app-main/docs/decisiones-auditoria-fase2-2026-09-15.md
+    // §9): el emisor es CUIT-only -- ya no es editable desde acá, así que
+    // no forma parte del payload de update (el backend solo acepta el
+    // literal 'CUIT' si se manda, y no lo exige). Sigue viniendo en la
+    // respuesta de GET (`BusinessProfile.taxIdType`, types.ts) para poder
+    // seguir mostrándolo.
     taxCondition?: string | null
     fiscalAddressLine1?: string | null
     fiscalAddressCity?: string | null

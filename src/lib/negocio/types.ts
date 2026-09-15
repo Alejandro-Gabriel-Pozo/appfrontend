@@ -22,11 +22,10 @@ export interface OperatingWindow {
 // ─── Perfil fiscal del negocio EMISOR (19/08/2026) ────────────────────────────
 // Facturación Electrónica AFIP, Fase 1 (app-main/docs/pendientes-2026-08-18.md
 // punto P) -- sin conexión real a AFIP todavía, solo los datos que hacen falta
-// cargar antes de poder emitir. Sin catálogo cerrado para taxIdType/
-// taxCondition (mismo criterio que el backend): texto libre por ahora, AFIP
-// expone sus propios catálogos de referencia (FEParamGetTiposDoc/
-// FEParamGetCondicionIvaReceptor) para validar en serio recién cuando se
-// conecte de verdad.
+// cargar antes de poder emitir. Sin catálogo cerrado para taxCondition (mismo
+// criterio que el backend): texto libre por ahora, AFIP expone sus propios
+// catálogos de referencia (FEParamGetCondicionIvaReceptor) para validar en
+// serio recién cuando se conecte de verdad.
 export interface BusinessProfile {
   id: string
   displayName: string | null
@@ -37,6 +36,13 @@ export interface BusinessProfile {
   defaultCheckOutTime: string
   legalName: string | null
   taxId: string | null
+  /**
+   * D-15 (15/09/2026, app-main/docs/decisiones-auditoria-fase2-2026-09-15.md
+   * §9): el emisor es CUIT-only -- deja de ser editable
+   * (`dashboard/mi-negocio/page.tsx` lo muestra fijo). Sigue siendo
+   * `string | null` (no un literal) porque la respuesta de GET puede traer
+   * lo que ya estuviera persistido antes de este cambio.
+   */
   taxIdType: string | null
   taxCondition: string | null
   fiscalAddressLine1: string | null
