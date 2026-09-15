@@ -1,6 +1,8 @@
 // ─── Orders ──────────────────────────────────────────────────────────────────
 // Sincronizado con domain/order.entities.ts del backend
 
+import type { Invoice } from '../facturacion/types'
+
 export type OrderStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
 
 export type OrderItemType = 'PRODUCT' | 'PRODUCT_VARIANT' | 'RESERVATION' | 'SERVICE'
@@ -81,4 +83,30 @@ export interface ListOrdersFilters {
   to?: string
   limit?: number
   offset?: number
+}
+
+/**
+ * `CANCEL-WITH-NC-UI-001` (15/09/2026) -- respuesta de
+ * `POST /api/orders/:id/cancel-with-credit-note`
+ * (app-main/src/pos-menu/orders.routes.ts). Réplica mínima de la misma
+ * forma que `reservas/types.ts::AccountsReceivableWarningEntry` -- se
+ * duplica a propósito en vez de importarla cruzando de dominio (mismo
+ * criterio de bounded contexts que ya sigue el backend: un value object
+ * chico por dominio, no una clase rica compartida).
+ */
+export interface AccountsReceivableWarningEntry {
+  accountsReceivableId: string
+  companyCustomerId: string
+  status: string
+  amount: number
+}
+
+export interface CancelOrderWithCreditNoteResult {
+  order: Order
+  creditNote: Invoice
+  adjustmentId: string
+  originalInvoiceId: string
+  /** true si esta llamada emitió la Nota de Crédito ahora; false si un reintento la resolvió por un fast-path idempotente. */
+  emitted: boolean
+  accountsReceivableWarning?: AccountsReceivableWarningEntry[]
 }

@@ -1,6 +1,6 @@
 'use client'
 import { apiFetch } from '../http'
-import type { Order, OrderItem, CreateOrderInput, ListOrdersFilters } from './types'
+import type { Order, OrderItem, CreateOrderInput, ListOrdersFilters, CancelOrderWithCreditNoteResult } from './types'
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 export const ordersApi = {
@@ -20,6 +20,19 @@ export const ordersApi = {
   confirm:     (id: string)                    => apiFetch<Order>(`/api/orders/${id}/confirm`,  { method: 'POST' }),
   complete:    (id: string)                    => apiFetch<Order>(`/api/orders/${id}/complete`, { method: 'POST' }),
   cancel:      (id: string)                    => apiFetch<Order>(`/api/orders/${id}/cancel`,   { method: 'POST' }),
+  /**
+   * `CANCEL-WITH-NC-UI-001` (15/09/2026, F3-01/F3-02 de
+   * app-main/docs/auditoria-integral-fase3-2026-09-15.md) -- escape
+   * administrativo para cancelar una orden que ya tiene una factura
+   * ISSUED viva (el `cancel()` normal la rechaza). Requiere el rol
+   * EMISOR_NOTA_CREDITO (ver `useCanIssueCreditNote()`,
+   * hooks/useAuthRole.ts) -- el backend igual lo valida en serio.
+   */
+  cancelWithCreditNote: (id: string, reason: string) =>
+    apiFetch<CancelOrderWithCreditNoteResult>(`/api/orders/${id}/cancel-with-credit-note`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
   serve:       (id: string)                    => apiFetch<Order>(`/api/orders/${id}/serve`,    { method: 'POST' }),
   updateNotes: (id: string, notes: string | null) =>
     apiFetch<Order>(`/api/orders/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes }) }),

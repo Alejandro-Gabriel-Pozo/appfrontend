@@ -41,7 +41,7 @@ export type {
   RecipeItem, CreateRecipeItemInput, RecordProductionInput,
 } from './productos/types'
 export type { Company, CompanyLink, CompanyProduct } from './empresa/types'
-export type { OrderStatus, OrderItemType, OrderItem, Order, CreateOrderItemInput, CreateOrderInput, ListOrdersFilters } from './ordenes/types'
+export type { OrderStatus, OrderItemType, OrderItem, Order, CreateOrderItemInput, CreateOrderInput, ListOrdersFilters, CancelOrderWithCreditNoteResult, AccountsReceivableWarningEntry as OrderAccountsReceivableWarningEntry } from './ordenes/types'
 export type { AvailabilityResource, AvailabilitySearchResult } from './portal/types'
 export type { DeadLetterEvent } from './sistema/types'
 export type { AfipCredentialsStatus, InvoiceStatus, Invoice, InvoiceWithLabel } from './facturacion/types'

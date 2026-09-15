@@ -6,6 +6,7 @@ import { ordersApi, customersApi, productsApi, extractErrorMessage } from '@/lib
 import { isApiError } from '@/lib/apiErrors'
 import { useToast } from '@/context/ToastContext'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import { useCanIssueCreditNote } from '@/hooks/useAuthRole'
 import type { Order, OrderItem, Customer, Product, OrderStatus } from '@/lib/types'
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -50,6 +51,7 @@ export default function OrderDetailPage() {
   const params = useParams()
   const { toast } = useToast()
   const id = params?.id as string
+  const canIssueCreditNote = useCanIssueCreditNote()
 
   const [order, setOrder]       = useState<Order | null>(null)
   const [customer, setCustomer] = useState<Customer | null>(null)
@@ -62,6 +64,12 @@ export default function OrderDetailPage() {
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: 'confirm' | 'cancel' | 'complete' | null }>({
     open: false, action: null,
   })
+
+  // CANCEL-WITH-NC-UI-001 (15/09/2026) — escape de cancelación con Nota de
+  // Crédito, separado del "Cancelar orden" normal (F3-01/F3-02).
+  const [cancelWithNcOpen, setCancelWithNcOpen] = useState(false)
+  const [cancelWithNcReason, setCancelWithNcReason] = useState('')
+  const [cancelWithNcSubmitting, setCancelWithNcSubmitting] = useState(false)
 
   // Notas
   const [editingNotes, setEditingNotes] = useState(false)
@@ -115,6 +123,36 @@ export default function OrderDetailPage() {
     } finally {
       setActionLoading(null)
       setConfirmDialog({ open: false, action: null })
+    }
+  }
+
+  // CANCEL-WITH-NC-UI-001 — a diferencia de doAction(), esta acción pide
+  // un motivo obligatorio (CancelWithCreditNoteSchema del backend) y la
+  // respuesta trae la Nota de Crédito emitida +, si aplica, una
+  // advertencia por cada traspaso a City Ledger todavía activo.
+  async function submitCancelWithCreditNote() {
+    if (cancelWithNcReason.trim() === '') {
+      toast('El motivo de la cancelación es obligatorio', 'error')
+      return
+    }
+    setCancelWithNcSubmitting(true)
+    try {
+      const result = await ordersApi.cancelWithCreditNote(id, cancelWithNcReason.trim())
+      toast('Orden cancelada con Nota de Crédito', 'success')
+      if (result.accountsReceivableWarning && result.accountsReceivableWarning.length > 0) {
+        const total = result.accountsReceivableWarning.reduce((sum, w) => sum + w.amount, 0)
+        toast(
+          `Ojo: hay ${result.accountsReceivableWarning.length} traspaso(s) a cuenta corriente todavía activo(s) por ${fmtMoney(total)} — revisar en Cuentas Corrientes.`,
+          'error',
+        )
+      }
+      setOrder(result.order)
+      setCancelWithNcOpen(false)
+      setCancelWithNcReason('')
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setCancelWithNcSubmitting(false)
     }
   }
 
@@ -359,6 +397,56 @@ export default function OrderDetailPage() {
               )}
             </button>
           )}
+          {/* CANCEL-WITH-NC-UI-001 — acción separada del "Cancelar orden"
+              de arriba (decisión del dueño, 15/09/2026): allowedTransitions
+              no sabe si hay una factura ISSUED viva (F3-01/F3-02), así que
+              se ofrece siempre que el rol y el estado lo permitan — si no
+              hace falta, el backend responde "usá la cancelación normal". */}
+          {canIssueCreditNote && order.allowedTransitions?.includes('CANCELLED') && (
+            <button
+              className="btn-action btn-cancel"
+              disabled={actionLoading !== null}
+              onClick={() => setCancelWithNcOpen(o => !o)}
+            >
+              Cancelar con Nota de Crédito
+            </button>
+          )}
+        </div>
+      )}
+
+      {cancelWithNcOpen && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="detail-card-header">Cancelar con Nota de Crédito</div>
+          <div className="detail-card-body">
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>
+              Cancela la orden y emite una Nota de Crédito por la factura ya emitida.
+              Usá esta opción solo cuando el cliente ya tomó la decisión de cancelar y hay
+              una factura viva de por medio — la cancelación normal no alcanza en ese caso.
+            </p>
+            <textarea
+              className="input-sm"
+              style={{ width: '100%', resize: 'vertical', minHeight: 80 }}
+              value={cancelWithNcReason}
+              onChange={e => setCancelWithNcReason(e.target.value)}
+              placeholder="Motivo de la cancelación (obligatorio)"
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button
+                className="btn-ghost"
+                onClick={() => { setCancelWithNcOpen(false); setCancelWithNcReason('') }}
+              >
+                Volver
+              </button>
+              <button
+                className="btn-action btn-cancel"
+                onClick={submitCancelWithCreditNote}
+                disabled={cancelWithNcSubmitting || cancelWithNcReason.trim() === ''}
+              >
+                {cancelWithNcSubmitting ? '…' : 'Confirmar cancelación con NC'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
