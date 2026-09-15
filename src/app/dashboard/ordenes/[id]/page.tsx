@@ -28,6 +28,8 @@ const ITEM_TYPE_LABEL: Record<string, string> = {
   PRODUCT:         'Producto',
   PRODUCT_VARIANT: 'Variante',
   RESERVATION:     'Reserva',
+  // Bloque C (backend, docs/diseno-factura-borrador-2026-08-31.md §29, 15/09/2026)
+  SERVICE:         'Servicio',
 }
 
 function fmtDate(iso: string | null) {

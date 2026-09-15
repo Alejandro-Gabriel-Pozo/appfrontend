@@ -3,7 +3,7 @@
 
 export type OrderStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
 
-export type OrderItemType = 'PRODUCT' | 'PRODUCT_VARIANT' | 'RESERVATION'
+export type OrderItemType = 'PRODUCT' | 'PRODUCT_VARIANT' | 'RESERVATION' | 'SERVICE'
 
 export interface OrderItem {
   id: string
@@ -15,6 +15,8 @@ export interface OrderItem {
   productVariantId: string | null
   /** FK a reservations.id — presente para RESERVATION */
   reservationId: string | null
+  /** FK a service_items.id — presente para SERVICE (Bloque C, docs/diseno-factura-borrador-2026-08-31.md §29, backend, 15/09/2026) */
+  serviceItemId: string | null
   quantity: number
   unitPrice: number
   /** quantity * unitPrice (snapshot inmutable) */
@@ -48,6 +50,8 @@ export interface CreateOrderItemInput {
   productId?: string | null
   productVariantId?: string | null
   reservationId?: string | null
+  /** FK a service_items.id — obligatoria para itemType SERVICE (Bloque C, backend, 15/09/2026). */
+  serviceItemId?: string | null
   quantity: number
   /**
    * ORDER-11 (03/09/2026) — SOLO para `RESERVATION`.
@@ -57,7 +61,9 @@ export interface CreateOrderItemInput {
    * resuelve el servidor con el precio base del producto más la tarifa
    * especial del cliente si corresponde. Mandarlo hacía que el alta de orden
    * y el alta de ítem fallaran siempre — el módulo de órdenes no era
-   * recorrible desde el panel.
+   * recorrible desde el panel. Bloque C (backend, 15/09/2026): SERVICE
+   * sigue el mismo eje (rechazado con 400 también) — el servidor lo
+   * resuelve desde `service_items.price`.
    */
   unitPrice?: number
 }

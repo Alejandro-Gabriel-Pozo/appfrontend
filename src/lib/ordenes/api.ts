@@ -24,8 +24,10 @@ export const ordersApi = {
   updateNotes: (id: string, notes: string | null) =>
     apiFetch<Order>(`/api/orders/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes }) }),
   // ORDER-11: `unitPrice` sale de la firma para PRODUCT/PRODUCT_VARIANT — el
-  // servidor lo resuelve y el backend rechaza el body si viene.
-  addItem: (id: string, body: { itemType: string; productId?: string | null; productVariantId?: string | null; reservationId?: string | null; quantity: number }) =>
+  // servidor lo resuelve y el backend rechaza el body si viene. Bloque C
+  // (backend, 15/09/2026): `serviceItemId` se suma a la firma para itemType
+  // SERVICE, mismo criterio (sin unitPrice, el servidor lo resuelve).
+  addItem: (id: string, body: { itemType: string; productId?: string | null; productVariantId?: string | null; reservationId?: string | null; serviceItemId?: string | null; quantity: number }) =>
     apiFetch<OrderItem>(`/api/orders/${id}/items`, { method: 'POST', body: JSON.stringify(body) }),
   removeItem: (id: string, itemId: string) =>
     apiFetch<void>(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' }),
