@@ -12,7 +12,7 @@
 // docs/convenciones-nombres.md para el árbol completo.
 
 export { handleApiResponse, apiFetch, extractErrorMessage, extractFieldErrors } from './http'
-export type { ApiError, ApiErrorWithStatus, ZodFlatErrors, PaginatedResponse } from './http'
+export type { ApiError, ApiErrorWithStatus, ZodFlatErrors, PaginatedResponse, OffsetPaginatedResponse } from './http'
 
 export { resourcesApi, resourceHoursApi } from './recursos/api'
 export { bookableServicesApi, resourceLocksApi, ratePlansApi, serviceSchedulesApi } from './servicios/api'

@@ -32,6 +32,23 @@ export interface PaginatedResponse<T> {
   totalPages: number
 }
 
+/**
+ * D-14 (15/09/2026, docs/decisiones-auditoria-fase2-2026-09-15.md #12,
+ * backend app-main) — contrato canónico de paginación limit/offset,
+ * envelope único `{ data, limit, offset, total, hasMore }`, sin fallback a
+ * array plano. Reemplaza `PaginatedResponse<T>` (page/totalPages) para los
+ * recursos migrados a este contrato — hoy solo `reservations`
+ * (`lib/reservas/api.ts`). Los recursos que todavía no migraron (clientes,
+ * en su POST /search) siguen devolviendo `PaginatedResponse<T>` de arriba.
+ */
+export interface OffsetPaginatedResponse<T> {
+  data: T[]
+  limit: number
+  offset: number
+  total: number
+  hasMore: boolean
+}
+
 // ─── Retry con backoff exponencial para cold starts de Render (503) ───────────
 // Solo reintenta en 503 (Service Unavailable) y errores de red.
 // No reintenta en 4xx (errores del cliente) ni en mutaciones peligrosas.

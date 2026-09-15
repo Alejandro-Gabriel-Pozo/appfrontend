@@ -1,11 +1,18 @@
 'use client'
 import { apiFetch } from '../http'
-import type { PaginatedResponse } from '../http'
+import type { OffsetPaginatedResponse } from '../http'
 import type { Reservation } from './types'
 
+/**
+ * D-14 (15/09/2026, docs/decisiones-auditoria-fase2-2026-09-15.md #12,
+ * backend app-main) — contrato canónico limit/offset (reemplaza page/limit).
+ * El backend SIEMPRE devuelve el envelope `OffsetPaginatedResponse<Reservation>`
+ * ahora (nunca un array plano), incluso sin `limit`/`offset` explícitos —
+ * ver `respondWithReservationsList()` en `reservations.routes.ts`.
+ */
 export interface ReservationFilters {
-  page?:       number
   limit?:      number
+  offset?:     number
   status?:     string
   from?:       string
   to?:         string
@@ -23,7 +30,7 @@ export const reservationsApi = {
     // igual en el body para no duplicar la llamada (mismo motivo que
     // customersApi.list — el request es uno solo, no dos).
     if (filters.search) {
-      return apiFetch<PaginatedResponse<Reservation> | Reservation[]>('/api/reservations/search', {
+      return apiFetch<OffsetPaginatedResponse<Reservation>>('/api/reservations/search', {
         method: 'POST',
         body: JSON.stringify({
           search: filters.search,
@@ -31,20 +38,20 @@ export const reservationsApi = {
           ...(filters.from       !== undefined && { from: filters.from }),
           ...(filters.to         !== undefined && { to: filters.to }),
           ...(filters.isLodging  !== undefined && { isLodging: filters.isLodging }),
-          ...(filters.page       !== undefined && { page: filters.page }),
           ...(filters.limit      !== undefined && { limit: filters.limit }),
+          ...(filters.offset     !== undefined && { offset: filters.offset }),
         }),
       })
     }
     const params = new URLSearchParams()
-    if (filters.page)               params.set('page',      String(filters.page))
-    if (filters.limit)              params.set('limit',     String(filters.limit))
+    if (filters.limit !== undefined)  params.set('limit',  String(filters.limit))
+    if (filters.offset !== undefined) params.set('offset', String(filters.offset))
     if (filters.status)             params.set('status',    filters.status)
     if (filters.from)               params.set('from',      filters.from)
     if (filters.to)                 params.set('to',        filters.to)
     if (filters.isLodging !== undefined) params.set('isLodging', String(filters.isLodging))
     const qs = params.toString()
-    return apiFetch<PaginatedResponse<Reservation> | Reservation[]>(
+    return apiFetch<OffsetPaginatedResponse<Reservation>>(
       `/api/reservations${qs ? `?${qs}` : ''}`,
     )
   },

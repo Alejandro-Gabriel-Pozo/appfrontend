@@ -4,7 +4,7 @@ import {
   customersApi, reservationsApi, staysApi, housekeepingApi, ordersApi,
   wasteReasonsApi, consumptionDestinationsApi, rolesApi,
 } from '@/lib/api'
-import type { PaginatedResponse } from '@/lib/api'
+import type { PaginatedResponse, OffsetPaginatedResponse } from '@/lib/api'
 import type { Category, CreateProductInput, UpdateProductInput } from '@/lib/types'
 
 // ─── Data provider por-recurso (confirmado con el dueño, 18/08/2026) ─────────
@@ -33,14 +33,20 @@ interface ResourceAdapter {
   deleteOne: (id: string) => Promise<void>
 }
 
-function toArray<T>(res: PaginatedResponse<T> | T[]): T[] {
+// D-14 (15/09/2026, docs/decisiones-auditoria-fase2-2026-09-15.md #12,
+// backend app-main) -- reservas migró a `OffsetPaginatedResponse<T>`
+// (limit/offset/hasMore, nunca array plano), clientes/órdenes siguen con
+// `PaginatedResponse<T>` (page/totalPages) o T[] a secas. Estos dos
+// helpers solo leen `.data`/`.total`, presentes en las dos formas del
+// envelope -- ampliar la unión alcanza, sin duplicar el helper.
+function toArray<T>(res: PaginatedResponse<T> | OffsetPaginatedResponse<T> | T[]): T[] {
   return Array.isArray(res) ? res : res.data
 }
 
 /** A diferencia de toArray(), preserva el total real del servidor cuando
  * la respuesta viene paginada — lo necesitan los recursos migrados a
  * `pagination: { mode: 'server' }` (hoy Clientes y Reservas/Turnos). */
-function toPaginated<T>(res: PaginatedResponse<T> | T[]): { data: T[]; total: number } {
+function toPaginated<T>(res: PaginatedResponse<T> | OffsetPaginatedResponse<T> | T[]): { data: T[]; total: number } {
   return Array.isArray(res) ? { data: res, total: res.length } : { data: res.data, total: res.total }
 }
 
@@ -173,9 +179,16 @@ const resources: Record<string, ResourceAdapter> = {
       const status    = getFilterValue(filters, 'status')
       const search    = getFilterValue(filters, 'search')
       if (pagination?.mode !== 'server') return toArray(await reservationsApi.list({ isLodging, status, search, from, to }))
+      // D-14 (15/09/2026, docs/decisiones-auditoria-fase2-2026-09-15.md
+      // #12, backend app-main) -- contrato canónico limit/offset,
+      // reemplaza page/limit. currentPage/pageSize son opcionales en el
+      // tipo `Pagination` de Refine -- mismos defaults (página 1, tamaño
+      // 20) que useReservationsScreen ya le pasa a useTable().
+      const currentPage = pagination.currentPage ?? 1
+      const pageSize    = pagination.pageSize ?? 20
       return toPaginated(await reservationsApi.list({
-        page: pagination.currentPage,
-        limit: pagination.pageSize,
+        offset: (currentPage - 1) * pageSize,
+        limit: pageSize,
         status,
         search,
         isLodging,

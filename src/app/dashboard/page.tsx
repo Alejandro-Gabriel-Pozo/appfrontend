@@ -149,10 +149,16 @@ export default function DashboardHome() {
 
   useEffect(() => {
     Promise.all([
-      reservationsApi.list().catch(() => []),
+      // D-14 (15/09/2026, docs/decisiones-auditoria-fase2-2026-09-15.md
+      // #12, backend app-main) -- reservationsApi.list() ya NO devuelve un
+      // array plano nunca, siempre el envelope OffsetPaginatedResponse
+      // {data, limit, offset, total, hasMore}. `Array.isArray(res) ? res : []`
+      // habría quedado mostrando 0 reservas en silencio (el catch de abajo
+      // sí devuelve [] a propósito, para el caso de error real).
+      reservationsApi.list().then(res => res.data).catch(() => []),
       resourcesApi.list().catch(() => []),
     ]).then(([res, rec]) => {
-      setReservations(Array.isArray(res) ? res : [])
+      setReservations(res)
       setResources(Array.isArray(rec) ? rec : [])
     }).finally(() => setLoading(false))
   }, [])

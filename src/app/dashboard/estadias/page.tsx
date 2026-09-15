@@ -4,7 +4,7 @@ import { useTable, useCreate } from '@refinedev/core'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { resourcesApi, customersApi, reservationsApi, categoriesApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
-import type { PaginatedResponse } from '@/lib/api'
+import type { PaginatedResponse, OffsetPaginatedResponse } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
 import type { Stay, Resource, Customer, Reservation, Category } from '@/lib/types'
@@ -16,7 +16,11 @@ function fmt(iso: string) {
   return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false })
 }
 
-function toArray<T>(res: PaginatedResponse<T> | T[]): T[] {
+// D-14 (15/09/2026, docs/decisiones-auditoria-fase2-2026-09-15.md #12,
+// backend app-main) -- reservationsApi.list() devuelve OffsetPaginatedResponse
+// ahora (nunca array plano); customersApi.list() sigue con PaginatedResponse
+// o T[] a secas. Este helper solo lee `.data`, presente en las dos formas.
+function toArray<T>(res: PaginatedResponse<T> | OffsetPaginatedResponse<T> | T[]): T[] {
   return Array.isArray(res) ? res : res.data
 }
 
