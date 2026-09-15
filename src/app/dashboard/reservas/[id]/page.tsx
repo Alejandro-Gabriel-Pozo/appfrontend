@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { reservationsApi, resourcesApi, bookableServicesApi, customerAccountApi, customersApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { isApiError } from '@/lib/apiErrors'
 import { useToast } from '@/context/ToastContext'
-import { useIsManagement } from '@/hooks/useAuthRole'
+import { useIsManagement, useCanIssueCreditNote } from '@/hooks/useAuthRole'
 import FacturarButton from '@/components/FacturarButton'
 import type { Reservation, ReservationStatus, Resource, BookableService } from '@/lib/types'
 
@@ -67,6 +67,7 @@ export default function ReservaDetailPage() {
   const id = params?.id as string
   const { toast } = useToast()
   const isManagement = useIsManagement()
+  const canIssueCreditNote = useCanIssueCreditNote()
   const { mutateAsync: updateReservation } = useUpdate<Reservation>()
   const invalidate = useInvalidate()
 
@@ -112,6 +113,11 @@ export default function ReservaDetailPage() {
   const [scheduleSubmitting, setScheduleSubmitting] = useState(false)
   const [scheduleApproveOpen, setScheduleApproveOpen] = useState(false)
   const [scheduleChargeAmount, setScheduleChargeAmount] = useState('')
+
+  // CANCEL-WITH-NC-UI-001 (15/09/2026) — escape de cancelación con Nota de
+  // Crédito, separado del "Cancelar reserva" normal (F3-01/F3-02).
+  const [cancelWithNcOpen, setCancelWithNcOpen] = useState(false)
+  const [cancelWithNcReason, setCancelWithNcReason] = useState('')
 
   // Se pide siempre que se carga/actualiza una reserva CONFIRMED.
   const refreshPriceAdjustment = useCallback(async (r: Reservation) => {
@@ -268,6 +274,46 @@ export default function ReservaDetailPage() {
       setReservation(updated)
       refreshPriceAdjustment(updated)
       refreshChargeTransaction(updated)
+      invalidate({ resource: 'reservas', invalidates: ['list'] })
+    } catch (err) {
+      toast(extractErrorMessage(err), 'error')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // CANCEL-WITH-NC-UI-001 — a diferencia de doDetailAction(), esta acción
+  // pide un motivo obligatorio (CancelWithCreditNoteSchema del backend) y
+  // la respuesta trae la Nota de Crédito emitida +, si aplica, una
+  // advertencia por cada traspaso a City Ledger todavía activo de la
+  // estadía (no se puede ignorar: implica plata que sigue debiéndose por
+  // esa vía aunque la reserva ya esté cancelada).
+  async function submitCancelWithCreditNote() {
+    if (!reservation) return
+    if (cancelWithNcReason.trim() === '') {
+      toast('El motivo de la cancelación es obligatorio', 'error')
+      return
+    }
+    // Gate de arquitectura (15/09/2026): comparte actionLoading con
+    // confirm/cancel/complete en vez de un estado propio -- así los
+    // botones hermanos quedan disabled mientras esta acción está en
+    // curso, sin agregar un chequeo aparte en cada uno.
+    setActionLoading('cancel-with-nc')
+    try {
+      const result = await reservationsApi.cancelWithCreditNote(reservation.id, cancelWithNcReason.trim())
+      toast('Reserva cancelada con Nota de Crédito', 'success')
+      if (result.accountsReceivableWarning && result.accountsReceivableWarning.length > 0) {
+        const total = result.accountsReceivableWarning.reduce((sum, w) => sum + w.amount, 0)
+        toast(
+          `Ojo: esta estadía tiene ${result.accountsReceivableWarning.length} traspaso(s) a cuenta corriente todavía activo(s) por ${fmtMoney(total)} — revisar en Cuentas Corrientes.`,
+          'error',
+        )
+      }
+      setReservation(result.reservation)
+      refreshPriceAdjustment(result.reservation)
+      refreshChargeTransaction(result.reservation)
+      setCancelWithNcOpen(false)
+      setCancelWithNcReason('')
       invalidate({ resource: 'reservas', invalidates: ['list'] })
     } catch (err) {
       toast(extractErrorMessage(err), 'error')
@@ -653,6 +699,21 @@ export default function ReservaDetailPage() {
                     {actionLoading === 'cancel' ? '…' : 'Cancelar reserva'}
                   </button>
                 )}
+                {/* CANCEL-WITH-NC-UI-001 — acción separada del "Cancelar
+                    reserva" de arriba (decisión del dueño, 15/09/2026):
+                    allowedTransitions no sabe si hay una factura ISSUED
+                    viva (F3-01), así que se ofrece siempre que el rol y el
+                    estado lo permitan — si no hace falta, el backend
+                    responde "usá la cancelación normal". */}
+                {canIssueCreditNote && reservation.allowedTransitions?.includes('CANCELLED') && (
+                  <button
+                    onClick={() => setCancelWithNcOpen(o => !o)}
+                    disabled={actionLoading !== null}
+                    className="btn-mini btn-mini-danger"
+                  >
+                    Cancelar con Nota de Crédito
+                  </button>
+                )}
                 {reservation.allowedTransitions?.includes('COMPLETED') && (
                   <button
                     onClick={() => doDetailAction('complete')}
@@ -717,6 +778,36 @@ export default function ReservaDetailPage() {
                     >
                       {actionLoading === 'approve-schedule' ? <span className="spinner" /> : null}
                       Confirmar aprobación
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {cancelWithNcOpen && (
+                <div className="space-y-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    Cancela la reserva y emite una Nota de Crédito por la factura ya emitida.
+                    Usá esta opción solo cuando el cliente ya tomó la decisión de cancelar y hay
+                    una factura viva de por medio — la cancelación normal no alcanza en ese caso.
+                  </p>
+                  <div>
+                    <label className="label">Motivo de la cancelación</label>
+                    <textarea
+                      className="input" rows={3}
+                      value={cancelWithNcReason}
+                      onChange={e => setCancelWithNcReason(e.target.value)}
+                      placeholder="Ej: el huésped canceló la estadía y ya no viene"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setCancelWithNcOpen(false)} className="btn-secondary flex-1">Volver</button>
+                    <button
+                      type="button" onClick={submitCancelWithCreditNote}
+                      disabled={actionLoading !== null || cancelWithNcReason.trim() === ''}
+                      className="btn-primary flex-1"
+                    >
+                      {actionLoading === 'cancel-with-nc' ? <span className="spinner" /> : null}
+                      Confirmar cancelación con NC
                     </button>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 'use client'
 import { apiFetch } from '../http'
 import type { OffsetPaginatedResponse } from '../http'
-import type { Reservation } from './types'
+import type { Reservation, CancelReservationWithCreditNoteResult } from './types'
 
 /**
  * D-14 (15/09/2026, docs/decisiones-auditoria-fase2-2026-09-15.md #12,
@@ -71,6 +71,20 @@ export const reservationsApi = {
   confirm:  (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/confirm`,  { method: 'POST' }),
   cancel:   (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/cancel`,   { method: 'POST' }),
   complete: (id: string)  => apiFetch<Reservation>(`/api/reservations/${id}/complete`, { method: 'POST' }),
+  /**
+   * `CANCEL-WITH-NC-UI-001` (15/09/2026, F3-01/F3-02 de
+   * app-main/docs/auditoria-integral-fase3-2026-09-15.md) -- escape
+   * administrativo para cancelar una reserva que ya tiene una factura
+   * ISSUED viva (el `cancel()` normal la rechaza con 409
+   * RESERVATION_CHARGE_INVOICED). Requiere el rol EMISOR_NOTA_CREDITO
+   * (ver `useCanIssueCreditNote()`, hooks/useAuthRole.ts) -- el backend
+   * igual lo valida en serio.
+   */
+  cancelWithCreditNote: (id: string, reason: string) =>
+    apiFetch<CancelReservationWithCreditNoteResult>(`/api/reservations/${id}/cancel-with-credit-note`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
   /**
    * Flujo de horario de check-in/check-out fuera del estándar (18/08/2026,
    * pendientes-2026-08-18.md punto N). `scheduleRequest` lo puede iniciar
