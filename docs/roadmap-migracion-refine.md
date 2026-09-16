@@ -110,8 +110,11 @@ cualquier otra decisión de diseño de este repo.
   propio, es una acción de vínculo entre negocios.
 - **`dashboard/reportes`** — solo lectura, filtros + gráficos/tablas de
   agregados. Sin create/update/delete de nada.
-- **`dashboard/admin`** — panel de acciones puntuales de plataforma
-  (repair-tenant-db/set-tenant-url), no una lista de recursos.
+- **`dashboard/admin`** — retirado (16/09/2026, backend D-06/P-04, Wave 7
+  del plan de ejecución integral de `app-main`): existía solo para el
+  botón de `repair-tenant-db`, una trampa armada del lado del backend
+  (aplicaba schema de tenant contra `DATABASE_URL`, sin declarar en
+  Render). `set-tenant-url` nunca tuvo pantalla propia acá.
 - **`dashboard` (home)** — resumen/overview (reservas de hoy, ocupación),
   no una pantalla de gestión.
 - **`dashboard/ordenes/[id]`** — detalle de UNA orden: confirmar/

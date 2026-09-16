@@ -68,7 +68,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/roles':       'Roles',
   '/dashboard/mi-negocio':  'Mi Negocio',
   '/dashboard/empresa':     'Empresa',
-  '/dashboard/admin':       'Admin',
 }
 
 // A9.5/A8.7 (15/08/2026): antes un evento fallido se reintentaba para
