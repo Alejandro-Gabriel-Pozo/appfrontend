@@ -34,8 +34,9 @@ export default function DisponibilidadPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
 
-  // El filtro de categoría solo está disponible logueado: GET /api/categories
-  // requiere autenticación aunque no exija un rol específico.
+  // El filtro de categoría solo está disponible logueado: GET /api/customer/categories
+  // requiere sesión de cliente (endpoint dedicado del portal, Wave 2 P-01/D-03
+  // en app-main, 16/09/2026 -- antes pegaba a la ruta de STAFF /api/categories).
   useEffect(() => {
     if (!customer) return
     customerCategoriesApi.list().then(setCategories).catch(() => { /* no bloquea la búsqueda */ })

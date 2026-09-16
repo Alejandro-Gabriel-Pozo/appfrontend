@@ -47,9 +47,10 @@ function slugFromLocation(): string | undefined {
 }
 
 // ─── Fetch autenticado del dominio de clientes ────────────────────────────────
-// Se usa tanto para /api/customer/me* como para los endpoints generales que
-// el rol CUSTOMER puede leer (Roles.BOOKING incluye CUSTOMER):
-// /api/categories y /api/bookable-services*.
+// Se usa para todos los endpoints bajo /api/customer/* -- /me*, y desde
+// Wave 2 (P-01/D-03, 16/09/2026) también el catálogo de solo lectura
+// (/categories, /bookable-services), dedicados al portal, no las rutas de
+// STAFF que este mismo archivo usaba antes.
 //
 // Cookie httpOnly (19/08/2026) — ya no arma el header Authorization a mano
 // (no hay token legible del lado del cliente): `credentials: 'include'`
@@ -212,11 +213,16 @@ export const customerAccountApi = {
   deleteAccount: () => customerApiFetch<void>('/api/customer/me', { method: 'DELETE' }),
 }
 
-// ─── Endpoints generales de solo lectura (Roles.BOOKING incluye CUSTOMER) ─────
+// ─── Catálogo de solo lectura para armar una reserva ──────────────────────────
+// Wave 2 (P-01/D-03, app-main, 16/09/2026): antes pegaban directo a las rutas
+// de STAFF (`/api/categories`, `/api/bookable-services`, Roles.BOOKING incluye
+// CUSTOMER) -- ese camino está roto (500) desde el 03/07/2026 y, además,
+// tenantMiddleware ahora rechaza con 403 cualquier token CUSTOMER en rutas de
+// staff. Endpoints dedicados del portal, mismo patrón que customerReservationsApi.
 export const customerCategoriesApi = {
-  list: () => customerApiFetch<Category[]>('/api/categories'),
+  list: () => customerApiFetch<Category[]>('/api/customer/categories'),
 }
 
 export const customerBookableServicesApi = {
-  list: () => customerApiFetch<BookableService[]>('/api/bookable-services'),
+  list: () => customerApiFetch<BookableService[]>('/api/customer/bookable-services'),
 }
