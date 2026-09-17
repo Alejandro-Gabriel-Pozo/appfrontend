@@ -98,6 +98,20 @@ export default function CuentasCorrientesPage() {
   const [payAmount, setPayAmount] = useState('')
   const [payNotes, setPayNotes] = useState('')
   const [paying, setPaying] = useState(false)
+  // D-10 (17/09/2026, app-main docs/auditoria-integral-fase15-2026-09-16.md
+  // -- Wave 8) -- generada al ABRIR el formulario (openPay()), no en el
+  // submit: reintentos del MISMO envío (el operador vuelve a apretar
+  // "Registrar" tras un 500/timeout, sin cerrar el modal) mandan la misma
+  // clave y el backend los deduplica. Antes se generaba con
+  // crypto.randomUUID() dentro del handler del submit -- cada click
+  // producía una clave nueva, así que protegía el caso que casi nunca pasa
+  // (un reintento automático de red -- lib/http.ts no tiene ninguno) y no
+  // protegía el que sí pasa (el reintento humano). El reset explícito para
+  // un operador que quiere registrar DOS pagos legítimamente idénticos
+  // seguidos es cerrar y reabrir el modal -- openPay() ya corre en cada
+  // click de "Registrar pago" y ya resetea payAmount/payNotes/allocations,
+  // así que generar la clave ahí mismo no agrega un paso nuevo.
+  const [payIdempotencyKey, setPayIdempotencyKey] = useState('')
 
   // I4 (23/08/2026, pendientes-2026-08-23.md — conciliación de pagos,
   // verificación de auditoría externa): "Registrar Pago" deja de ser una
@@ -147,6 +161,7 @@ export default function CuentasCorrientesPage() {
     setPayAmount('')
     setPayNotes('')
     setAllocations({})
+    setPayIdempotencyKey(crypto.randomUUID())
     setPayOpen(true)
     setLoadingInvoices(true)
     try {
@@ -182,15 +197,16 @@ export default function CuentasCorrientesPage() {
     if (!selected || !payAmount) return
     setPaying(true)
     try {
-      // idempotencyKey generada acá — si el pedido se reintenta por un
-      // corte de red, el backend no duplica el pago.
-      const idempotencyKey = crypto.randomUUID()
+      // idempotencyKey generada en openPay() (D-10, ver comentario del
+      // state) -- NO acá. Un reintento del mismo click (el operador vuelve
+      // a apretar "Registrar" tras un error, sin cerrar el modal) reusa la
+      // misma clave y el backend deduplica.
       const allocationList = Object.entries(allocations)
         .map(([invoiceId, amount]) => ({ invoiceId, amount: parseFloat(amount) }))
         .filter(a => a.amount > 0)
       await customerAccountApi.recordPayment(selected.id, {
         amount: parseFloat(payAmount),
-        idempotencyKey,
+        idempotencyKey: payIdempotencyKey,
         ...(payNotes && { notes: payNotes }),
         ...(allocationList.length > 0 && { allocations: allocationList }),
       })
