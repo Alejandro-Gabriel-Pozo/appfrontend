@@ -7,6 +7,7 @@ import { resourcesApi, customersApi, reservationsApi, categoriesApi, extractErro
 import type { PaginatedResponse, OffsetPaginatedResponse } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
+import SignalBadge from '@/components/SignalBadge'
 import type { Stay, Resource, Customer, Reservation, Category } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
@@ -93,6 +94,16 @@ export default function EstadiasPage() {
 
   const getResourceName = (id: string) => resources.find(r => r.id === id)?.name ?? id.slice(0, 8) + '…'
   const getCustomerName = (id: string) => customers.find(c => c.id === id)?.fullName ?? id.slice(0, 8) + '…'
+
+  // v11/Fase 1 (25/09/2026) -- mismo criterio que reservas/page.tsx y
+  // reservas/[id]/page.tsx: eje independiente de status, ver el docblock de
+  // AssignmentStatus en lib/reservas/types.ts. Acá además importa para el
+  // check-in en sí: elegir la habitación en este form es lo que confirma la
+  // asignación diferida (StayService.checkIn() -> assignDeferred(), backend
+  // app-main/src/pms-estadias/stay.service.ts) -- el backend acepta el
+  // check-in de una reserva PENDING_ASSIGNMENT sin rechazarlo, así que el
+  // indicador es informativo, no un bloqueo.
+  const selectedReservation = lodgingConfirmedReservations.find(r => r.id === checkInForm.reservationId)
 
   function openCheckIn() {
     setCheckInForm({ reservationId: '', resourceId: '', notes: '', adultos: 1, ninos: 0 })
@@ -211,11 +222,20 @@ export default function EstadiasPage() {
               {lodgingConfirmedReservations.map(r => (
                 <option key={r.id} value={r.id}>
                   {r.customer.fullName} — {getResourceName(r.resourceId)} — {fmt(r.startTime)}
+                  {r.assignmentStatus === 'PENDING_ASSIGNMENT' ? ' (sin asignar)' : ''}
                 </option>
               ))}
             </select>
             {lodgingConfirmedReservations.length === 0 && (
               <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>No hay reservas confirmadas pendientes de check-in.</p>
+            )}
+            {/* v11/Fase 1 (25/09/2026) -- un <option> nativo no puede llevar el
+                SignalBadge (solo texto plano, de ahí el "(sin asignar)" de
+                arriba); acá sí, apenas se elige la reserva. */}
+            {selectedReservation?.assignmentStatus === 'PENDING_ASSIGNMENT' && (
+              <div className="mt-1 flex items-center gap-1.5">
+                <SignalBadge state="unassigned" label="Sin asignar" />
+              </div>
             )}
             {fieldErrors['reservationId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['reservationId']}</p>}
           </div>
@@ -231,7 +251,19 @@ export default function EstadiasPage() {
               <option value="">Seleccioná una habitación…</option>
               {lodgingResources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
-            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>Puede ser distinta a la reservada si hubo que reasignar.</p>
+            {/* v11/Fase 1 (25/09/2026) -- si la reserva es PENDING_ASSIGNMENT,
+                elegir acá no es "reasignar": es lo que confirma la asignación
+                diferida (backend app-main StayService.checkIn() ->
+                ReservationService.assignDeferred() -- acepta el check-in sin
+                rechazarlo, ver docs de la Fase 2 de esa feature). Mismo
+                criterio "no bloquear" que el resto del repo: el backend ya
+                valida (categoría, disponibilidad) y sus errores se muestran
+                vía el mismo manejo de fieldErrors/toast de más abajo. */}
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              {selectedReservation?.assignmentStatus === 'PENDING_ASSIGNMENT'
+                ? 'Esta reserva todavía no tiene habitación confirmada — la que elijas acá queda asignada al hacer check-in.'
+                : 'Puede ser distinta a la reservada si hubo que reasignar.'}
+            </p>
             {fieldErrors['resourceId'] && <p className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>{fieldErrors['resourceId']}</p>}
           </div>
           {checkInForm.reservationId && (

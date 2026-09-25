@@ -127,10 +127,18 @@ function RecentReservations({
                     {new Date(r.startTime).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
                   </td>
                   <td>
-                    <SignalBadge
-                      state={statusState[r.status ?? ''] ?? 'pending'}
-                      label={statusLabel[r.status ?? ''] ?? r.status ?? '—'}
-                    />
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <SignalBadge
+                        state={statusState[r.status ?? ''] ?? 'pending'}
+                        label={statusLabel[r.status ?? ''] ?? r.status ?? '—'}
+                      />
+                      {/* v11/Fase 1 (25/09/2026) -- mismo criterio que reservas/page.tsx
+                          y reservas/[id]/page.tsx: eje independiente de status, ver el
+                          docblock de AssignmentStatus en lib/reservas/types.ts. */}
+                      {r.assignmentStatus === 'PENDING_ASSIGNMENT' && (
+                        <SignalBadge state="unassigned" label="Sin asignar" />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
