@@ -7,6 +7,7 @@ import Modal from '@/components/Modal'
 import SignalBadge from '@/components/SignalBadge'
 import RoomCalendar, { todayUTCMidnightMs, VISIBLE_DAYS, MS_PER_DAY } from '@/components/RoomCalendar'
 import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
+import { describeAssignmentMoveError } from '@/lib/reservas/assignment-errors'
 import { useNumeroOperativo, SIN_NUMERO } from '@/lib/business-context/numero-operativo'
 import type { ReservationStatus, RatePlan } from '@/lib/types'
 
@@ -233,13 +234,25 @@ export default function ReservasPage() {
   /** Drag-to-move/resize del calendario — llama al mismo PUT que la ruta de
    * detalle usa. Si falla (ej. 409 por conflicto contra el destino), no
    * hace falta revertir nada a mano: el calendario nunca mutó su propia
-   * lista, solo mostraba un ghost temporal que ya desapareció al soltar. */
+   * lista, solo mostraba un ghost temporal que ya desapareció al soltar.
+   *
+   * v11/Fase 1 (25/09/2026) -- cuando `changes.resourceId` viene seteado
+   * (drag a otra fila; incluye la confirmación de una `PENDING_ASSIGNMENT`
+   * que `RoomCalendar` ya avisó/confirmó antes de llamar acá, ver su
+   * docblock de `PendingAssignmentMove`), el error se traduce con
+   * `describeAssignmentMoveError()` en vez del `message` crudo del backend
+   * -- ese mensaje trae el UUID del recurso, no su nombre, para el caso de
+   * conflicto de disponibilidad. */
   async function handleCalendarUpdate(id: string, changes: { startTime?: string; endTime?: string; resourceId?: string }) {
     try {
       await updateReservation({ resource: 'reservas', id, values: changes })
       toast('Reserva actualizada', 'success')
     } catch (err) {
-      toast(extractErrorMessage(err), 'error')
+      if (changes.resourceId) {
+        toast(describeAssignmentMoveError(err, getResourceName(changes.resourceId)), 'error')
+      } else {
+        toast(extractErrorMessage(err), 'error')
+      }
     }
   }
 

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import type { Resource, Reservation, ReservationStatus, BookableService } from '@/lib/types'
 import { maintenanceWindowsApi } from '@/lib/maintenance-windows/api'
 import type { MaintenanceWindow } from '@/lib/maintenance-windows/types'
+import ConfirmDialog from '@/components/ConfirmDialog'
 
 // ─── Calendario de PMS (tape chart) — construido a medida, sin librería ─────
 // Filas = habitaciones (recursos de alojamiento), columnas = días, barras =
@@ -92,6 +93,31 @@ interface DragPreview {
   startIdx: number
   endIdx: number
   rowIndex: number
+}
+
+/**
+ * v11/Fase 1 (25/09/2026) -- soltar una reserva `PENDING_ASSIGNMENT` sobre
+ * otra fila/recurso CONFIRMA la asignación de forma definitiva
+ * (`assignDeferred()`, `reservation.service.ts` en app-main) -- a
+ * diferencia de mover/estirar una reserva `ASSIGNED`, esto no tiene vuelta
+ * atrás arrastrando de nuevo. Pedido explícito del dueño: "advertir y
+ * confirmar antes de mover". Este estado intercepta el PUT en `handleUp()`
+ * (antes de llamar a `onUpdated`) mientras se decide.
+ */
+interface PendingAssignmentMove {
+  reservationId: string
+  reservationLabel: string
+  targetResourceId: string
+  targetResourceName: string
+  /**
+   * El drag también movió fechas (arrastre diagonal) -- el backend rechaza
+   * en firme combinar `resourceId` con un cambio real de fechas sobre una
+   * reserva `PENDING_ASSIGNMENT` (D-2, `AssignmentCombinedChangeError`,
+   * "hacelo en dos pasos separados"). Si esto es true, la confirmación de
+   * abajo manda SOLO `resourceId` -- las fechas del drag se descartan, no
+   * se aplican en este paso.
+   */
+  datesAlsoChanged: boolean
 }
 
 export default function RoomCalendar({
@@ -203,6 +229,13 @@ export default function RoomCalendar({
   // abriría también el modal de detalle por accidente.
   const hasMovedRef = useRef(false)
 
+  // v11/Fase 1 -- ver el docblock de PendingAssignmentMove. No hace falta
+  // revertir nada visualmente al cancelar: `dragPreview` ya se limpió en
+  // `handleUp` ANTES de llegar a este estado, y este componente nunca muta
+  // `reservations` (viene del padre) -- la barra ya está de vuelta en su
+  // posición original, leída de las props, mientras el diálogo está abierto.
+  const [pendingAssignmentMove, setPendingAssignmentMove] = useState<PendingAssignmentMove | null>(null)
+
   const days = useMemo(
     () => Array.from({ length: VISIBLE_DAYS }, (_, i) => msAtDayOffset(weekStartMs, i)),
     [weekStartMs],
@@ -289,20 +322,38 @@ export default function RoomCalendar({
         return
       }
 
-      const changed =
-        preview.startIdx !== s.originStartIdx ||
-        preview.endIdx !== s.originEndIdx ||
-        preview.rowIndex !== s.originRowIndex
-      if (changed) {
-        const changes: { startTime?: string; endTime?: string; resourceId?: string } = {}
-        if (preview.startIdx !== s.originStartIdx) changes.startTime = msToDate(msAtDayOffset(weekStartMs, preview.startIdx)).toISOString()
-        if (preview.endIdx !== s.originEndIdx) changes.endTime = msToDate(msAtDayOffset(weekStartMs, preview.endIdx)).toISOString()
-        if (preview.rowIndex !== s.originRowIndex) {
-          const target = resources[preview.rowIndex]
-          if (target) changes.resourceId = target.id
+      const resourceChanged = preview.rowIndex !== s.originRowIndex
+      const datesChanged = preview.startIdx !== s.originStartIdx || preview.endIdx !== s.originEndIdx
+      const changed = resourceChanged || datesChanged
+      if (!changed) return
+
+      // v11/Fase 1 (25/09/2026) -- soltar sobre otra fila CONFIRMA una
+      // asignación provisoria (ver docblock de PendingAssignmentMove).
+      // Se intercepta ACÁ, antes de llamar a onUpdated(), para que el PUT
+      // nunca salga sin que el staff lo haya confirmado a propósito.
+      if (resourceChanged) {
+        const reservation = reservations.find(r => r.id === s.reservationId)
+        const target = resources[preview.rowIndex]
+        if (reservation?.assignmentStatus === 'PENDING_ASSIGNMENT' && target) {
+          setPendingAssignmentMove({
+            reservationId: s.reservationId,
+            reservationLabel: reservation.customer.fullName ?? 'Esta reserva',
+            targetResourceId: target.id,
+            targetResourceName: target.name,
+            datesAlsoChanged: datesChanged,
+          })
+          return
         }
-        onUpdated(s.reservationId, changes)
       }
+
+      const changes: { startTime?: string; endTime?: string; resourceId?: string } = {}
+      if (preview.startIdx !== s.originStartIdx) changes.startTime = msToDate(msAtDayOffset(weekStartMs, preview.startIdx)).toISOString()
+      if (preview.endIdx !== s.originEndIdx) changes.endTime = msToDate(msAtDayOffset(weekStartMs, preview.endIdx)).toISOString()
+      if (resourceChanged) {
+        const target = resources[preview.rowIndex]
+        if (target) changes.resourceId = target.id
+      }
+      onUpdated(s.reservationId, changes)
     }
 
     window.addEventListener('pointermove', handleMove)
@@ -312,6 +363,21 @@ export default function RoomCalendar({
       window.removeEventListener('pointerup', handleUp)
     }
   }, [isDragging, resources, weekStartMs, onUpdated, reservations, onReservationClick])
+
+  function confirmAssignmentMove() {
+    if (!pendingAssignmentMove) return
+    // D-2 (ver docblock de PendingAssignmentMove) -- manda SOLO resourceId,
+    // nunca las fechas del drag, incluso si datesAlsoChanged es true.
+    onUpdated(pendingAssignmentMove.reservationId, { resourceId: pendingAssignmentMove.targetResourceId })
+    setPendingAssignmentMove(null)
+  }
+
+  function cancelAssignmentMove() {
+    // No hay nada que revertir: onUpdated() nunca se llamó, así que
+    // `reservations` (prop) sigue con el resourceId original -- ver el
+    // comentario de arriba, junto a la declaración de este estado.
+    setPendingAssignmentMove(null)
+  }
 
   const gridWidth = VISIBLE_DAYS * DAY_WIDTH
 
@@ -466,6 +532,29 @@ export default function RoomCalendar({
           )}
         </div>
       </div>
+
+      {/* v11/Fase 1 (25/09/2026) -- "Advertir y confirmar antes de mover"
+          (decisión explícita del dueño). Modal breve, no ruta dedicada: es
+          una confirmación de una sola intención, no una edición extensa
+          (ver CLAUDE.md, "tres niveles de interacción"). Reusa <ConfirmDialog>
+          (components/ConfirmDialog.tsx), el mismo patrón que ya usan las
+          cancelaciones -- no un componente nuevo. */}
+      <ConfirmDialog
+        open={pendingAssignmentMove !== null}
+        onClose={cancelAssignmentMove}
+        onConfirm={confirmAssignmentMove}
+        title="Confirmar asignación de habitación"
+        description={
+          pendingAssignmentMove
+            ? `${pendingAssignmentMove.reservationLabel} todavía no tiene su unidad confirmada. Moverla a "${pendingAssignmentMove.targetResourceName}" va a confirmar esa asignación de forma definitiva -- no se puede volver a la asignación provisoria arrastrándola de nuevo.`
+              + (pendingAssignmentMove.datesAlsoChanged
+                ? ' Las fechas del arrastre no se aplican en este paso: una asignación provisoria no admite combinarse con otro cambio en el mismo movimiento. Mové las fechas aparte, después de confirmar la habitación.'
+                : '')
+              + ' ¿Continuar?'
+            : ''
+        }
+        confirmLabel="Confirmar asignación"
+      />
     </div>
   )
 }
