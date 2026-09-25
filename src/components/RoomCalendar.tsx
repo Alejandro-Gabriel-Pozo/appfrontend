@@ -511,7 +511,15 @@ function ReservationBar({
       onPointerLeave={() => setTooltipPos(null)}
       style={{
         position: 'absolute', left, top: 4, width, height: ROW_HEIGHT - 8,
-        background: style.bg, border: `1px solid ${style.border}`,
+        background: style.bg,
+        // v11/Fase 1 (25/09/2026) -- el recurso de esta fila es un candidato
+        // PROVISORIO cuando assignmentStatus === 'PENDING_ASSIGNMENT' (ver
+        // lib/reservas/types.ts::AssignmentStatus): el borde punteado es la
+        // misma gramática que .badge-unassigned (contorno, no relleno) —
+        // señal independiente de `style`, que solo codifica `status`.
+        border: reservation.assignmentStatus === 'PENDING_ASSIGNMENT'
+          ? `1.5px dashed ${style.border}`
+          : `1px solid ${style.border}`,
         borderTopLeftRadius: truncatedStart ? 2 : 8, borderBottomLeftRadius: truncatedStart ? 2 : 8,
         borderTopRightRadius: truncatedEnd ? 2 : 8, borderBottomRightRadius: truncatedEnd ? 2 : 8,
         display: 'flex', alignItems: 'center', padding: '0 8px', gap: 4,
@@ -520,6 +528,15 @@ function ReservationBar({
     >
       {!truncatedStart && (
         <div data-handle="start" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, cursor: 'ew-resize' }} />
+      )}
+      {reservation.assignmentStatus === 'PENDING_ASSIGNMENT' && (
+        <svg
+          width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--zulu-brass-strong)" strokeWidth={2}
+          style={{ flexShrink: 0 }}
+          aria-label="Recurso sin asignar todavía"
+        >
+          <circle cx="12" cy="12" r="9" strokeDasharray="3 3" />
+        </svg>
       )}
       <span className="text-xs" style={{ color: style.text, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {reservation.customer.fullName ?? 'Reserva'}
@@ -552,6 +569,13 @@ function ReservationTooltip({ reservation, serviceName, pos }: { reservation: Re
       <p className="text-sm" style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
         {reservation.customer.fullName ?? 'Reserva'}
       </p>
+      {/* v11/Fase 1 (25/09/2026) -- mismo criterio que el badge de lista/detalle:
+          label explícito, no solo el borde punteado de la barra. */}
+      {reservation.assignmentStatus === 'PENDING_ASSIGNMENT' && (
+        <p className="text-xs" style={{ color: 'var(--zulu-brass-strong)', fontWeight: 600, marginBottom: 4 }}>
+          ○ Recurso sin asignar (provisorio)
+        </p>
+      )}
       <div className="text-xs" style={{ color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span>Check-in: {fmtTooltipDate(reservation.startTime)}</span>
         <span>Check-out: {fmtTooltipDate(reservation.endTime)}</span>

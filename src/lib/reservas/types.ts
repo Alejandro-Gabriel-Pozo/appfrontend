@@ -2,6 +2,21 @@ import type { Invoice } from '../facturacion/types'
 
 export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'EXPIRED'
 
+/**
+ * Asignación de recurso (v11/Fase 1, 25/09/2026, backend `app-main`
+ * `src/reservas/Reservation.ts` — Wave 14 item 4.3, commiteado en app-main
+ * pero SIN deployar todavía). Máquina de estados INDEPENDIENTE de `status`:
+ * `PENDING_ASSIGNMENT` = el `resourceId` de la reserva es un candidato
+ * provisorio (asignación diferida por categoría), todavía reoptimizable;
+ * `ASSIGNED` = recurso confirmado. Solo el alta por `categoryId` de una
+ * categoría de alojamiento puede nacer `PENDING_ASSIGNMENT` — cualquier otro
+ * camino (resourceId explícito, o categoría que no es alojamiento, ej.
+ * Turnos) nace `ASSIGNED` siempre. El staff DTO (`toReservationDto()`)
+ * siempre incluye el campo; el DTO del portal de clientes lo omite
+ * (`toCustomerReservationDto()`).
+ */
+export type AssignmentStatus = 'ASSIGNED' | 'PENDING_ASSIGNMENT'
+
 export interface Reservation {
   id: string
   /**
@@ -18,6 +33,21 @@ export interface Reservation {
   startTime: string
   endTime: string
   status: ReservationStatus
+  /**
+   * v11/Fase 1 (25/09/2026) — ver el docblock de `AssignmentStatus` arriba.
+   * Opcional a propósito, por dos motivos:
+   * (a) el portal de clientes lo omite a propósito — `toCustomerReservationDto()`
+   *     devuelve `Omit<ReservationDto, 'assignmentStatus'>` en los 4 endpoints
+   *     de `customerReservationsApi` (`src/lib/customerApi.ts`), que tipan su
+   *     respuesta como este mismo `Reservation`; el campo nunca llega ahí.
+   * (b) puede faltar mientras el backend real (Fase 1 de 4.3, `app-main`
+   *     `src/reservas/Reservation.ts`) no esté deployado — está commiteado
+   *     pero no deployado todavía, así que el DTO de staff de producción
+   *     hoy tampoco lo trae.
+   * Los lectores existentes (`=== 'PENDING_ASSIGNMENT'`) ya dan `false`
+   * correctamente con `undefined` — no requieren cambios.
+   */
+  assignmentStatus?: AssignmentStatus
   details?: Record<string, unknown>
   serviceId?: string | null
   partySize?: number

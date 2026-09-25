@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { customersApi, ratePlansApi, extractErrorMessage, extractFieldErrors } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
 import Modal from '@/components/Modal'
+import SignalBadge from '@/components/SignalBadge'
 import RoomCalendar, { todayUTCMidnightMs, VISIBLE_DAYS, MS_PER_DAY } from '@/components/RoomCalendar'
 import { useReservationsScreen, useAvailableSlots, toLocalInput } from '@/hooks/useReservationsScreen'
 import { useNumeroOperativo, SIN_NUMERO } from '@/lib/business-context/numero-operativo'
@@ -355,9 +356,19 @@ export default function ReservasPage() {
                     <td className="mono" style={{ fontSize: 12 }}>{fmt(r.endTime)}</td>
                     <td className="mono">{fmtMoney(r.totalPrice)}</td>
                     <td>
-                      <span className={STATUS_BADGE_CLASS[r.status]}>
-                        {STATUS_LABEL[r.status]}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={STATUS_BADGE_CLASS[r.status]}>
+                          {STATUS_LABEL[r.status]}
+                        </span>
+                        {/* v11/Fase 1 (25/09/2026) -- eje independiente de status,
+                            ver el docblock de AssignmentStatus en lib/reservas/types.ts.
+                            El campo puede faltar (portal, o backend anterior a 4.3
+                            Fase 1): la comparación estricta da false y no se muestra
+                            nada -- no asumir ningún estado fijo de deploy acá. */}
+                        {r.assignmentStatus === 'PENDING_ASSIGNMENT' && (
+                          <SignalBadge state="unassigned" label="Sin asignar" />
+                        )}
+                      </div>
                     </td>
                     <td onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">

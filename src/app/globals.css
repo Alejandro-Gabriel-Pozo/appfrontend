@@ -814,6 +814,39 @@
      --surface-4 ya está documentado como "superficie hundida / chip neutro". */
   .badge-expired   { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold; background: var(--surface-4); color: var(--text-primary); border: 1px solid var(--border); }
 
+  /* ASIGNACIÓN PROVISORIA (25/09/2026, v11/Fase 1 -- ver
+     `lib/reservas/types.ts::AssignmentStatus`) -- eje INDEPENDIENTE de
+     `status`: una reserva puede ser `PENDING` (status) y `ASSIGNED`
+     (assignment) a la vez, o `CONFIRMED` (status) y `PENDING_ASSIGNMENT`
+     (assignment) a la vez. A propósito NO reusa `.badge-pending`: dentro
+     del scope `.zulu`, `--warning` ya apunta a brass (ver la reasignación
+     semántica más abajo en este archivo), así que un badge relleno con
+     `--warning-dim` se vería IDÉNTICO al badge de `status === 'PENDING'`
+     cuando las dos cosas coinciden -- que es el caso más común (una
+     reserva recién creada por categoría nace PENDING + PENDING_ASSIGNMENT
+     a la vez). Mismo criterio que `.badge-expired` (no conflacionar dos
+     señales distintas del backend en el mismo pixel). Se diferencia por
+     FORMA (contorno punteado, no relleno) y por label, no solo por color
+     -- en la lista de reservas convive con el badge de `status` dentro de
+     la misma celda "Estado" (no tiene columna propia); brass sigue siendo
+     el token correcto porque es literalmente la señal de "reservas /
+     recursos" del sistema de diseño (§4.6 de
+     docs/sistema-diseno-zulu-hub.md).
+
+     Borde en `--zulu-brass-strong`, no `--zulu-brass` (gate 25/09/2026):
+     contraste real medido contra los 3 fondos donde aparece el badge --
+     blanco (3.16), hover de fila (3.02) y warm-white del header de
+     detalle (2.87) -- `--zulu-brass` no llega al mínimo de 3.0 que exige
+     `docs/sistema-diseno-zulu-hub.md` §4.4 regla 2 en el tercer fondo.
+     `--zulu-brass-strong` (mismo token que ya usa el texto) da 5.34+ en
+     los 3 fondos, con margen. */
+  .badge-unassigned {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: transparent;
+    color: var(--zulu-brass-strong);
+    border: 1.5px dashed var(--zulu-brass-strong);
+  }
+
   /* ── Response block ── */
   /* V2.6.2c — otra isla oscura que sobrevivió a la inversión.
      Era `rgba(0,0,0,0.35)` con texto `#7d8799`: sobre navy daba un bloque
@@ -1206,7 +1239,8 @@
   .zulu .badge-completed,
   .zulu .badge-cancelled,
   .zulu .badge-active,
-  .zulu .badge-expired {
+  .zulu .badge-expired,
+  .zulu .badge-unassigned {
     font-family: var(--font-zulu-mono, 'IBM Plex Mono', monospace);
     letter-spacing: 0.02em;
   }
@@ -1246,6 +1280,17 @@
     box-shadow: 0 0 6px currentColor;
   }
   .signal-dot-active { animation: pulse-dot 2s ease-in-out infinite; }
+  /* Punto hueco (25/09/2026) -- variante de `.signal-dot` para
+     `badge-unassigned`: un punto RELLENO significa "esto es un hecho
+     confirmado" en el resto de este archivo (pending/confirmed/completed/
+     cancelled/active); un punto hueco es la misma gramática visual
+     aplicada a "esto todavía no está confirmado". Mismo mecanismo de
+     `currentColor` que `.signal-dot` -- no agrega token de color nuevo. */
+  .signal-dot-outline {
+    background: transparent;
+    box-shadow: none;
+    border: 1.5px solid currentColor;
+  }
 
   /* ── SystemRail — línea de estado del header (guía §5) ── */
   .system-rail {

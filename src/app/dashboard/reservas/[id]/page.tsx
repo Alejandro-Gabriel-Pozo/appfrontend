@@ -8,6 +8,7 @@ import { isApiError } from '@/lib/apiErrors'
 import { useToast } from '@/context/ToastContext'
 import { useIsManagement, useCanIssueCreditNote } from '@/hooks/useAuthRole'
 import FacturarButton from '@/components/FacturarButton'
+import SignalBadge from '@/components/SignalBadge'
 import type { Reservation, ReservationStatus, Resource, BookableService } from '@/lib/types'
 
 // ─── Sistema de diseño "ZULU" (ex-Bastión, migrado 23/08/2026) ───────────────
@@ -439,7 +440,16 @@ export default function ReservaDetailPage() {
           <h1 className="page-title" style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}>{reservation.customer.fullName}</h1>
           <p className="mono" style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{reservation.customer.email}</p>
         </div>
-        <span className={STATUS_BADGE_CLASS[reservation.status]}>{STATUS_LABEL[reservation.status]}</span>
+        <div className="flex items-center gap-1.5 flex-wrap" style={{ justifyContent: 'flex-end' }}>
+          <span className={STATUS_BADGE_CLASS[reservation.status]}>{STATUS_LABEL[reservation.status]}</span>
+          {/* v11/Fase 1 (25/09/2026) -- eje independiente de status, ver el
+              docblock de AssignmentStatus en lib/reservas/types.ts. El campo
+              puede faltar (portal, o backend anterior a 4.3 Fase 1): la
+              comparación estricta da false y no se muestra nada. */}
+          {reservation.assignmentStatus === 'PENDING_ASSIGNMENT' && (
+            <SignalBadge state="unassigned" label="Sin asignar" />
+          )}
+        </div>
       </div>
 
       <div className="card">
