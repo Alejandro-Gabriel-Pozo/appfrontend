@@ -4,8 +4,8 @@ export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLET
 
 /**
  * Asignación de recurso (v11/Fase 1, 25/09/2026, backend `app-main`
- * `src/reservas/Reservation.ts` — Wave 14 item 4.3, commiteado en app-main
- * pero SIN deployar todavía). Máquina de estados INDEPENDIENTE de `status`:
+ * `src/reservas/Reservation.ts` — Wave 14 item 4.3, en producción desde el
+ * deploy grande del 26/09/2026). Máquina de estados INDEPENDIENTE de `status`:
  * `PENDING_ASSIGNMENT` = el `resourceId` de la reserva es un candidato
  * provisorio (asignación diferida por categoría), todavía reoptimizable;
  * `ASSIGNED` = recurso confirmado. Solo el alta por `categoryId` de una
@@ -40,10 +40,12 @@ export interface Reservation {
    *     devuelve `Omit<ReservationDto, 'assignmentStatus'>` en los 4 endpoints
    *     de `customerReservationsApi` (`src/lib/customerApi.ts`), que tipan su
    *     respuesta como este mismo `Reservation`; el campo nunca llega ahí.
-   * (b) puede faltar mientras el backend real (Fase 1 de 4.3, `app-main`
-   *     `src/reservas/Reservation.ts`) no esté deployado — está commiteado
-   *     pero no deployado todavía, así que el DTO de staff de producción
-   *     hoy tampoco lo trae.
+   * (b) puede faltar si el backend que sirve la request es ANTERIOR a Fase
+   *     1 de 4.3 (`app-main` `src/reservas/Reservation.ts`, ej. un rollback
+   *     a un deploy previo al 26/09/2026) — no un estado de deploy fijo,
+   *     una condición a chequear en el momento (mismo criterio que el
+   *     CLAUDE.md raíz sobre no registrar "¿está deployado?" como un hecho
+   *     estable del texto).
    * Los lectores existentes (`=== 'PENDING_ASSIGNMENT'`) ya dan `false`
    * correctamente con `undefined` — no requieren cambios.
    */

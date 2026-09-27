@@ -32,7 +32,7 @@ import { extractErrorMessage } from '../http'
  *    (`RESERVATION_ALREADY_ASSIGNED`).
  * 3. Carrera de modificación -- `updateReservation()` detecta que la fila
  *    lockeada difiere del pre-check (recurso o servicio cambiaron
- *    mientras tanto, p. ej. un "Auto Assign All" concurrente)
+ *    mientras tanto, p. ej. otro PUT o un check-in concurrente)
  *    (`RESERVATION_CONCURRENTLY_MODIFIED`).
  * 4. Combo inválido -- el PUT combinó `resourceId` con otro cambio real de
  *    la reserva (`ASSIGNMENT_COMBINED_CHANGE`). `RoomCalendar::handleUp()`
